@@ -318,6 +318,19 @@
     "pleaseLoginAgain": "Please log in again with your new password",
     "userWillBeLoggedOut": "{name} will be logged out on their next request"
   },
+  "profile": {
+    "title": "My Profile",
+    "subtitle": "View your personal information and account settings",
+    "loading": "Loading profile...",
+    "personalInfo": "Personal Information",
+    "personalInfoDesc": "Your personal details",
+    "security": "Security",
+    "securityDesc": "Manage your password and security settings",
+    "password": "Password",
+    "passwordDesc": "Change your password to keep your account secure",
+    "changePasswordDesc": "Enter your new password below. You will be logged out after changing your password.",
+    "memberSince": "Member since"
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",

@@ -16,6 +16,7 @@ import {
   Truck,
   Users,
   LogOut,
+  User,
 } from "lucide-react";
 import { getCurrentUser, logout } from "@/lib/auth";
 import { toast } from "sonner";
@@ -231,7 +232,12 @@ export function AppSidebar() {
                 {t('settings')}
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>{t('profile')}</DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/profile">
+                <User className="me-2 h-4 w-4" />
+                {t('profile')}
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-red-600" onClick={handleLogout}>
               <LogOut className="me-2 h-4 w-4" />

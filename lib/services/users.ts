@@ -136,17 +136,35 @@ export async function deleteUser(id: number): Promise<void> {
 }
 
 /**
- * Change user password
+ * Change own password (from profile page)
+ */
+export async function changeOwnPassword(
+  password: string, 
+  passwordConfirmation: string
+): Promise<User> {
+  const response = await apiRequest<User>('/profile/change-password', {
+    method: 'POST',
+    body: JSON.stringify({
+      password,
+      password_confirmation: passwordConfirmation,
+    }),
+  });
+
+  return response.data;
+}
+
+/**
+ * Change user password (admin function - for changing other users' passwords)
  */
 export async function changeUserPassword(
-  id: number, 
+  userId: number,
   password: string, 
   passwordConfirmation: string
 ): Promise<User> {
   const response = await apiRequest<User>('/change-password', {
     method: 'POST',
     body: JSON.stringify({
-      id,
+      id: userId,
       password,
       password_confirmation: passwordConfirmation,
     }),
