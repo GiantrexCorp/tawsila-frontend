@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Mail, Phone, Clock, MoreVertical, UserPlus, ChevronLeft, ChevronRight, Loader2, Eye, Calendar, Shield } from "lucide-react";
-import { fetchUsers, updateUser, createUser, changeUserPassword, User, UserFilters } from "@/lib/services/users";
+import { fetchUsers, updateUser, createUser, changeUserPassword, assignUserRole, User, UserFilters } from "@/lib/services/users";
+import { fetchRoles, Role } from "@/lib/services/roles";
+import { usePagePermission } from "@/hooks/use-page-permission";
 import { getCurrentUser, logout } from "@/lib/auth";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
@@ -45,6 +47,9 @@ export default function UsersPage() {
   // Get current user for permission checks
   const currentUser = getCurrentUser();
   
+  // Check if user has permission to access users page
+  const hasPermission = usePagePermission(['super-admin', 'admin', 'inventory-manager', 'order-preparer']);
+  
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -59,7 +64,6 @@ export default function UsersPage() {
     name_ar: '',
     email: '',
     mobile: '',
-    role: '',
     status: 'active' as 'active' | 'inactive',
   });
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -81,6 +85,10 @@ export default function UsersPage() {
     confirmPassword: '',
   });
   const [userToView, setUserToView] = useState<User | null>(null);
+  const [userToAssignRole, setUserToAssignRole] = useState<User | null>(null);
+  const [isAssigningRole, setIsAssigningRole] = useState(false);
+  const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
+  const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
 
   // Get display name based on locale
   const getDisplayName = (user: User) => {
@@ -89,7 +97,13 @@ export default function UsersPage() {
 
   // Check if current user is super admin
   const isSuperAdmin = () => {
-    return currentUser?.roles?.includes('super-admin');
+    const isSuper = currentUser?.roles?.includes('super-admin');
+    console.log('isSuperAdmin check:', { 
+      currentUser: currentUser?.name, 
+      roles: currentUser?.roles, 
+      isSuperAdmin: isSuper 
+    });
+    return isSuper;
   };
 
   // Filter configuration - show name filter based on locale
@@ -146,8 +160,23 @@ export default function UsersPage() {
   ];
 
   useEffect(() => {
-    loadUsers(currentPage, appliedFilters);
-  }, [currentPage, appliedFilters]);
+    if (hasPermission) {
+      loadUsers(currentPage, appliedFilters);
+      loadRoles();
+    }
+  }, [currentPage, appliedFilters, hasPermission]);
+
+  const loadRoles = async () => {
+    try {
+      const response = await fetchRoles();
+      console.log('Loaded roles:', response.data);
+      console.log('First role permissions type:', typeof response.data[0]?.permissions);
+      console.log('First role permissions:', response.data[0]?.permissions);
+      setAvailableRoles(response.data);
+    } catch (error: any) {
+      console.error("Failed to load roles:", error);
+    }
+  };
 
   const loadUsers = async (page: number, currentFilters: UserFilters) => {
     setIsLoading(true);
@@ -225,7 +254,6 @@ export default function UsersPage() {
       name_ar: user.name_ar,
       email: user.email || '',
       mobile: user.mobile,
-      role: user.roles[0] || '',
       status: user.status,
     });
   };
@@ -240,7 +268,6 @@ export default function UsersPage() {
       email: editFormData.email,
       mobile: editFormData.mobile,
       status: editFormData.status,
-      roles: editFormData.role ? [editFormData.role] : [],
     };
     
     console.log('Sending update request:', updateData);
@@ -264,6 +291,43 @@ export default function UsersPage() {
       });
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleOpenAssignRoleDialog = (user: User) => {
+    setUserToAssignRole(user);
+    setSelectedRoleId(user.roles && user.roles.length > 0 ? 
+      availableRoles.find(r => r.name === user.roles[0])?.id || null : null
+    );
+  };
+
+  const handleAssignRole = async () => {
+    if (!userToAssignRole || !selectedRoleId) return;
+
+    console.log('Assigning role:', {
+      userId: userToAssignRole.id,
+      roleId: selectedRoleId,
+      userName: userToAssignRole.name,
+      selectedRole: availableRoles.find(r => r.id === selectedRoleId)
+    });
+
+    setIsAssigningRole(true);
+    try {
+      await assignUserRole(userToAssignRole.id, selectedRoleId);
+      toast.success(t('assignRoleSuccess'));
+      setUserToAssignRole(null);
+      setSelectedRoleId(null);
+      
+      // Reload users to reflect role changes
+      await loadUsers(currentPage, appliedFilters);
+    } catch (error: any) {
+      console.error('Error assigning role:', error);
+      console.error('Full error details:', JSON.stringify(error, null, 2));
+      toast.error(t('assignRoleFailed'), {
+        description: error.message || tCommon('tryAgain'),
+      });
+    } finally {
+      setIsAssigningRole(false);
     }
   };
 
@@ -421,7 +485,7 @@ export default function UsersPage() {
       return <Badge variant="outline">{t('noRole')}</Badge>;
     }
     
-    const role = roles[0];
+    const roleName = roles[0];
     const variants: Record<string, "default" | "secondary" | "outline"> = {
       "super-admin": "default",
       admin: "default",
@@ -429,12 +493,22 @@ export default function UsersPage() {
       viewer: "outline",
     };
     
-    // Format role for display (e.g., "super-admin" -> "Super Admin")
-    const formattedRole = role.split('-').map(word => 
+    // Find role in available roles to get slug
+    const roleData = availableRoles.find(r => r.name === roleName);
+    
+    // Use slug based on locale, fallback to formatted role name
+    let displayName = roleName.split('-').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
     
-    return <Badge variant={variants[role] || "outline"}>{formattedRole}</Badge>;
+    if (roleData) {
+      const slug = locale === 'ar' ? roleData.slug_ar : roleData.slug_en;
+      if (slug) {
+        displayName = slug;
+      }
+    }
+    
+    return <Badge variant={variants[roleName] || "outline"}>{displayName}</Badge>;
   };
 
   const getStatusBadge = (status: string) => {
@@ -459,6 +533,15 @@ export default function UsersPage() {
           <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
           <p className="mt-4 text-muted-foreground">{t('loadingUsers')}</p>
         </div>
+      </div>
+    );
+  }
+
+  // Don't render page if permission check hasn't completed or user lacks permission
+  if (hasPermission === null || hasPermission === false) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -529,6 +612,9 @@ export default function UsersPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleOpenAssignRoleDialog(user)}>
+                        {t('assignRole')}
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleOpenChangePasswordDialog(user)}>
                         {t('changePassword')}
                       </DropdownMenuItem>
@@ -691,26 +777,6 @@ export default function UsersPage() {
                 onChange={(e) => setEditFormData(prev => ({ ...prev, mobile: e.target.value }))}
                 disabled={isUpdating}
               />
-            </div>
-
-            {/* Role */}
-            <div className="grid gap-2">
-              <Label htmlFor="role">{t('role')}</Label>
-              <Select
-                value={editFormData.role}
-                onValueChange={(value) => setEditFormData(prev => ({ ...prev, role: value }))}
-                disabled={isUpdating}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={tCommon('select')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="super-admin">{t('superAdmin')}</SelectItem>
-                  <SelectItem value="admin">{t('admin')}</SelectItem>
-                  <SelectItem value="manager">{t('manager')}</SelectItem>
-                  <SelectItem value="viewer">{t('viewer')}</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             {/* Status */}
@@ -1046,6 +1112,36 @@ export default function UsersPage() {
                   </div>
                 </div>
 
+                {/* Permissions */}
+                {availableRoles.length > 0 && userToView.roles && userToView.roles.length > 0 && (() => {
+                  const userRole = availableRoles.find(r => r.name === userToView.roles[0]);
+                  const permissions = userRole?.permissions || [];
+                  
+                  if (permissions.length === 0) return null;
+                  
+                  return (
+                    <div className="grid gap-1.5">
+                      <Label className="text-xs font-medium text-muted-foreground">{t('permissions')}</Label>
+                      <div className="p-2.5 rounded-md bg-muted/50">
+                        <div className="flex flex-wrap gap-1.5">
+                          {permissions.map((permission, index) => {
+                            // Handle both string and object formats
+                            const permissionName = typeof permission === 'string' 
+                              ? permission 
+                              : (permission as any)?.name || 'unknown';
+                            
+                            return (
+                              <Badge key={index} variant="secondary" className="text-xs">
+                                {permissionName}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Last Active */}
                 <div className="grid gap-1.5">
                   <Label className="text-xs font-medium text-muted-foreground">{t('lastActive')}</Label>
@@ -1070,6 +1166,63 @@ export default function UsersPage() {
           <DialogFooter>
             <Button type="button" onClick={() => setUserToView(null)}>
               {tCommon('close')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Role Dialog */}
+      <Dialog open={!!userToAssignRole} onOpenChange={() => setUserToAssignRole(null)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{t('assignRole')}</DialogTitle>
+            <DialogDescription>
+              {userToAssignRole && t('assignRoleDesc', { name: getDisplayName(userToAssignRole) })}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="role">{t('role')} *</Label>
+              <Select
+                value={selectedRoleId?.toString() || ''}
+                onValueChange={(value) => setSelectedRoleId(Number(value))}
+                disabled={isAssigningRole}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={tCommon('select')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableRoles.map(role => (
+                    <SelectItem key={role.id} value={role.id.toString()}>
+                      {role.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setUserToAssignRole(null)}
+              disabled={isAssigningRole}
+            >
+              {tCommon('cancel')}
+            </Button>
+            <Button
+              type="button"
+              onClick={handleAssignRole}
+              disabled={isAssigningRole || !selectedRoleId}
+            >
+              {isAssigningRole ? (
+                <>
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
+                  {t('assigning')}
+                </>
+              ) : (
+                t('assignRole')
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

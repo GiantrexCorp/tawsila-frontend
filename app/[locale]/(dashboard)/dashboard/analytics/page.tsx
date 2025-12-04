@@ -3,12 +3,25 @@
 import { useTranslations } from "next-intl";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, TrendingUp, Package, DollarSign, Star, Trophy } from "lucide-react";
+import { Clock, TrendingUp, Package, DollarSign, Star, Trophy, Loader2 } from "lucide-react";
 import { agents, orders, products } from "@/lib/mock-data";
+import { usePagePermission } from "@/hooks/use-page-permission";
 
 export default function AnalyticsPage() {
   const t = useTranslations('analyticsPage');
   const tCommon = useTranslations('common');
+  
+  // Check if user has permission to access analytics page
+  const hasPermission = usePagePermission(['super-admin', 'admin', 'manager', 'inventory-manager']);
+
+  // Don't render page if permission check hasn't completed or user lacks permission
+  if (hasPermission === null || hasPermission === false) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   // Calculate metrics
   const completedOrders = orders.filter(o => o.status === 'delivered').length;

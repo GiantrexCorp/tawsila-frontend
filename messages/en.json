@@ -14,9 +14,11 @@
     "orders": "Orders",
     "agents": "Delivery Agents",
     "organizations": "Vendors",
+    "vendors": "Vendors",
     "analytics": "Analytics",
     "settings": "Settings",
     "users": "Users",
+    "roles": "Roles",
     "myAccount": "My Account",
     "profile": "Profile",
     "logout": "Log out",
@@ -165,10 +167,47 @@
     "minutes": "minutes",
     "revenue": "Revenue"
   },
-  "settingsPage": {
+  "settings": {
     "title": "Settings",
-    "subtitle": "Manage your account and system preferences",
-    "description": "Configure profile settings, organization settings, user management, and API keys."
+    "subtitle": "Manage system roles and permissions",
+    "rolesTab": "Roles",
+    "permissionsTab": "Permissions",
+    "rolesTitle": "System Roles",
+    "rolesDescription": "Manage user roles and their permissions",
+    "permissionsTitle": "System Permissions",
+    "permissionsDescription": "View all available permissions in the system",
+    "addRole": "Add Role",
+    "editRole": "Edit Role",
+    "deleteRole": "Delete Role",
+    "addRoleDesc": "Create a new role with permissions",
+    "editRoleDesc": "Update role details and permissions",
+    "deleteRoleDesc": "Are you sure you want to delete the role \"{name}\"? This action cannot be undone.",
+    "name": "Name",
+    "slug": "Slug",
+    "slugEnglish": "Slug (English)",
+    "slugArabic": "Slug (Arabic)",
+    "permissions": "Permissions",
+    "permissionsLabel": "Assign Permissions",
+    "permissionsNote": "Select permissions for this role",
+    "guardName": "Guard Name",
+    "createdAt": "Created At",
+    "actions": "Actions",
+    "id": "ID",
+    "noRoles": "No roles found",
+    "noPermissions": "No permissions found",
+    "nameRequired": "Name is required",
+    "slugEnRequired": "English slug is required",
+    "slugArRequired": "Arabic slug is required",
+    "roleCreateSuccess": "Role created successfully",
+    "roleCreateFailed": "Failed to create role",
+    "roleUpdateSuccess": "Role updated successfully",
+    "roleUpdateFailed": "Failed to update role",
+    "roleDeleteSuccess": "Role deleted successfully",
+    "roleDeleteFailed": "Failed to delete role",
+    "failedToLoadRoles": "Failed to load roles",
+    "failedToLoadPermissions": "Failed to load permissions",
+    "saving": "Saving...",
+    "deleting": "Deleting..."
   },
   "tracking": {
     "title": "Track Your Order",
@@ -320,7 +359,19 @@
     "view": "View",
     "viewUser": "View User",
     "viewUserDetails": "View user profile and details",
-    "createdAt": "Created At"
+    "createdAt": "Created At",
+    "assignRole": "Assign Role",
+    "assignRoleDesc": "Assign a role to {name}",
+    "assignRoleSuccess": "Role assigned successfully",
+    "assignRoleFailed": "Failed to assign role",
+    "assigning": "Assigning...",
+    "permissions": "Permissions",
+    "noPermissions": "No permissions assigned"
+  },
+  "unauthorized": {
+    "title": "Access Denied",
+    "description": "You don't have permission to access this resource. Please contact your administrator if you believe this is an error.",
+    "home": "Home"
   },
   "profile": {
     "title": "My Profile",
@@ -356,6 +407,7 @@
     "to": "To",
     "addFilter": "Add Filter",
     "selectFilter": "Select Filter",
-    "allFiltersAdded": "All filters added"
+    "allFiltersAdded": "All filters added",
+    "tryAgain": "Please try again"
   }
 }

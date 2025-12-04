@@ -5,13 +5,26 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { CheckCircle, XCircle, AlertCircle, Loader2 } from "lucide-react";
 import { productRequests } from "@/lib/mock-data";
+import { usePagePermission } from "@/hooks/use-page-permission";
 
 export default function RequestsPage() {
   const t = useTranslations('requests');
   const tCommon = useTranslations('common');
   const locale = useLocale();
+  
+  // Check if user has permission to access requests page
+  const hasPermission = usePagePermission(['super-admin', 'admin', 'manager', 'inventory-manager']);
+
+  // Don't render page if permission check hasn't completed or user lacks permission
+  if (hasPermission === null || hasPermission === false) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const filterByStatus = (status?: string) => {
     if (!status) return productRequests;

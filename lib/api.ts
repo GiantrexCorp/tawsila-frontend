@@ -43,12 +43,19 @@ export async function apiRequest<T>(
 ): Promise<ApiResponse<T>> {
   const url = `${API_BASE_URL}${endpoint}`;
   
+  // Check if body is FormData - if so, don't set Content-Type (browser will set it with boundary)
+  const isFormData = options.body instanceof FormData;
+  
   const defaultHeaders: HeadersInit = {
-    'Content-Type': 'application/json',
     'Accept': 'application/json',
     'Accept-Language': getCurrentLocale(), // Add locale to all requests
     'X-Locale': getCurrentLocale(), // Also send as custom header for backend flexibility
   };
+  
+  // Only set Content-Type for JSON requests
+  if (!isFormData) {
+    defaultHeaders['Content-Type'] = 'application/json';
+  }
 
   // Add authorization header if token exists
   const token = getToken();
@@ -79,9 +86,20 @@ export async function apiRequest<T>(
         } as ApiError;
       }
 
+      // Handle 403 Forbidden - user doesn't have permission
+      if (response.status === 403) {
+        handleForbidden();
+        throw {
+          message: data.message || 'You do not have permission to access this resource.',
+          errors: data.errors,
+          status: 403,
+        } as ApiError;
+      }
+
       throw {
         message: data.message || 'An error occurred',
         errors: data.errors,
+        status: response.status,
       } as ApiError;
     }
 
@@ -122,6 +140,24 @@ function handleUnauthorized(): void {
     
     // Redirect to login with proper locale
     window.location.href = `/${locale}/login`;
+  }
+}
+
+/**
+ * Handle forbidden access (403)
+ * This happens when user doesn't have permission for the resource
+ */
+function handleForbidden(): void {
+  if (typeof window === 'undefined') return;
+  
+  // Only redirect if not already on 403 page
+  if (!window.location.pathname.includes('/403')) {
+    // Extract current locale from pathname
+    const pathSegments = window.location.pathname.split('/').filter(Boolean);
+    const locale = pathSegments[0] || 'en';
+    
+    // Redirect to 403 page with proper locale
+    window.location.href = `/${locale}/403`;
   }
 }
 

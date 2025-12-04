@@ -49,8 +49,12 @@ export default function LoginPage() {
         description: t('welcomeBack', { name: user.name }),
       });
 
-      // Redirect to dashboard
-      router.push('/dashboard');
+      // Redirect based on role
+      if (user.roles?.includes('shipping-agent')) {
+        router.push('/dashboard/orders');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (error: any) {
       console.error("Login error:", error);
       
@@ -72,10 +76,10 @@ export default function LoginPage() {
     }
   };
 
-  const handleTestLogin = async () => {
+  const handleSuperAdminLogin = async () => {
     setFormData({
       email: "moay@gmail.com",
-      password: "12345678",
+      password: "password",
     });
     
     setIsLoading(true);
@@ -84,19 +88,22 @@ export default function LoginPage() {
     try {
       const user = await login({
         email: "moay@gmail.com",
-        password: "12345678",
+        password: "password",
       });
       
       toast.success(t('loginSuccess'), {
         description: t('welcomeBack', { name: user.name }),
       });
 
-      // Redirect to dashboard
-      router.push('/dashboard');
+      // Redirect based on role
+      if (user.roles?.includes('shipping-agent')) {
+        router.push('/dashboard/orders');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (error: any) {
       console.error("Login error:", error);
       
-      // Handle validation errors
       if (error.errors) {
         const formattedErrors: Record<string, string> = {};
         Object.entries(error.errors).forEach(([key, messages]) => {
@@ -105,7 +112,94 @@ export default function LoginPage() {
         setErrors(formattedErrors);
       }
       
-      // Show error toast
+      toast.error(t('loginFailed'), {
+        description: error.message || t('checkCredentials'),
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleInventoryManagerLogin = async () => {
+    setFormData({
+      email: "ahmedeid@gmail.com",
+      password: "87654321",
+    });
+    
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      const user = await login({
+        email: "ahmedeid@gmail.com",
+        password: "87654321",
+      });
+      
+      toast.success(t('loginSuccess'), {
+        description: t('welcomeBack', { name: user.name }),
+      });
+
+      // Redirect based on role
+      if (user.roles?.includes('shipping-agent')) {
+        router.push('/dashboard/orders');
+      } else {
+        router.push('/dashboard');
+      }
+    } catch (error: any) {
+      console.error("Login error:", error);
+      
+      if (error.errors) {
+        const formattedErrors: Record<string, string> = {};
+        Object.entries(error.errors).forEach(([key, messages]) => {
+          formattedErrors[key] = (messages as string[])[0];
+        });
+        setErrors(formattedErrors);
+      }
+      
+      toast.error(t('loginFailed'), {
+        description: error.message || t('checkCredentials'),
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleShippingAgentLogin = async () => {
+    setFormData({
+      email: "uncleahmed@gmail.com",
+      password: "password",
+    });
+    
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      const user = await login({
+        email: "uncleahmed@gmail.com",
+        password: "password",
+      });
+      
+      toast.success(t('loginSuccess'), {
+        description: t('welcomeBack', { name: user.name }),
+      });
+
+      // Redirect based on role
+      if (user.roles?.includes('shipping-agent')) {
+        router.push('/dashboard/orders');
+      } else {
+        router.push('/dashboard');
+      }
+    } catch (error: any) {
+      console.error("Login error:", error);
+      
+      if (error.errors) {
+        const formattedErrors: Record<string, string> = {};
+        Object.entries(error.errors).forEach(([key, messages]) => {
+          formattedErrors[key] = (messages as string[])[0];
+        });
+        setErrors(formattedErrors);
+      }
+      
       toast.error(t('loginFailed'), {
         description: error.message || t('checkCredentials'),
       });
@@ -192,16 +286,34 @@ export default function LoginPage() {
               </Button>
             </form>
             
-            {/* Test Login Button */}
-            <div className="mt-4 pt-4 border-t">
+            {/* Test Login Buttons */}
+            <div className="mt-4 pt-4 border-t space-y-2">
               <Button 
                 type="button" 
                 variant="outline" 
-                className="w-full bg-yellow-50 hover:bg-yellow-100 dark:bg-yellow-950 dark:hover:bg-yellow-900 border-yellow-300 dark:border-yellow-800 text-yellow-900 dark:text-yellow-100"
-                onClick={handleTestLogin}
+                className="w-full bg-purple-50 hover:bg-purple-100 dark:bg-purple-950 dark:hover:bg-purple-900 border-purple-300 dark:border-purple-800 text-purple-900 dark:text-purple-100"
+                onClick={handleSuperAdminLogin}
                 disabled={isLoading}
               >
-                🧪 Test Login (moay@gmail.com)
+                👑 Super Admin Login
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full bg-blue-50 hover:bg-blue-100 dark:bg-blue-950 dark:hover:bg-blue-900 border-blue-300 dark:border-blue-800 text-blue-900 dark:text-blue-100"
+                onClick={handleInventoryManagerLogin}
+                disabled={isLoading}
+              >
+                📦 Inventory Manager Login
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full bg-green-50 hover:bg-green-100 dark:bg-green-950 dark:hover:bg-green-900 border-green-300 dark:border-green-800 text-green-900 dark:text-green-100"
+                onClick={handleShippingAgentLogin}
+                disabled={isLoading}
+              >
+                🚚 Shipping Agent Login
               </Button>
             </div>
           </CardContent>

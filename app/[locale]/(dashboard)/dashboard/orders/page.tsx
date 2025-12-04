@@ -6,14 +6,27 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, Eye } from "lucide-react";
+import { Search, Filter, Eye, Loader2 } from "lucide-react";
 import { orders } from "@/lib/mock-data";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePagePermission } from "@/hooks/use-page-permission";
 
 export default function OrdersPage() {
   const t = useTranslations('orders');
   const tCommon = useTranslations('common');
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Check if user has permission to access orders page
+  const hasPermission = usePagePermission(['super-admin', 'admin', 'manager', 'order-preparer', 'shipping-agent', 'inventory-manager']);
+
+  // Don't render page if permission check hasn't completed or user lacks permission
+  if (hasPermission === null || hasPermission === false) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const filteredOrders = orders.filter(order => 
     order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||

@@ -16,6 +16,7 @@ export interface User {
   created_at: string;
   updated_at: string;
   roles: string[];
+  permissions?: string[]; // User's permissions from their role
 }
 
 export interface PaginationLinks {
@@ -171,5 +172,32 @@ export async function changeUserPassword(
   });
 
   return response.data;
+}
+
+/**
+ * Assign role to user
+ * Backend expects: POST /assign-role with user_id and roles[] array as form-data
+ * Returns: { message: "Role assigned successfully" }
+ */
+export async function assignUserRole(
+  userId: number,
+  roleId: number
+): Promise<{ message: string }> {
+  console.log('assignUserRole called with:', { userId, roleId });
+  
+  // Create FormData for form-data submission
+  const formData = new FormData();
+  formData.append('user_id', userId.toString());
+  formData.append('roles[0]', roleId.toString());
+  
+  console.log('Request URL:', '/assign-role');
+  console.log('FormData:', { user_id: userId, 'roles[0]': roleId });
+  
+  const response = await apiRequest<{ message: string }>('/assign-role', {
+    method: 'POST',
+    body: formData,
+  });
+
+  return response;
 }
 

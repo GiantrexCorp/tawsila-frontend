@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -10,6 +10,7 @@ import {
   ArrowDown,
   FileText,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -24,14 +25,25 @@ export default function DashboardPage() {
   const tRequests = useTranslations('requests');
   const tCommon = useTranslations('common');
   const router = useRouter();
+  const [isShippingAgent, setIsShippingAgent] = useState(false);
 
-  // Redirect users without roles to profile page
+  // Check if user is shipping agent and redirect
   useEffect(() => {
     const currentUser = getCurrentUser();
-    if (!currentUser || !currentUser.roles || currentUser.roles.length === 0) {
-      router.push('/dashboard/profile');
+    if (currentUser?.roles?.includes('shipping-agent')) {
+      setIsShippingAgent(true);
+      router.push('/dashboard/orders');
     }
   }, [router]);
+
+  // Don't render dashboard for shipping agents
+  if (isShippingAgent) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   // Calculate real metrics
   const pendingRequests = productRequests.filter(r => r.status === 'pending').length;

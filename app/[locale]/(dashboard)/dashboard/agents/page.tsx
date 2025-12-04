@@ -4,11 +4,24 @@ import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star, MapPin, Phone, Mail, Package } from "lucide-react";
+import { Star, MapPin, Phone, Mail, Package, Loader2 } from "lucide-react";
 import { agents } from "@/lib/mock-data";
+import { usePagePermission } from "@/hooks/use-page-permission";
 
 export default function AgentsPage() {
   const t = useTranslations('agents');
+  
+  // Check if user has permission to access agents page
+  const hasPermission = usePagePermission(['super-admin', 'admin', 'manager', 'inventory-manager']);
+
+  // Don't render page if permission check hasn't completed or user lacks permission
+  if (hasPermission === null || hasPermission === false) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 md:space-y-6">
