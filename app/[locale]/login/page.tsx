@@ -72,6 +72,48 @@ export default function LoginPage() {
     }
   };
 
+  const handleTestLogin = async () => {
+    setFormData({
+      email: "moay@gmail.com",
+      password: "password",
+    });
+    
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      const user = await login({
+        email: "moay@gmail.com",
+        password: "password",
+      });
+      
+      toast.success(t('loginSuccess'), {
+        description: t('welcomeBack', { name: user.name }),
+      });
+
+      // Redirect to dashboard
+      router.push('/dashboard');
+    } catch (error: any) {
+      console.error("Login error:", error);
+      
+      // Handle validation errors
+      if (error.errors) {
+        const formattedErrors: Record<string, string> = {};
+        Object.entries(error.errors).forEach(([key, messages]) => {
+          formattedErrors[key] = (messages as string[])[0];
+        });
+        setErrors(formattedErrors);
+      }
+      
+      // Show error toast
+      toast.error(t('loginFailed'), {
+        description: error.message || t('checkCredentials'),
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/20">
       {/* Header */}
@@ -149,6 +191,19 @@ export default function LoginPage() {
                 )}
               </Button>
             </form>
+            
+            {/* Test Login Button */}
+            <div className="mt-4 pt-4 border-t">
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full bg-yellow-50 hover:bg-yellow-100 dark:bg-yellow-950 dark:hover:bg-yellow-900 border-yellow-300 dark:border-yellow-800 text-yellow-900 dark:text-yellow-100"
+                onClick={handleTestLogin}
+                disabled={isLoading}
+              >
+                🧪 Test Login (moay@gmail.com)
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
