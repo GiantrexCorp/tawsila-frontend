@@ -262,7 +262,7 @@ export default function TrackOrderPage({ params }: Props) {
       {/* Footer */}
       <footer className="border-t py-6 bg-background">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© 2024 Tawsila. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Tawsila. All rights reserved.</p>
         </div>
       </footer>
     </div>

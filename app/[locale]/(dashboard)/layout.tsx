@@ -7,12 +7,15 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { Separator } from "@/components/ui/separator";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSessionMonitor } from "@/hooks/use-session-monitor";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Monitor session and handle automatic logout
+  useSessionMonitor();
   return (
     <SidebarProvider>
       <AppSidebar />

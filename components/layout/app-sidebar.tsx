@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/routing";
+import { useTranslations, useLocale } from "next-intl";
+import { Link, useRouter } from "@/i18n/routing";
 import {
   LayoutDashboard,
   Package,
@@ -15,7 +15,10 @@ import {
   ChevronDown,
   Truck,
   Users,
+  LogOut,
 } from "lucide-react";
+import { getCurrentUser, logout } from "@/lib/auth";
+import { toast } from "sonner";
 import {
   Sidebar,
   SidebarContent,
@@ -41,7 +44,59 @@ import { TawsilaLogo } from "@/components/branding/tawsila-logo";
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const locale = useLocale();
   const t = useTranslations('nav');
+  const [user, setUser] = React.useState<{
+    name: string;
+    name_en: string;
+    name_ar: string;
+    roles: string[];
+  } | null>(null);
+
+  React.useEffect(() => {
+    const currentUser = getCurrentUser();
+    if (currentUser) {
+      setUser({
+        name: currentUser.name,
+        name_en: currentUser.name_en,
+        name_ar: currentUser.name_ar,
+        roles: currentUser.roles,
+      });
+    }
+  }, []);
+
+  // Get the appropriate name based on locale
+  const getDisplayName = () => {
+    if (!user) return t('user');
+    return locale === 'ar' ? user.name_ar : user.name_en;
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success(t('logoutSuccess'));
+      router.push('/login');
+    } catch (error: any) {
+      toast.error(t('logoutFailed'), {
+        description: error.message,
+      });
+    }
+  };
+
+  const getUserInitials = () => {
+    const name = getDisplayName();
+    return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  };
+
+  const getRoleDisplay = (roles: string[]) => {
+    if (!roles || roles.length === 0) return t('user');
+    const role = roles[0];
+    // Format role for display
+    return role.split('-').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  };
 
   const navigation = [
     {
@@ -154,27 +209,33 @@ export function AppSidebar() {
               suppressHydrationWarning
             >
               <Avatar className="h-8 w-8">
-                <AvatarImage src="/avatar.png" alt="User" />
-                <AvatarFallback>AD</AvatarFallback>
+                <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                  {user ? getUserInitials() : "U"}
+                </AvatarFallback>
               </Avatar>
-              <div className="flex-1 text-left text-sm">
-                <p className="font-medium">Admin User</p>
-                <p className="text-xs text-muted-foreground">Administrator</p>
+              <div className="flex-1 text-start text-sm">
+                <p className="font-medium">{getDisplayName()}</p>
+                <p className="text-xs text-muted-foreground">
+                  {user ? getRoleDisplay(user.roles) : t('loading')}
+                </p>
               </div>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuLabel>{t('myAccount')}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/settings">
+                <Settings className="me-2 h-4 w-4" />
+                {t('settings')}
+              </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>Profile</DropdownMenuItem>
+            <DropdownMenuItem>{t('profile')}</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-600">
-              Log out
+            <DropdownMenuItem className="text-red-600" onClick={handleLogout}>
+              <LogOut className="me-2 h-4 w-4" />
+              {t('logout')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
