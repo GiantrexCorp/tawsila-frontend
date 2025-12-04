@@ -13,7 +13,7 @@
     "requests": "Product Requests",
     "orders": "Orders",
     "agents": "Delivery Agents",
-    "organizations": "Organizations",
+    "organizations": "Vendors",
     "analytics": "Analytics",
     "settings": "Settings",
     "users": "Users",
@@ -102,14 +102,14 @@
   },
   "requests": {
     "title": "Product Requests",
-    "subtitle": "Review and approve product requests from organizations",
-    "description": "Organizations can request products through the API, and you can review and approve them here.",
+    "subtitle": "Review and approve product requests from vendors",
+    "description": "Vendors can request products through the API, and you can review and approve them here.",
     "pending": "Pending",
     "approved": "Approved",
     "rejected": "Rejected",
     "partially_accepted": "Partially Accepted",
     "allRequests": "All Requests",
-    "organization": "Organization",
+    "organization": "Vendor",
     "products": "Products",
     "requestedOn": "Requested On",
     "reviewedOn": "Reviewed On",
@@ -125,8 +125,8 @@
     "requestDetails": "Request Details"
   },
   "organizations": {
-    "title": "Organizations",
-    "subtitle": "Manage organizations and their API access",
+    "title": "Vendors",
+    "subtitle": "Manage vendors and their API access",
     "description": "Manage organization accounts, API credentials, and webhook configurations.",
     "addOrganization": "Add Organization",
     "apiKey": "API Key",
@@ -137,7 +137,7 @@
     "copyKey": "Copy Key",
     "regenerate": "Regenerate",
     "configure": "Configure",
-    "totalOrganizations": "Total Organizations",
+    "totalOrganizations": "Total Vendors",
     "activeOrgs": "Active",
     "inactiveOrgs": "Inactive",
     "totalRequests": "Total Requests"
@@ -316,7 +316,11 @@
     "me": "Me",
     "ownPasswordChanged": "Your password has been changed",
     "pleaseLoginAgain": "Please log in again with your new password",
-    "userWillBeLoggedOut": "{name} will be logged out on their next request"
+    "userWillBeLoggedOut": "{name} will be logged out on their next request",
+    "view": "View",
+    "viewUser": "View User",
+    "viewUserDetails": "View user profile and details",
+    "createdAt": "Created At"
   },
   "profile": {
     "title": "My Profile",
@@ -336,6 +340,7 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
+    "close": "Close",
     "search": "Search",
     "filter": "Filter",
     "filters": "Filters",

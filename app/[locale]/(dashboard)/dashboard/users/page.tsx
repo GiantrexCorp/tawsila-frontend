@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Mail, Phone, Clock, MoreVertical, UserPlus, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
-import { fetchUsers, deleteUser, updateUser, createUser, changeUserPassword, User, UserFilters } from "@/lib/services/users";
+import { Mail, Phone, Clock, MoreVertical, UserPlus, ChevronLeft, ChevronRight, Loader2, Eye, Calendar, Shield } from "lucide-react";
+import { fetchUsers, updateUser, createUser, changeUserPassword, User, UserFilters } from "@/lib/services/users";
 import { getCurrentUser, logout } from "@/lib/auth";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
@@ -18,16 +18,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -62,8 +52,6 @@ export default function UsersPage() {
   const [total, setTotal] = useState(0);
   const [filters, setFilters] = useState<UserFilters>({});
   const [appliedFilters, setAppliedFilters] = useState<UserFilters>({});
-  const [userToDelete, setUserToDelete] = useState<User | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [editFormData, setEditFormData] = useState({
@@ -92,6 +80,7 @@ export default function UsersPage() {
     password: '',
     confirmPassword: '',
   });
+  const [userToView, setUserToView] = useState<User | null>(null);
 
   // Get display name based on locale
   const getDisplayName = (user: User) => {
@@ -227,32 +216,6 @@ export default function UsersPage() {
     delete newAppliedFilters[key];
     setAppliedFilters(newAppliedFilters);
     setCurrentPage(1);
-  };
-
-  const handleDeleteUser = async () => {
-    if (!userToDelete) return;
-    
-    setIsDeleting(true);
-    try {
-      await deleteUser(userToDelete.id);
-      
-      // Remove user from local state (optimistic update)
-      setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
-      setTotal(prev => prev - 1);
-      
-      toast.success(t('deleteSuccess'));
-      setUserToDelete(null);
-      
-      // Reload users if current page is now empty
-      if (users.length === 1 && currentPage > 1) {
-        setCurrentPage(prev => prev - 1);
-      }
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      toast.error(t('deleteFailed'));
-    } finally {
-      setIsDeleting(false);
-    }
   };
 
   const handleOpenEditDialog = (user: User) => {
@@ -535,74 +498,88 @@ export default function UsersPage() {
           const displayName = getDisplayName(user);
           return (
           <Card key={user.id}>
-            <CardHeader>
+            <CardHeader className="pb-4">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <Avatar className="h-12 w-12">
-                    <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                  <Avatar className="h-14 w-14">
+                    <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg">
                       {displayName.split(' ').map(n => n[0]).join('').slice(0, 2)}
                     </AvatarFallback>
                   </Avatar>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <CardTitle className="text-base">{displayName}</CardTitle>
+                      <CardTitle className="text-base font-semibold truncate">{displayName}</CardTitle>
                       {currentUser?.id === user.id && (
-                        <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300">
+                        <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 flex-shrink-0">
                           {t('me')}
                         </Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
                       {getRoleBadge(user.roles)}
                       {getStatusBadge(user.status)}
                     </div>
                   </div>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon-sm">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {isSuperAdmin() && (
-                      <DropdownMenuItem onClick={() => handleOpenEditDialog(user)}>
-                        {tCommon('edit')}
-                      </DropdownMenuItem>
-                    )}
-                    {isSuperAdmin() && (
+                {isSuperAdmin() && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon-sm">
+                        <MoreVertical className="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => handleOpenChangePasswordDialog(user)}>
                         {t('changePassword')}
                       </DropdownMenuItem>
-                    )}
-                    {isSuperAdmin() && (
-                      <DropdownMenuItem 
-                        className="text-red-600"
-                        onClick={() => setUserToDelete(user)}
-                      >
-                        {tCommon('delete')}
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center gap-2 text-sm">
-                <Mail className="h-4 w-4 text-muted-foreground" />
+            <CardContent className="space-y-3 pb-4">
+              <div className="flex items-center gap-3 text-sm">
+                <Mail className="h-5 w-5 text-muted-foreground" />
                 <span className="text-muted-foreground truncate">{user.email || t('noEmail')}</span>
               </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Phone className="h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center gap-3 text-sm">
+                <Phone className="h-5 w-5 text-muted-foreground" />
                 <span className="text-muted-foreground truncate">{user.mobile}</span>
               </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Clock className="h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center gap-3 text-sm">
+                <Clock className="h-5 w-5 text-muted-foreground" />
                 <span className="text-muted-foreground">
-                  {t('lastActive')}: {user.last_active ? new Date(user.last_active).toLocaleString() : t('never')}
+                  {t('lastActive')}: {user.last_active ? new Date(user.last_active).toLocaleDateString() : t('never')}
                 </span>
               </div>
             </CardContent>
+            <div className="border-t px-6 py-4">
+              <div className="flex items-center justify-around gap-2">
+                <Button
+                  variant="ghost"
+                  className="flex-1 flex flex-col items-center gap-1 h-auto py-2"
+                  onClick={() => setUserToView(user)}
+                >
+                  <Eye className="h-5 w-5" />
+                  <span className="text-sm">{t('view')}</span>
+                </Button>
+                {isSuperAdmin() && (
+                  <>
+                    <div className="h-12 w-px bg-border" />
+                    <Button
+                      variant="ghost"
+                      className="flex-1 flex flex-col items-center gap-1 h-auto py-2"
+                      onClick={() => handleOpenEditDialog(user)}
+                    >
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                      <span className="text-sm">{tCommon('edit')}</span>
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
           </Card>
           );
         })}
@@ -662,37 +639,6 @@ export default function UsersPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!userToDelete} onOpenChange={() => setUserToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('deleteUser')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {userToDelete && t('deleteUserDesc', { name: getDisplayName(userToDelete) })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>
-              {tCommon('cancel')}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteUser}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                  {t('deleting')}
-                </>
-              ) : (
-                tCommon('delete')
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Edit User Dialog */}
       <Dialog open={!!userToEdit} onOpenChange={() => setUserToEdit(null)}>
@@ -1020,6 +966,110 @@ export default function UsersPage() {
               ) : (
                 t('changePassword')
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View User Dialog */}
+      <Dialog open={!!userToView} onOpenChange={() => setUserToView(null)}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>{t('viewUser')}</DialogTitle>
+            <DialogDescription>{t('viewUserDetails')}</DialogDescription>
+          </DialogHeader>
+          
+          {userToView && (
+            <div className="space-y-6">
+              {/* User Profile Header */}
+              <div className="flex items-center gap-4 pb-4 border-b">
+                <Avatar className="h-16 w-16">
+                  <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xl">
+                    {getDisplayName(userToView).split(' ').map(n => n[0]).join('').slice(0, 2)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold">{getDisplayName(userToView)}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    {getRoleBadge(userToView.roles)}
+                    {getStatusBadge(userToView.status)}
+                  </div>
+                </div>
+              </div>
+
+              {/* User Details Grid */}
+              <div className="grid gap-4">
+                {/* Name English */}
+                <div className="grid gap-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">{t('nameEnglish')}</Label>
+                  <div className="flex items-center gap-2 p-2.5 rounded-md bg-muted/50">
+                    <span>{userToView.name_en}</span>
+                  </div>
+                </div>
+
+                {/* Name Arabic */}
+                <div className="grid gap-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">{t('nameArabic')}</Label>
+                  <div className="flex items-center gap-2 p-2.5 rounded-md bg-muted/50">
+                    <span>{userToView.name_ar}</span>
+                  </div>
+                </div>
+
+                {/* Email */}
+                <div className="grid gap-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">{t('email')}</Label>
+                  <div className="flex items-center gap-2 p-2.5 rounded-md bg-muted/50">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span>{userToView.email || t('noEmail')}</span>
+                  </div>
+                </div>
+
+                {/* Mobile */}
+                <div className="grid gap-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">{t('mobile')}</Label>
+                  <div className="flex items-center gap-2 p-2.5 rounded-md bg-muted/50">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span>{userToView.mobile}</span>
+                  </div>
+                </div>
+
+                {/* Role */}
+                <div className="grid gap-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">{t('role')}</Label>
+                  <div className="flex items-center gap-2 p-2.5 rounded-md bg-muted/50">
+                    <Shield className="h-4 w-4 text-muted-foreground" />
+                    <span>
+                      {userToView.roles && userToView.roles.length > 0
+                        ? userToView.roles[0].split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+                        : t('noRole')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Last Active */}
+                <div className="grid gap-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">{t('lastActive')}</Label>
+                  <div className="flex items-center gap-2 p-2.5 rounded-md bg-muted/50">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span>{userToView.last_active ? new Date(userToView.last_active).toLocaleString() : t('never')}</span>
+                  </div>
+                </div>
+
+                {/* Created At */}
+                <div className="grid gap-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">{t('createdAt')}</Label>
+                  <div className="flex items-center gap-2 p-2.5 rounded-md bg-muted/50">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span>{new Date(userToView.created_at).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button type="button" onClick={() => setUserToView(null)}>
+              {tCommon('close')}
             </Button>
           </DialogFooter>
         </DialogContent>
