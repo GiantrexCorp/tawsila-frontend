@@ -302,7 +302,21 @@
     "createFailed": "Failed to create user",
     "creating": "Creating...",
     "passwordMismatch": "Passwords do not match",
-    "fillAllFields": "Please fill all required fields"
+    "fillAllFields": "Please fill all required fields",
+    "changePassword": "Change Password",
+    "changePasswordDesc": "Change password for {name}",
+    "newPassword": "New Password",
+    "enterNewPassword": "Enter new password",
+    "confirmNewPassword": "Confirm new password",
+    "passwordRequired": "Password is required",
+    "passwordTooShort": "Password must be at least 6 characters",
+    "passwordChangeSuccess": "Password changed successfully",
+    "passwordChangeFailed": "Failed to change password",
+    "changingPassword": "Changing...",
+    "me": "Me",
+    "ownPasswordChanged": "Your password has been changed",
+    "pleaseLoginAgain": "Please log in again with your new password",
+    "userWillBeLoggedOut": "{name} will be logged out on their next request"
   },
   "common": {
     "save": "Save",

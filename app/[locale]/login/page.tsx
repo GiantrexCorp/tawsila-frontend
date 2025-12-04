@@ -75,7 +75,7 @@ export default function LoginPage() {
   const handleTestLogin = async () => {
     setFormData({
       email: "moay@gmail.com",
-      password: "password",
+      password: "12345678",
     });
     
     setIsLoading(true);
@@ -84,7 +84,7 @@ export default function LoginPage() {
     try {
       const user = await login({
         email: "moay@gmail.com",
-        password: "password",
+        password: "12345678",
       });
       
       toast.success(t('loginSuccess'), {

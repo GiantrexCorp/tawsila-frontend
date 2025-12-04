@@ -17,6 +17,24 @@ export interface ApiError {
 }
 
 /**
+ * Get current locale from URL
+ */
+function getCurrentLocale(): string {
+  if (typeof window === 'undefined') return 'en';
+  
+  // Extract locale from pathname (e.g., /en/dashboard -> en, /ar/users -> ar)
+  const pathSegments = window.location.pathname.split('/').filter(Boolean);
+  const locale = pathSegments[0];
+  
+  // Validate locale (should be 'en' or 'ar')
+  if (locale === 'ar' || locale === 'en') {
+    return locale;
+  }
+  
+  return 'en'; // Default to English
+}
+
+/**
  * Makes an API request with proper error handling
  */
 export async function apiRequest<T>(
@@ -28,6 +46,8 @@ export async function apiRequest<T>(
   const defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+    'Accept-Language': getCurrentLocale(), // Add locale to all requests
+    'X-Locale': getCurrentLocale(), // Also send as custom header for backend flexibility
   };
 
   // Add authorization header if token exists

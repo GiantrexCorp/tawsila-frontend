@@ -135,3 +135,23 @@ export async function deleteUser(id: number): Promise<void> {
   });
 }
 
+/**
+ * Change user password
+ */
+export async function changeUserPassword(
+  id: number, 
+  password: string, 
+  passwordConfirmation: string
+): Promise<User> {
+  const response = await apiRequest<User>('/change-password', {
+    method: 'POST',
+    body: JSON.stringify({
+      id,
+      password,
+      password_confirmation: passwordConfirmation,
+    }),
+  });
+
+  return response.data;
+}
+

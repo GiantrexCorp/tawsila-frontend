@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Mail, Phone, Clock, MoreVertical, UserPlus, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
-import { fetchUsers, deleteUser, updateUser, createUser, User, UserFilters } from "@/lib/services/users";
-import { getCurrentUser } from "@/lib/auth";
+import { fetchUsers, deleteUser, updateUser, createUser, changeUserPassword, User, UserFilters } from "@/lib/services/users";
+import { getCurrentUser, logout } from "@/lib/auth";
 import { toast } from "sonner";
+import { useRouter } from "@/i18n/routing";
 import { FilterBar, FilterConfig } from "@/components/ui/filter-bar";
 import {
   DropdownMenu,
@@ -49,6 +50,7 @@ export default function UsersPage() {
   const t = useTranslations('users');
   const tCommon = useTranslations('common');
   const locale = useLocale();
+  const router = useRouter();
   
   // Get current user for permission checks
   const currentUser = getCurrentUser();
@@ -83,6 +85,12 @@ export default function UsersPage() {
     confirmPassword: '',
     role: '',
     status: 'active' as 'active' | 'inactive',
+  });
+  const [userToChangePassword, setUserToChangePassword] = useState<User | null>(null);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordFormData, setPasswordFormData] = useState({
+    password: '',
+    confirmPassword: '',
   });
 
   // Get display name based on locale
@@ -369,6 +377,82 @@ export default function UsersPage() {
     }
   };
 
+  const handleOpenChangePasswordDialog = (user: User) => {
+    setUserToChangePassword(user);
+    setPasswordFormData({
+      password: '',
+      confirmPassword: '',
+    });
+  };
+
+  const handleChangePassword = async () => {
+    if (!userToChangePassword) return;
+
+    // Validation
+    if (!passwordFormData.password) {
+      toast.error(t('passwordRequired'));
+      return;
+    }
+
+    if (passwordFormData.password !== passwordFormData.confirmPassword) {
+      toast.error(t('passwordMismatch'));
+      return;
+    }
+
+    if (passwordFormData.password.length < 6) {
+      toast.error(t('passwordTooShort'));
+      return;
+    }
+
+    const isOwnPassword = userToChangePassword.id === currentUser?.id;
+
+    setIsChangingPassword(true);
+    try {
+      await changeUserPassword(
+        userToChangePassword.id,
+        passwordFormData.password,
+        passwordFormData.confirmPassword
+      );
+
+      toast.success(t('passwordChangeSuccess'));
+      setUserToChangePassword(null);
+      setPasswordFormData({ password: '', confirmPassword: '' });
+
+      // If changing own password, logout immediately
+      if (isOwnPassword) {
+        toast.info(t('ownPasswordChanged'), {
+          description: t('pleaseLoginAgain'),
+        });
+        
+        // Small delay to show the toast before logout
+        setTimeout(() => {
+          logout();
+          router.push('/login');
+        }, 1500);
+      } else {
+        // For other users, they will be logged out on their next request
+        toast.info(t('userWillBeLoggedOut', { name: getDisplayName(userToChangePassword) }));
+      }
+    } catch (error: any) {
+      console.error('Error changing password:', error);
+      
+      // Handle validation errors
+      if (error.errors) {
+        const errorMessages = Object.values(error.errors).flat().join(', ');
+        toast.error(t('passwordChangeFailed'), {
+          description: errorMessages,
+        });
+      } else {
+        const errorMessage = error?.message || error?.error || t('passwordChangeFailed');
+        toast.error(t('passwordChangeFailed'), {
+          description: errorMessage,
+        });
+      }
+      setIsChangingPassword(false);
+    }
+    // Note: Don't set isChangingPassword to false if it's own password (logout will happen)
+  };
+
   const getRoleBadge = (roles: string[]) => {
     if (!roles || roles.length === 0) {
       return <Badge variant="outline">{t('noRole')}</Badge>;
@@ -460,7 +544,14 @@ export default function UsersPage() {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <CardTitle className="text-base">{displayName}</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-base">{displayName}</CardTitle>
+                      {currentUser?.id === user.id && (
+                        <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300">
+                          {t('me')}
+                        </Badge>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
                       {getRoleBadge(user.roles)}
                       {getStatusBadge(user.status)}
@@ -477,6 +568,11 @@ export default function UsersPage() {
                     {isSuperAdmin() && (
                       <DropdownMenuItem onClick={() => handleOpenEditDialog(user)}>
                         {tCommon('edit')}
+                      </DropdownMenuItem>
+                    )}
+                    {isSuperAdmin() && (
+                      <DropdownMenuItem onClick={() => handleOpenChangePasswordDialog(user)}>
+                        {t('changePassword')}
                       </DropdownMenuItem>
                     )}
                     {isSuperAdmin() && (
@@ -858,6 +954,71 @@ export default function UsersPage() {
                 </>
               ) : (
                 t('addUser')
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Password Dialog */}
+      <Dialog open={!!userToChangePassword} onOpenChange={() => setUserToChangePassword(null)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{t('changePassword')}</DialogTitle>
+            <DialogDescription>
+              {userToChangePassword && t('changePasswordDesc', { name: getDisplayName(userToChangePassword) })}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {/* New Password */}
+            <div className="grid gap-2">
+              <Label htmlFor="new_password">{t('newPassword')} *</Label>
+              <Input
+                id="new_password"
+                type="password"
+                value={passwordFormData.password}
+                onChange={(e) => setPasswordFormData(prev => ({ ...prev, password: e.target.value }))}
+                disabled={isChangingPassword}
+                placeholder={t('enterNewPassword')}
+                required
+              />
+            </div>
+
+            {/* Confirm Password */}
+            <div className="grid gap-2">
+              <Label htmlFor="confirm_new_password">{t('confirmPassword')} *</Label>
+              <Input
+                id="confirm_new_password"
+                type="password"
+                value={passwordFormData.confirmPassword}
+                onChange={(e) => setPasswordFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                disabled={isChangingPassword}
+                placeholder={t('confirmNewPassword')}
+                required
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setUserToChangePassword(null)}
+              disabled={isChangingPassword}
+            >
+              {tCommon('cancel')}
+            </Button>
+            <Button
+              type="button"
+              onClick={handleChangePassword}
+              disabled={isChangingPassword}
+            >
+              {isChangingPassword ? (
+                <>
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
+                  {t('changingPassword')}
+                </>
+              ) : (
+                t('changePassword')
               )}
             </Button>
           </DialogFooter>

@@ -302,7 +302,21 @@
     "createFailed": "فشل إنشاء المستخدم",
     "creating": "جاري الإنشاء...",
     "passwordMismatch": "كلمات المرور غير متطابقة",
-    "fillAllFields": "الرجاء ملء جميع الحقول المطلوبة"
+    "fillAllFields": "الرجاء ملء جميع الحقول المطلوبة",
+    "changePassword": "تغيير كلمة المرور",
+    "changePasswordDesc": "تغيير كلمة المرور لـ {name}",
+    "newPassword": "كلمة المرور الجديدة",
+    "enterNewPassword": "أدخل كلمة المرور الجديدة",
+    "confirmNewPassword": "تأكيد كلمة المرور الجديدة",
+    "passwordRequired": "كلمة المرور مطلوبة",
+    "passwordTooShort": "يجب أن تكون كلمة المرور 6 أحرف على الأقل",
+    "passwordChangeSuccess": "تم تغيير كلمة المرور بنجاح",
+    "passwordChangeFailed": "فشل تغيير كلمة المرور",
+    "changingPassword": "جاري التغيير...",
+    "me": "أنت",
+    "ownPasswordChanged": "تم تغيير كلمة المرور الخاصة بك",
+    "pleaseLoginAgain": "يرجى تسجيل الدخول مرة أخرى بكلمة المرور الجديدة",
+    "userWillBeLoggedOut": "سيتم تسجيل خروج {name} عند طلبهم التالي"
   },
   "common": {
     "save": "حفظ",
