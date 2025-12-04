@@ -1,11 +1,23 @@
 "use client";
 
+import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Settings } from "lucide-react";
+import { useRouter } from "@/i18n/routing";
+import { getCurrentUser } from "@/lib/auth";
 
 export default function SettingsPage() {
   const t = useTranslations('settingsPage');
+  const router = useRouter();
+
+  // Redirect users without roles to profile page
+  useEffect(() => {
+    const currentUser = getCurrentUser();
+    if (!currentUser || !currentUser.roles || currentUser.roles.length === 0) {
+      router.push('/dashboard/profile');
+    }
+  }, [router]);
 
   return (
     <div className="space-y-6">

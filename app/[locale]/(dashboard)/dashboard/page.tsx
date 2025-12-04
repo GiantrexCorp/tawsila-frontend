@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -14,13 +15,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { orders, productRequests, agents, products } from "@/lib/mock-data";
-import { Link } from "@/i18n/routing";
+import { Link, useRouter } from "@/i18n/routing";
+import { getCurrentUser } from "@/lib/auth";
 
 export default function DashboardPage() {
   const t = useTranslations('dashboard');
   const tOrders = useTranslations('orders');
   const tRequests = useTranslations('requests');
   const tCommon = useTranslations('common');
+  const router = useRouter();
+
+  // Redirect users without roles to profile page
+  useEffect(() => {
+    const currentUser = getCurrentUser();
+    if (!currentUser || !currentUser.roles || currentUser.roles.length === 0) {
+      router.push('/dashboard/profile');
+    }
+  }, [router]);
 
   // Calculate real metrics
   const pendingRequests = productRequests.filter(r => r.status === 'pending').length;
