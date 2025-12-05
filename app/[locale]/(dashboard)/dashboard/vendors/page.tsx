@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { fetchVendors, type Vendor } from "@/lib/services/vendors";
 
-export default function OrganizationsPage() {
+export default function VendorsPage() {
   const t = useTranslations('organizations');
   const tCommon = useTranslations('common');
   const locale = useLocale();
@@ -71,7 +71,7 @@ export default function OrganizationsPage() {
             {t('subtitle')}
           </p>
         </div>
-        <Button className="w-full sm:w-auto" onClick={() => router.push('/dashboard/organizations/new')}>
+        <Button className="w-full sm:w-auto" onClick={() => router.push('/dashboard/vendors/new')}>
           <Plus className="h-4 w-4 mr-2" />
           {t('addOrganization')}
         </Button>
@@ -244,3 +244,4 @@ export default function OrganizationsPage() {
     </div>
   );
 }
+
