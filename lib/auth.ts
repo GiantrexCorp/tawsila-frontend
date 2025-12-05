@@ -65,6 +65,10 @@ export async function login(credentials: LoginCredentials): Promise<LoginRespons
     // Store temporary token for set-password endpoint
     if (response.meta?.access_token) {
       setToken(response.meta.access_token);
+      // Set flag to indicate this is a first-time login requiring password change
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('requires_password_change', 'true');
+      }
     }
     return {
       message: response.message,
@@ -102,9 +106,29 @@ export async function setPassword(data: SetPasswordRequest): Promise<SetPassword
   if (response.meta?.access_token && response.data) {
     setToken(response.meta.access_token);
     setUser(response.data);
+    // Clear the password change flag
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('requires_password_change');
+    }
   }
 
   return response;
+}
+
+/**
+ * Check if user needs to change password (first-time login)
+ */
+export function requiresPasswordChange(): boolean {
+  if (typeof window === 'undefined') return false;
+  return localStorage.getItem('requires_password_change') === 'true';
+}
+
+/**
+ * Clear password change requirement flag
+ */
+export function clearPasswordChangeFlag(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('requires_password_change');
 }
 
 /**
@@ -120,6 +144,7 @@ export async function logout(): Promise<void> {
   } finally {
     removeToken();
     removeUser();
+    clearPasswordChangeFlag();
   }
 }
 

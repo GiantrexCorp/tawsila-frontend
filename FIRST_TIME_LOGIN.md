@@ -230,3 +230,5 @@ Full support for English and Arabic with proper RTL layout for Arabic.
 4. **Password History**: Prevent reuse of recent passwords
 5. **Custom Password Policy**: Admin-configurable password requirements
 
+
+

@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { TawsilaLogo } from "@/components/branding/tawsila-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { setPassword, getToken } from "@/lib/auth";
+import { setPassword, getToken, requiresPasswordChange } from "@/lib/auth";
 import { toast } from "sonner";
 
 export default function SetPasswordPage() {
@@ -27,12 +27,21 @@ export default function SetPasswordPage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Check if user has a token (required for set-password)
+  // Check if user is allowed to access this page (first-time login only)
   useEffect(() => {
     const token = getToken();
-    if (!token) {
-      toast.error(t('noTokenError'));
-      router.push('/login');
+    const needsPasswordChange = requiresPasswordChange();
+    
+    // User must have a token AND the password change flag set
+    if (!token || !needsPasswordChange) {
+      // If user has token but no password change flag, they're already logged in
+      if (token && !needsPasswordChange) {
+        router.push('/dashboard');
+      } else {
+        // No token at all, go to login
+        toast.error(t('noTokenError'));
+        router.push('/login');
+      }
     } else {
       setHasToken(true);
     }
