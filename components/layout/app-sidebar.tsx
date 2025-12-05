@@ -31,7 +31,7 @@ import {
   SidebarGroupLabel,
   SidebarGroupContent,
 } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -77,9 +77,12 @@ export function AppSidebar() {
       await logout();
       toast.success(t('logoutSuccess'));
       router.push('/login');
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = (error && typeof error === 'object' && 'message' in error) 
+        ? String(error.message) 
+        : 'Logout failed';
       toast.error(t('logoutFailed'), {
-        description: error.message,
+        description: errorMessage,
       });
     }
   };
