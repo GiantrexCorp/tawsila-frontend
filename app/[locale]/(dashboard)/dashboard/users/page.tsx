@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useTranslations, useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -527,7 +526,6 @@ export default function UsersPage() {
     
     const roleName = roles[0];
     const variants: Record<string, "default" | "secondary" | "outline"> = {
-      "super-admin": "default",
       admin: "default",
       manager: "secondary",
       viewer: "outline",
@@ -541,15 +539,8 @@ export default function UsersPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    if (status === 'active') {
-      return (
-        <Badge className="bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800">
-          {t(status)}
-        </Badge>
-      );
-    }
     return (
-      <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800">
+      <Badge variant={status === 'active' ? 'outline' : 'secondary'}>
         {t(status)}
       </Badge>
     );
@@ -581,34 +572,18 @@ export default function UsersPage() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
           <p className="text-sm md:text-base text-muted-foreground mt-2">
-            {t('totalUsers', { count: total })}
+            {t('subtitle')}
           </p>
         </div>
-        {isSuperAdmin() && (
-          <Button className="w-full sm:w-auto" onClick={handleOpenAddDialog}>
-            <UserPlus className="h-4 w-4 me-2" />
-            {t('addUser')}
-          </Button>
-        )}
+        <Button className="w-full sm:w-auto">
+          <UserPlus className="h-4 w-4 mr-2" />
+          {t('addUser')}
+        </Button>
       </div>
-
-      {/* Filters */}
-      <FilterBar
-        filters={filters}
-        filterConfigs={filterConfigs}
-        onFilterChange={handleFilterChange}
-        onClearFilters={handleClearFilters}
-        onClearAllFilters={handleClearAllFilters}
-        onApplyFilters={handleApplyFilters}
-        onRemoveFilter={handleRemoveFilter}
-        defaultFilters={[locale === 'ar' ? 'name_ar' : 'name_en']}
-      />
 
       {/* Users Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {users.map((user) => {
-          const displayName = getDisplayName(user);
-          return (
+        {users.map((user) => (
           <Card key={user.id}>
             <CardHeader className="pb-4">
               <div className="flex items-start justify-between">
@@ -696,60 +671,40 @@ export default function UsersPage() {
               </div>
             </div>
           </Card>
-          );
-        })}
+        ))}
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            {t('page')} {currentPage} {t('of')} {totalPages}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="h-4 w-4 me-1" />
-              {t('previous')}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages}
-            >
-              {t('next')}
-              <ChevronRight className="h-4 w-4 ms-1" />
-            </Button>
-          </div>
-        </div>
-      )}
-
       {/* Summary Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">{t('totalUsersLabel')}</p>
-            <p className="text-2xl font-bold">{total}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">{t('activeUsers')}</p>
-            <p className="text-2xl font-bold">
-              {users.filter(u => u.status === 'active').length}
+            <p className="text-xs md:text-sm text-muted-foreground">{t('admin')}</p>
+            <p className="text-xl md:text-2xl font-bold">
+              {users.filter(u => u.role === 'admin').length}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">{t('inactiveUsers')}</p>
-            <p className="text-2xl font-bold">
-              {users.filter(u => u.status === 'inactive').length}
+            <p className="text-xs md:text-sm text-muted-foreground">{t('manager')}</p>
+            <p className="text-xl md:text-2xl font-bold">
+              {users.filter(u => u.role === 'manager').length}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs md:text-sm text-muted-foreground">{t('viewer')}</p>
+            <p className="text-xl md:text-2xl font-bold">
+              {users.filter(u => u.role === 'viewer').length}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs md:text-sm text-muted-foreground">{t('active')}</p>
+            <p className="text-xl md:text-2xl font-bold">
+              {users.filter(u => u.status === 'active').length}
             </p>
           </CardContent>
         </Card>
@@ -1260,4 +1215,3 @@ export default function UsersPage() {
     </div>
   );
 }
-

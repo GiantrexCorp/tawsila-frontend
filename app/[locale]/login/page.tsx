@@ -68,17 +68,24 @@ export default function LoginPage() {
       }
       
       // Handle validation errors
-      if (error.errors) {
-        const formattedErrors: Record<string, string> = {};
-        Object.entries(error.errors).forEach(([key, messages]) => {
-          formattedErrors[key] = (messages as string[])[0];
-        });
-        setErrors(formattedErrors);
+      if (error && typeof error === 'object' && 'errors' in error) {
+        const errorObj = error as { errors?: Record<string, string[]> };
+        if (errorObj.errors) {
+          const formattedErrors: Record<string, string> = {};
+          Object.entries(errorObj.errors).forEach(([key, messages]) => {
+            formattedErrors[key] = messages[0];
+          });
+          setErrors(formattedErrors);
+        }
       }
       
       // Show error toast
+      const errorMessage = (error && typeof error === 'object' && 'message' in error) 
+        ? String(error.message) 
+        : t('checkCredentials');
+      
       toast.error(t('loginFailed'), {
-        description: error.message || t('checkCredentials'),
+        description: errorMessage,
       });
     } finally {
       setIsLoading(false);

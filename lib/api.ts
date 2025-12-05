@@ -7,7 +7,14 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.
 export interface ApiResponse<T> {
   message: string;
   data: T;
-  meta?: any;
+  meta?: {
+    access_token?: string;
+    current_page?: number;
+    last_page?: number;
+    per_page?: number;
+    total?: number;
+    [key: string]: unknown;
+  };
 }
 
 export interface ApiError {
@@ -104,9 +111,9 @@ export async function apiRequest<T>(
     }
 
     return data;
-  } catch (error: any) {
+  } catch (error) {
     // Re-throw API errors
-    if (error.message) {
+    if (error && typeof error === 'object' && 'message' in error) {
       throw error;
     }
     // Handle network errors
