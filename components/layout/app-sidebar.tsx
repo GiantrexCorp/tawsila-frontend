@@ -16,8 +16,10 @@ import {
   Truck,
   Users,
   LogOut,
+  User,
 } from "lucide-react";
 import { getCurrentUser, logout } from "@/lib/auth";
+import { fetchRoles, Role } from "@/lib/services/roles";
 import { toast } from "sonner";
 import {
   Sidebar,
@@ -53,6 +55,7 @@ export function AppSidebar() {
     name_ar: string;
     roles: string[];
   } | null>(null);
+  const [availableRoles, setAvailableRoles] = React.useState<Role[]>([]);
 
   React.useEffect(() => {
     const currentUser = getCurrentUser();
@@ -64,7 +67,17 @@ export function AppSidebar() {
         roles: currentUser.roles,
       });
     }
+    loadRoles();
   }, []);
+
+  const loadRoles = async () => {
+    try {
+      const response = await fetchRoles();
+      setAvailableRoles(response.data);
+    } catch (error) {
+      console.error("Failed to load roles:", error);
+    }
+  };
 
   // Get the appropriate name based on locale
   const getDisplayName = () => {
@@ -94,11 +107,32 @@ export function AppSidebar() {
 
   const getRoleDisplay = (roles: string[]) => {
     if (!roles || roles.length === 0) return t('user');
-    const role = roles[0];
-    // Format role for display
-    return role.split('-').map(word => 
+    const roleName = roles[0];
+    
+    // Find role in available roles to get slug
+    const roleData = availableRoles.find(r => r.name === roleName);
+    
+    // Use slug based on locale, fallback to formatted role name
+    if (roleData) {
+      const slug = locale === 'ar' ? roleData.slug_ar : roleData.slug_en;
+      if (slug) {
+        return slug;
+      }
+    }
+    
+    // Fallback: format role name
+    return roleName.split('-').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
+  };
+
+  // Check if user has any of the required roles
+  const hasPermission = (allowedRoles?: string[]) => {
+    if (!allowedRoles || allowedRoles.length === 0) return true; // No restriction
+    if (!user || !user.roles || user.roles.length === 0) return false;
+    
+    // Check if user has any of the allowed roles
+    return user.roles.some(role => allowedRoles.includes(role));
   };
 
   const navigation = [
@@ -109,6 +143,7 @@ export function AppSidebar() {
           title: t('dashboard'),
           href: "/dashboard",
           icon: LayoutDashboard,
+          allowedRoles: ['super-admin', 'admin', 'manager', 'viewer', 'inventory-manager', 'order-preparer'],
         },
       ],
     },
@@ -119,26 +154,31 @@ export function AppSidebar() {
           title: t('inventory'),
           href: "/dashboard/inventory",
           icon: Package,
+          allowedRoles: ['super-admin', 'admin', 'manager', 'inventory-manager'],
         },
         {
           title: t('requests'),
           href: "/dashboard/requests",
           icon: FileText,
+          allowedRoles: ['super-admin', 'admin', 'manager', 'inventory-manager', 'order-preparer'],
         },
         {
           title: t('orders'),
           href: "/dashboard/orders",
           icon: ShoppingCart,
+          allowedRoles: ['super-admin', 'admin', 'manager', 'order-preparer', 'shipping-agent', 'inventory-manager'],
         },
         {
           title: t('agents'),
           href: "/dashboard/agents",
           icon: Truck,
+          allowedRoles: ['super-admin', 'admin', 'manager', 'inventory-manager'],
         },
         {
-          title: t('organizations'),
+          title: t('vendors'),
           href: "/dashboard/organizations",
           icon: Building2,
+          allowedRoles: ['super-admin', 'admin', 'manager', 'inventory-manager'],
         },
       ],
     },
@@ -149,6 +189,7 @@ export function AppSidebar() {
           title: t('analytics'),
           href: "/dashboard/analytics",
           icon: BarChart3,
+          allowedRoles: ['super-admin', 'admin', 'manager', 'inventory-manager'],
         },
       ],
     },
@@ -159,49 +200,69 @@ export function AppSidebar() {
           title: t('users'),
           href: "/dashboard/users",
           icon: Users,
+          allowedRoles: ['super-admin', 'admin', 'inventory-manager'],
         },
         {
           title: t('settings'),
           href: "/dashboard/settings",
           icon: Settings,
+          allowedRoles: ['super-admin', 'admin', 'manager', 'viewer', 'inventory-manager'],
         },
       ],
     },
   ];
 
+  // Determine home page based on user role
+  const getHomePage = () => {
+    if (user?.roles?.includes('shipping-agent')) {
+      return '/dashboard/orders';
+    }
+    return '/dashboard';
+  };
+
   return (
     <Sidebar>
       <SidebarHeader className="border-b border-sidebar-border p-4">
-        <TawsilaLogo />
+        <Link href={getHomePage()}>
+          <TawsilaLogo />
+        </Link>
       </SidebarHeader>
 
       <SidebarContent>
-        {navigation.map((group) => (
-          <SidebarGroup key={group.title}>
-            <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {group.items.map((item) => {
-                  const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-                  return (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={isActive}
-                        tooltip={item.title}
-                      >
-                        <Link href={item.href} className="flex items-center gap-2">
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
+        {navigation.map((group) => {
+          // Filter items based on user permissions
+          const visibleItems = group.items.filter(item => hasPermission(item.allowedRoles));
+          
+          // Don't render group if no items are visible
+          if (visibleItems.length === 0) return null;
+          
+          return (
+            <SidebarGroup key={group.title}>
+              <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {visibleItems.map((item) => {
+                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive}
+                          tooltip={item.title}
+                        >
+                          <Link href={item.href} className="flex items-center gap-2">
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          );
+        })}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
@@ -229,12 +290,19 @@ export function AppSidebar() {
             <DropdownMenuLabel>{t('myAccount')}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/dashboard/settings">
-                <Settings className="me-2 h-4 w-4" />
-                {t('settings')}
+              <Link href="/dashboard/profile">
+                <User className="me-2 h-4 w-4" />
+                {t('profile')}
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>{t('profile')}</DropdownMenuItem>
+            {hasPermission(['super-admin', 'admin', 'manager', 'viewer']) && (
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/settings">
+                  <Settings className="me-2 h-4 w-4" />
+                  {t('settings')}
+                </Link>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-red-600" onClick={handleLogout}>
               <LogOut className="me-2 h-4 w-4" />

@@ -49,10 +49,23 @@ export default function LoginPage() {
         description: t('welcomeBack', { name: user.name }),
       });
 
-      // Redirect to dashboard
-      router.push('/dashboard');
-    } catch (error) {
+      // Redirect based on role
+      if (user.roles?.includes('shipping-agent')) {
+        router.push('/dashboard/orders');
+      } else {
+        router.push('/dashboard');
+      }
+    } catch (error: unknown) {
       console.error("Login error:", error);
+      
+      // Handle inactive account error
+      if (error && typeof error === 'object' && 'message' in error && (error as {message: string}).message === 'ACCOUNT_INACTIVE') {
+        toast.error(t('accountInactive'), {
+          description: t('accountInactiveDesc'),
+          duration: 5000,
+        });
+        return;
+      }
       
       // Handle validation errors
       if (error && typeof error === 'object' && 'errors' in error) {
@@ -73,6 +86,222 @@ export default function LoginPage() {
       
       toast.error(t('loginFailed'), {
         description: errorMessage,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSuperAdminLogin = async () => {
+    setFormData({
+      email: "moay@gmail.com",
+      password: "password",
+    });
+    
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      const user = await login({
+        email: "moay@gmail.com",
+        password: "password",
+      });
+      
+      toast.success(t('loginSuccess'), {
+        description: t('welcomeBack', { name: user.name }),
+      });
+
+      // Redirect based on role
+      if (user.roles?.includes('shipping-agent')) {
+        router.push('/dashboard/orders');
+      } else {
+        router.push('/dashboard');
+      }
+    } catch (error: unknown) {
+      console.error("Login error:", error);
+      
+      // Handle inactive account error
+      if (error && typeof error === 'object' && 'message' in error && (error as {message: string}).message === 'ACCOUNT_INACTIVE') {
+        toast.error(t('accountInactive'), {
+          description: t('accountInactiveDesc'),
+          duration: 5000,
+        });
+        return;
+      }
+      
+      if (error && typeof error === 'object' && 'errors' in error) {
+        const formattedErrors: Record<string, string> = {};
+        const errorObj = error as { errors: Record<string, string[]> };
+        Object.entries(errorObj.errors).forEach(([key, messages]) => {
+          formattedErrors[key] = messages[0];
+        });
+        setErrors(formattedErrors);
+      }
+      
+      toast.error(t('loginFailed'), {
+        description: (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || t('checkCredentials'),
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleInventoryManagerLogin = async () => {
+    setFormData({
+      email: "ahmedeid@gmail.com",
+      password: "87654321",
+    });
+    
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      const user = await login({
+        email: "ahmedeid@gmail.com",
+        password: "87654321",
+      });
+      
+      toast.success(t('loginSuccess'), {
+        description: t('welcomeBack', { name: user.name }),
+      });
+
+      // Redirect based on role
+      if (user.roles?.includes('shipping-agent')) {
+        router.push('/dashboard/orders');
+      } else {
+        router.push('/dashboard');
+      }
+    } catch (error: unknown) {
+      console.error("Login error:", error);
+      
+      // Handle inactive account error
+      if (error && typeof error === 'object' && 'message' in error && (error as {message: string}).message === 'ACCOUNT_INACTIVE') {
+        toast.error(t('accountInactive'), {
+          description: t('accountInactiveDesc'),
+          duration: 5000,
+        });
+        return;
+      }
+      
+      if (error && typeof error === 'object' && 'errors' in error) {
+        const formattedErrors: Record<string, string> = {};
+        const errorObj = error as { errors: Record<string, string[]> };
+        Object.entries(errorObj.errors).forEach(([key, messages]) => {
+          formattedErrors[key] = messages[0];
+        });
+        setErrors(formattedErrors);
+      }
+      
+      toast.error(t('loginFailed'), {
+        description: (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || t('checkCredentials'),
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleShippingAgentLogin = async () => {
+    setFormData({
+      email: "uncleahmed@gmail.com",
+      password: "password",
+    });
+    
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      const user = await login({
+        email: "uncleahmed@gmail.com",
+        password: "password",
+      });
+      
+      toast.success(t('loginSuccess'), {
+        description: t('welcomeBack', { name: user.name }),
+      });
+
+      // Redirect based on role
+      if (user.roles?.includes('shipping-agent')) {
+        router.push('/dashboard/orders');
+      } else {
+        router.push('/dashboard');
+      }
+    } catch (error: unknown) {
+      console.error("Login error:", error);
+      
+      // Handle inactive account error
+      if (error && typeof error === 'object' && 'message' in error && (error as {message: string}).message === 'ACCOUNT_INACTIVE') {
+        toast.error(t('accountInactive'), {
+          description: t('accountInactiveDesc'),
+          duration: 5000,
+        });
+        return;
+      }
+      
+      if (error && typeof error === 'object' && 'errors' in error) {
+        const formattedErrors: Record<string, string> = {};
+        const errorObj = error as { errors: Record<string, string[]> };
+        Object.entries(errorObj.errors).forEach(([key, messages]) => {
+          formattedErrors[key] = messages[0];
+        });
+        setErrors(formattedErrors);
+      }
+      
+      toast.error(t('loginFailed'), {
+        description: (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || t('checkCredentials'),
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOrderPreparerLogin = async () => {
+    setFormData({
+      email: "metwaly@gmail.com",
+      password: "password",
+    });
+    
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      const user = await login({
+        email: "metwaly@gmail.com",
+        password: "password",
+      });
+      
+      toast.success(t('loginSuccess'), {
+        description: t('welcomeBack', { name: user.name }),
+      });
+
+      // Redirect based on role
+      if (user.roles?.includes('shipping-agent')) {
+        router.push('/dashboard/orders');
+      } else {
+        router.push('/dashboard');
+      }
+    } catch (error: unknown) {
+      console.error("Login error:", error);
+      
+      // Handle inactive account error
+      if (error && typeof error === 'object' && 'message' in error && (error as {message: string}).message === 'ACCOUNT_INACTIVE') {
+        toast.error(t('accountInactive'), {
+          description: t('accountInactiveDesc'),
+          duration: 5000,
+        });
+        return;
+      }
+      
+      if (error && typeof error === 'object' && 'errors' in error) {
+        const formattedErrors: Record<string, string> = {};
+        const errorObj = error as { errors: Record<string, string[]> };
+        Object.entries(errorObj.errors).forEach(([key, messages]) => {
+          formattedErrors[key] = messages[0];
+        });
+        setErrors(formattedErrors);
+      }
+      
+      toast.error(t('loginFailed'), {
+        description: (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || t('checkCredentials'),
       });
     } finally {
       setIsLoading(false);
@@ -156,6 +385,46 @@ export default function LoginPage() {
                 )}
               </Button>
             </form>
+            
+            {/* Test Login Buttons */}
+            <div className="mt-4 pt-4 border-t space-y-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full bg-purple-50 hover:bg-purple-100 dark:bg-purple-950 dark:hover:bg-purple-900 border-purple-300 dark:border-purple-800 text-purple-900 dark:text-purple-100"
+                onClick={handleSuperAdminLogin}
+                disabled={isLoading}
+              >
+                👑 Super Admin Login
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full bg-blue-50 hover:bg-blue-100 dark:bg-blue-950 dark:hover:bg-blue-900 border-blue-300 dark:border-blue-800 text-blue-900 dark:text-blue-100"
+                onClick={handleInventoryManagerLogin}
+                disabled={isLoading}
+              >
+                📦 Inventory Manager Login
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full bg-green-50 hover:bg-green-100 dark:bg-green-950 dark:hover:bg-green-900 border-green-300 dark:border-green-800 text-green-900 dark:text-green-100"
+                onClick={handleShippingAgentLogin}
+                disabled={isLoading}
+              >
+                🚚 Shipping Agent Login
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full bg-orange-50 hover:bg-orange-100 dark:bg-orange-950 dark:hover:bg-orange-900 border-orange-300 dark:border-orange-800 text-orange-900 dark:text-orange-100"
+                onClick={handleOrderPreparerLogin}
+                disabled={isLoading}
+              >
+                📋 Order Preparer Login
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

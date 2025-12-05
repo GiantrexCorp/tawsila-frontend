@@ -9,12 +9,14 @@ export interface User {
   name: string;
   name_en: string;
   name_ar: string;
+  email: string;
   mobile: string;
-  status: string;
-  last_active: string;
+  status: 'active' | 'inactive';
+  last_active: string | null;
   created_at: string;
   updated_at: string;
   roles: string[];
+  permissions?: string[];
 }
 
 export interface LoginCredentials {
@@ -39,6 +41,12 @@ export async function login(credentials: LoginCredentials): Promise<User> {
     method: 'POST',
     body: JSON.stringify(credentials),
   });
+
+  // Check if user is inactive BEFORE storing any data
+  if (response.data.status === 'inactive') {
+    // Don't store token or user data for inactive users
+    throw new Error('ACCOUNT_INACTIVE');
+  }
 
   // Store the token from meta
   if (response.meta?.access_token) {

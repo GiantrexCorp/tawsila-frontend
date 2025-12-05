@@ -24,6 +24,24 @@ export interface ApiError {
 }
 
 /**
+ * Get current locale from URL
+ */
+function getCurrentLocale(): string {
+  if (typeof window === 'undefined') return 'en';
+  
+  // Extract locale from pathname (e.g., /en/dashboard -> en, /ar/users -> ar)
+  const pathSegments = window.location.pathname.split('/').filter(Boolean);
+  const locale = pathSegments[0];
+  
+  // Validate locale (should be 'en' or 'ar')
+  if (locale === 'ar' || locale === 'en') {
+    return locale;
+  }
+  
+  return 'en'; // Default to English
+}
+
+/**
  * Makes an API request with proper error handling
  */
 export async function apiRequest<T>(
@@ -32,10 +50,19 @@ export async function apiRequest<T>(
 ): Promise<ApiResponse<T>> {
   const url = `${API_BASE_URL}${endpoint}`;
   
+  // Check if body is FormData - if so, don't set Content-Type (browser will set it with boundary)
+  const isFormData = options.body instanceof FormData;
+  
   const defaultHeaders: HeadersInit = {
-    'Content-Type': 'application/json',
     'Accept': 'application/json',
+    'Accept-Language': getCurrentLocale(), // Add locale to all requests
+    'X-Locale': getCurrentLocale(), // Also send as custom header for backend flexibility
   };
+  
+  // Only set Content-Type for JSON requests
+  if (!isFormData) {
+    defaultHeaders['Content-Type'] = 'application/json';
+  }
 
   // Add authorization header if token exists
   const token = getToken();
@@ -66,9 +93,20 @@ export async function apiRequest<T>(
         } as ApiError;
       }
 
+      // Handle 403 Forbidden - user doesn't have permission
+      if (response.status === 403) {
+        handleForbidden();
+        throw {
+          message: data.message || 'You do not have permission to access this resource.',
+          errors: data.errors,
+          status: 403,
+        } as ApiError;
+      }
+
       throw {
         message: data.message || 'An error occurred',
         errors: data.errors,
+        status: response.status,
       } as ApiError;
     }
 
@@ -113,6 +151,24 @@ function handleUnauthorized(): void {
 }
 
 /**
+ * Handle forbidden access (403)
+ * This happens when user doesn't have permission for the resource
+ */
+function handleForbidden(): void {
+  if (typeof window === 'undefined') return;
+  
+  // Only redirect if not already on 403 page
+  if (!window.location.pathname.includes('/403')) {
+    // Extract current locale from pathname
+    const pathSegments = window.location.pathname.split('/').filter(Boolean);
+    const locale = pathSegments[0] || 'en';
+    
+    // Redirect to 403 page with proper locale
+    window.location.href = `/${locale}/403`;
+  }
+}
+
+/**
  * Get stored authentication token
  */
 export function getToken(): string | null {
@@ -126,6 +182,12 @@ export function getToken(): string | null {
 export function setToken(token: string): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem('access_token', token);
+  
+  // Also store in cookie for middleware access
+  // Set cookie with 7 days expiry (adjust as needed)
+  const expiryDate = new Date();
+  expiryDate.setDate(expiryDate.getDate() + 7);
+  document.cookie = `token=${token}; path=/; expires=${expiryDate.toUTCString()}; SameSite=Lax`;
 }
 
 /**
@@ -134,5 +196,8 @@ export function setToken(token: string): void {
 export function removeToken(): void {
   if (typeof window === 'undefined') return;
   localStorage.removeItem('access_token');
+  
+  // Also remove from cookie
+  document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
 }
 
