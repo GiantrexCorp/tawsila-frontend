@@ -100,6 +100,10 @@ export async function fetchUser(id: number): Promise<User> {
     method: 'GET',
   });
 
+  if (!response.data) {
+    throw new Error('User not found');
+  }
+
   return response.data;
 }
 
@@ -112,6 +116,10 @@ export async function createUser(userData: Partial<User>): Promise<User> {
     body: JSON.stringify(userData),
   });
 
+  if (!response.data) {
+    throw new Error('Failed to create user');
+  }
+
   return response.data;
 }
 
@@ -123,6 +131,10 @@ export async function updateUser(id: number, userData: Partial<User>): Promise<U
     method: 'PUT',
     body: JSON.stringify(userData),
   });
+
+  if (!response.data) {
+    throw new Error('Failed to update user');
+  }
 
   return response.data;
 }
@@ -151,6 +163,10 @@ export async function changeOwnPassword(
     }),
   });
 
+  if (!response.data) {
+    throw new Error('Failed to change password');
+  }
+
   return response.data;
 }
 
@@ -170,6 +186,10 @@ export async function changeUserPassword(
       password_confirmation: passwordConfirmation,
     }),
   });
+
+  if (!response.data) {
+    throw new Error('Failed to change user password');
+  }
 
   return response.data;
 }

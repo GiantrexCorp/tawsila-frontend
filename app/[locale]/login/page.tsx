@@ -30,14 +30,14 @@ export default function LoginPage() {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: value }));
     // Clear error for this field when user types (only if it exists)
-    setErrors((prev) => {
-      if (prev[id]) {
+    if (errors[id]) {
+      setErrors((prev) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { [id]: _, ...rest } = prev;
         return rest;
-      }
-      return prev;
-    });
-  }, []);
+      });
+    }
+  }, [errors]);
 
   // Extracted error handling logic
   const handleLoginError = useCallback((error: unknown) => {

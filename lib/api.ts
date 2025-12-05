@@ -9,6 +9,8 @@ export interface ApiResponse<T> {
   data?: T;
   meta?: {
     access_token?: string;
+    token_type?: string;
+    expires_at?: string;
     current_page?: number;
     last_page?: number;
     per_page?: number;
@@ -90,7 +92,7 @@ export async function apiRequest<T>(
     let data;
     try {
       data = responseText ? JSON.parse(responseText) : {};
-    } catch (parseError) {
+    } catch {
       throw {
         message: 'Invalid response from server. Please try again.',
         status: response.status,
