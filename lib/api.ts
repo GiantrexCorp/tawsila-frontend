@@ -6,7 +6,7 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.
 
 export interface ApiResponse<T> {
   message: string;
-  data: T;
+  data?: T;
   meta?: {
     access_token?: string;
     current_page?: number;
@@ -15,6 +15,8 @@ export interface ApiResponse<T> {
     total?: number;
     [key: string]: unknown;
   };
+  status_code?: number;
+  requires_password_change?: boolean;
 }
 
 export interface ApiError {
@@ -80,7 +82,25 @@ export async function apiRequest<T>(
 
   try {
     const response = await fetch(url, config);
-    const data = await response.json();
+    
+    // Get response text first to handle empty responses
+    const responseText = await response.text();
+    
+    // Parse JSON only if we have content
+    let data;
+    try {
+      data = responseText ? JSON.parse(responseText) : {};
+    } catch (parseError) {
+      throw {
+        message: 'Invalid response from server. Please try again.',
+        status: response.status,
+      } as ApiError;
+    }
+
+    // Handle HTTP 203 - password change required
+    if (response.status === 203) {
+      data.status_code = 203;
+    }
 
     if (!response.ok) {
       // Handle 401 Unauthorized - session expired or logged in elsewhere

@@ -10,6 +10,9 @@ export default function middleware(request: NextRequest) {
   // Check if accessing dashboard routes
   const isDashboardRoute = pathname.includes('/dashboard');
   
+  // Check if accessing set-password route (special case - user has temp token)
+  const isSetPasswordRoute = pathname.includes('/set-password');
+  
   // Get token from cookies
   const token = request.cookies.get('token')?.value;
   
@@ -20,9 +23,15 @@ export default function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
   
-  // If accessing login with token, redirect to dashboard
+  // Allow set-password route - token check will happen client-side
+  // This is needed because cookie may not be set immediately after login
+  if (isSetPasswordRoute) {
+    return intlMiddleware(request);
+  }
+  
+  // If accessing login with token, redirect to dashboard (unless coming from set-password flow)
   const isLoginRoute = pathname.includes('/login');
-  if (isLoginRoute && token) {
+  if (isLoginRoute && token && !isSetPasswordRoute) {
     const locale = pathname.split('/')[1] || 'en';
     const dashboardUrl = new URL(`/${locale}/dashboard`, request.url);
     return NextResponse.redirect(dashboardUrl);
