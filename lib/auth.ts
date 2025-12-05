@@ -40,6 +40,12 @@ export async function login(credentials: LoginCredentials): Promise<User> {
     body: JSON.stringify(credentials),
   });
 
+  // Check if user is inactive BEFORE storing any data
+  if (response.data.status === 'inactive') {
+    // Don't store token or user data for inactive users
+    throw new Error('ACCOUNT_INACTIVE');
+  }
+
   // Store the token from meta
   if (response.meta?.access_token) {
     setToken(response.meta.access_token);

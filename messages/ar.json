@@ -269,7 +269,9 @@
     "checkCredentials": "يرجى التحقق من بيانات الاعتماد الخاصة بك والمحاولة مرة أخرى.",
     "allRightsReserved": "جميع الحقوق محفوظة",
     "sessionExpired": "انتهت الجلسة",
-    "sessionExpiredDesc": "تم تسجيل خروجك. قد يكون ذلك بسبب تسجيل الدخول من جهاز آخر."
+    "sessionExpiredDesc": "تم تسجيل خروجك. قد يكون ذلك بسبب تسجيل الدخول من جهاز آخر.",
+    "accountInactive": "الحساب غير نشط",
+    "accountInactiveDesc": "تم إلغاء تفعيل حسابك. يرجى الاتصال بالمسؤول للحصول على المساعدة."
   },
   "trackSearch": {
     "howItWorks": "كيف يعمل",

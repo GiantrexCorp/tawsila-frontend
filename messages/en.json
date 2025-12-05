@@ -269,7 +269,9 @@
     "checkCredentials": "Please check your credentials and try again.",
     "allRightsReserved": "All rights reserved",
     "sessionExpired": "Session Expired",
-    "sessionExpiredDesc": "You have been logged out. This may be because you logged in from another device."
+    "sessionExpiredDesc": "You have been logged out. This may be because you logged in from another device.",
+    "accountInactive": "Account Inactive",
+    "accountInactiveDesc": "Your account has been deactivated. Please contact your administrator for assistance."
   },
   "trackSearch": {
     "howItWorks": "How it Works",

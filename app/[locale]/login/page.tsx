@@ -58,6 +58,15 @@ export default function LoginPage() {
     } catch (error: any) {
       console.error("Login error:", error);
       
+      // Handle inactive account error
+      if (error.message === 'ACCOUNT_INACTIVE') {
+        toast.error(t('accountInactive'), {
+          description: t('accountInactiveDesc'),
+          duration: 5000,
+        });
+        return;
+      }
+      
       // Handle validation errors
       if (error.errors) {
         const formattedErrors: Record<string, string> = {};
@@ -104,6 +113,15 @@ export default function LoginPage() {
     } catch (error: any) {
       console.error("Login error:", error);
       
+      // Handle inactive account error
+      if (error.message === 'ACCOUNT_INACTIVE') {
+        toast.error(t('accountInactive'), {
+          description: t('accountInactiveDesc'),
+          duration: 5000,
+        });
+        return;
+      }
+      
       if (error.errors) {
         const formattedErrors: Record<string, string> = {};
         Object.entries(error.errors).forEach(([key, messages]) => {
@@ -147,6 +165,15 @@ export default function LoginPage() {
       }
     } catch (error: any) {
       console.error("Login error:", error);
+      
+      // Handle inactive account error
+      if (error.message === 'ACCOUNT_INACTIVE') {
+        toast.error(t('accountInactive'), {
+          description: t('accountInactiveDesc'),
+          duration: 5000,
+        });
+        return;
+      }
       
       if (error.errors) {
         const formattedErrors: Record<string, string> = {};
@@ -192,6 +219,15 @@ export default function LoginPage() {
     } catch (error: any) {
       console.error("Login error:", error);
       
+      // Handle inactive account error
+      if (error.message === 'ACCOUNT_INACTIVE') {
+        toast.error(t('accountInactive'), {
+          description: t('accountInactiveDesc'),
+          duration: 5000,
+        });
+        return;
+      }
+      
       if (error.errors) {
         const formattedErrors: Record<string, string> = {};
         Object.entries(error.errors).forEach(([key, messages]) => {
@@ -235,6 +271,15 @@ export default function LoginPage() {
       }
     } catch (error: any) {
       console.error("Login error:", error);
+      
+      // Handle inactive account error
+      if (error.message === 'ACCOUNT_INACTIVE') {
+        toast.error(t('accountInactive'), {
+          description: t('accountInactiveDesc'),
+          duration: 5000,
+        });
+        return;
+      }
       
       if (error.errors) {
         const formattedErrors: Record<string, string> = {};

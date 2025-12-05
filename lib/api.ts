@@ -175,6 +175,12 @@ export function getToken(): string | null {
 export function setToken(token: string): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem('access_token', token);
+  
+  // Also store in cookie for middleware access
+  // Set cookie with 7 days expiry (adjust as needed)
+  const expiryDate = new Date();
+  expiryDate.setDate(expiryDate.getDate() + 7);
+  document.cookie = `token=${token}; path=/; expires=${expiryDate.toUTCString()}; SameSite=Lax`;
 }
 
 /**
@@ -183,5 +189,8 @@ export function setToken(token: string): void {
 export function removeToken(): void {
   if (typeof window === 'undefined') return;
   localStorage.removeItem('access_token');
+  
+  // Also remove from cookie
+  document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
 }
 
