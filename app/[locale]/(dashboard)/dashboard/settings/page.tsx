@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, Plus, Loader2, MoreVertical } from "lucide-react";
-import { useRouter } from "@/i18n/routing";
+import { Plus, Loader2, MoreVertical } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { fetchRoles, createRole, updateRole, deleteRole, Role } from "@/lib/services/roles";
 import { fetchPermissions, Permission } from "@/lib/services/permissions";
@@ -51,7 +50,6 @@ export default function SettingsPage() {
   const t = useTranslations('settings');
   const tCommon = useTranslations('common');
   const locale = useLocale();
-  const router = useRouter();
   
   const currentUser = getCurrentUser();
   const isSuperAdmin = () => currentUser?.roles?.includes('super-admin');
@@ -80,42 +78,42 @@ export default function SettingsPage() {
   const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const loadRoles = useCallback(async () => {
+    setIsLoadingRoles(true);
+    try {
+      const response = await fetchRoles();
+      setRoles(response.data);
+    } catch (error: unknown) {
+      console.error("Failed to load roles:", error);
+      toast.error(t('failedToLoadRoles'), {
+        description: (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || tCommon('tryAgain'),
+      });
+    } finally {
+      setIsLoadingRoles(false);
+    }
+  }, [t, tCommon]);
+
+  const loadPermissions = useCallback(async () => {
+    setIsLoadingPermissions(true);
+    try {
+      const response = await fetchPermissions();
+      setPermissions(response.data);
+    } catch (error: unknown) {
+      console.error("Failed to load permissions:", error);
+      toast.error(t('failedToLoadPermissions'), {
+        description: (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || tCommon('tryAgain'),
+      });
+    } finally {
+      setIsLoadingPermissions(false);
+    }
+  }, [t, tCommon]);
+
   useEffect(() => {
     if (hasPermission) {
       loadRoles();
       loadPermissions();
     }
-  }, [hasPermission]);
-
-  const loadRoles = async () => {
-    setIsLoadingRoles(true);
-    try {
-      const response = await fetchRoles();
-      setRoles(response.data);
-    } catch (error: any) {
-      console.error("Failed to load roles:", error);
-      toast.error(t('failedToLoadRoles'), {
-        description: error.message || tCommon('tryAgain'),
-      });
-    } finally {
-      setIsLoadingRoles(false);
-    }
-  };
-
-  const loadPermissions = async () => {
-    setIsLoadingPermissions(true);
-    try {
-      const response = await fetchPermissions();
-      setPermissions(response.data);
-    } catch (error: any) {
-      console.error("Failed to load permissions:", error);
-      toast.error(t('failedToLoadPermissions'), {
-        description: error.message || tCommon('tryAgain'),
-      });
-    } finally {
-      setIsLoadingPermissions(false);
-    }
-  };
+  }, [hasPermission, loadRoles, loadPermissions]);
 
   const handleOpenAddRoleDialog = () => {
     setEditingRole(null);
@@ -168,17 +166,18 @@ export default function SettingsPage() {
       }
       setShowRoleDialog(false);
       loadRoles();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving role:', error);
-      if (error.errors) {
+      if (error && typeof error === 'object' && 'errors' in error) {
         const backendErrors: Record<string, string> = {};
-        Object.entries(error.errors).forEach(([key, messages]) => {
-          backendErrors[key] = (messages as string[])[0];
+        const errorObj = error as { errors: Record<string, string[]> };
+        Object.entries(errorObj.errors).forEach(([key, messages]) => {
+          backendErrors[key] = messages[0];
         });
         setRoleFormErrors(backendErrors);
       }
       toast.error(editingRole ? t('roleUpdateFailed') : t('roleCreateFailed'), {
-        description: error.message || tCommon('tryAgain'),
+        description: (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || tCommon('tryAgain'),
       });
     } finally {
       setIsSavingRole(false);
@@ -194,10 +193,10 @@ export default function SettingsPage() {
       toast.success(t('roleDeleteSuccess'));
       setRoleToDelete(null);
       loadRoles();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting role:', error);
       toast.error(t('roleDeleteFailed'), {
-        description: error.message || tCommon('tryAgain'),
+        description: (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || tCommon('tryAgain'),
       });
     } finally {
       setIsDeleting(false);

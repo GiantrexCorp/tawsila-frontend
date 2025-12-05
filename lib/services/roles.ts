@@ -18,8 +18,8 @@ export interface Role {
 
 export interface RolesResponse {
   data: Role[];
-  links?: any;
-  meta?: any;
+  links?: unknown;
+  meta?: unknown;
 }
 
 /**

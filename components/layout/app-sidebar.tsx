@@ -17,7 +17,6 @@ import {
   Users,
   LogOut,
   User,
-  Shield,
 } from "lucide-react";
 import { getCurrentUser, logout } from "@/lib/auth";
 import { fetchRoles, Role } from "@/lib/services/roles";

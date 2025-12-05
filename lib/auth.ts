@@ -9,12 +9,14 @@ export interface User {
   name: string;
   name_en: string;
   name_ar: string;
+  email: string;
   mobile: string;
-  status: string;
-  last_active: string;
+  status: 'active' | 'inactive';
+  last_active: string | null;
   created_at: string;
   updated_at: string;
   roles: string[];
+  permissions?: string[];
 }
 
 export interface LoginCredentials {

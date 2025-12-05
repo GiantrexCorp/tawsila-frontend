@@ -55,11 +55,11 @@ export default function LoginPage() {
       } else {
         router.push('/dashboard');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Login error:", error);
       
       // Handle inactive account error
-      if (error.message === 'ACCOUNT_INACTIVE') {
+      if (error && typeof error === 'object' && 'message' in error && (error as {message: string}).message === 'ACCOUNT_INACTIVE') {
         toast.error(t('accountInactive'), {
           description: t('accountInactiveDesc'),
           duration: 5000,
@@ -117,11 +117,11 @@ export default function LoginPage() {
       } else {
         router.push('/dashboard');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Login error:", error);
       
       // Handle inactive account error
-      if (error.message === 'ACCOUNT_INACTIVE') {
+      if (error && typeof error === 'object' && 'message' in error && (error as {message: string}).message === 'ACCOUNT_INACTIVE') {
         toast.error(t('accountInactive'), {
           description: t('accountInactiveDesc'),
           duration: 5000,
@@ -129,16 +129,17 @@ export default function LoginPage() {
         return;
       }
       
-      if (error.errors) {
+      if (error && typeof error === 'object' && 'errors' in error) {
         const formattedErrors: Record<string, string> = {};
-        Object.entries(error.errors).forEach(([key, messages]) => {
-          formattedErrors[key] = (messages as string[])[0];
+        const errorObj = error as { errors: Record<string, string[]> };
+        Object.entries(errorObj.errors).forEach(([key, messages]) => {
+          formattedErrors[key] = messages[0];
         });
         setErrors(formattedErrors);
       }
       
       toast.error(t('loginFailed'), {
-        description: error.message || t('checkCredentials'),
+        description: (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || t('checkCredentials'),
       });
     } finally {
       setIsLoading(false);
@@ -170,11 +171,11 @@ export default function LoginPage() {
       } else {
         router.push('/dashboard');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Login error:", error);
       
       // Handle inactive account error
-      if (error.message === 'ACCOUNT_INACTIVE') {
+      if (error && typeof error === 'object' && 'message' in error && (error as {message: string}).message === 'ACCOUNT_INACTIVE') {
         toast.error(t('accountInactive'), {
           description: t('accountInactiveDesc'),
           duration: 5000,
@@ -182,16 +183,17 @@ export default function LoginPage() {
         return;
       }
       
-      if (error.errors) {
+      if (error && typeof error === 'object' && 'errors' in error) {
         const formattedErrors: Record<string, string> = {};
-        Object.entries(error.errors).forEach(([key, messages]) => {
-          formattedErrors[key] = (messages as string[])[0];
+        const errorObj = error as { errors: Record<string, string[]> };
+        Object.entries(errorObj.errors).forEach(([key, messages]) => {
+          formattedErrors[key] = messages[0];
         });
         setErrors(formattedErrors);
       }
       
       toast.error(t('loginFailed'), {
-        description: error.message || t('checkCredentials'),
+        description: (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || t('checkCredentials'),
       });
     } finally {
       setIsLoading(false);
@@ -223,11 +225,11 @@ export default function LoginPage() {
       } else {
         router.push('/dashboard');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Login error:", error);
       
       // Handle inactive account error
-      if (error.message === 'ACCOUNT_INACTIVE') {
+      if (error && typeof error === 'object' && 'message' in error && (error as {message: string}).message === 'ACCOUNT_INACTIVE') {
         toast.error(t('accountInactive'), {
           description: t('accountInactiveDesc'),
           duration: 5000,
@@ -235,16 +237,17 @@ export default function LoginPage() {
         return;
       }
       
-      if (error.errors) {
+      if (error && typeof error === 'object' && 'errors' in error) {
         const formattedErrors: Record<string, string> = {};
-        Object.entries(error.errors).forEach(([key, messages]) => {
-          formattedErrors[key] = (messages as string[])[0];
+        const errorObj = error as { errors: Record<string, string[]> };
+        Object.entries(errorObj.errors).forEach(([key, messages]) => {
+          formattedErrors[key] = messages[0];
         });
         setErrors(formattedErrors);
       }
       
       toast.error(t('loginFailed'), {
-        description: error.message || t('checkCredentials'),
+        description: (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || t('checkCredentials'),
       });
     } finally {
       setIsLoading(false);
@@ -276,11 +279,11 @@ export default function LoginPage() {
       } else {
         router.push('/dashboard');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Login error:", error);
       
       // Handle inactive account error
-      if (error.message === 'ACCOUNT_INACTIVE') {
+      if (error && typeof error === 'object' && 'message' in error && (error as {message: string}).message === 'ACCOUNT_INACTIVE') {
         toast.error(t('accountInactive'), {
           description: t('accountInactiveDesc'),
           duration: 5000,
@@ -288,16 +291,17 @@ export default function LoginPage() {
         return;
       }
       
-      if (error.errors) {
+      if (error && typeof error === 'object' && 'errors' in error) {
         const formattedErrors: Record<string, string> = {};
-        Object.entries(error.errors).forEach(([key, messages]) => {
-          formattedErrors[key] = (messages as string[])[0];
+        const errorObj = error as { errors: Record<string, string[]> };
+        Object.entries(errorObj.errors).forEach(([key, messages]) => {
+          formattedErrors[key] = messages[0];
         });
         setErrors(formattedErrors);
       }
       
       toast.error(t('loginFailed'), {
-        description: error.message || t('checkCredentials'),
+        description: (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || t('checkCredentials'),
       });
     } finally {
       setIsLoading(false);

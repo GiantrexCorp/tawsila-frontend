@@ -1,6 +1,7 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useState, useEffect, useCallback } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -158,41 +159,41 @@ export default function UsersPage() {
     },
   ];
 
-  useEffect(() => {
-    if (hasPermission) {
-      loadUsers(currentPage, appliedFilters);
-      loadRoles();
-    }
-  }, [currentPage, appliedFilters, hasPermission]);
-
-  const loadRoles = async () => {
+  const loadRoles = useCallback(async () => {
     try {
       const response = await fetchRoles();
       console.log('Loaded roles:', response.data);
       console.log('First role permissions type:', typeof response.data[0]?.permissions);
       console.log('First role permissions:', response.data[0]?.permissions);
       setAvailableRoles(response.data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to load roles:", error);
     }
-  };
+  }, []);
 
-  const loadUsers = async (page: number, currentFilters: UserFilters) => {
+  const loadUsers = useCallback(async (page: number, currentFilters: UserFilters) => {
     setIsLoading(true);
     try {
       const response = await fetchUsers(page, 50, currentFilters);
       setUsers(response.data);
       setTotalPages(response.meta.last_page);
       setTotal(response.meta.total);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to load users:", error);
       toast.error(t('failedToLoad'), {
-        description: error.message || tCommon('noData'),
+        description: (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || tCommon('noData'),
       });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [t, tCommon]);
+
+  useEffect(() => {
+    if (hasPermission) {
+      loadUsers(currentPage, appliedFilters);
+      loadRoles();
+    }
+  }, [currentPage, appliedFilters, hasPermission, loadUsers, loadRoles]);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({
@@ -282,9 +283,9 @@ export default function UsersPage() {
       
       // Reload the page data to ensure everything is in sync
       await loadUsers(currentPage, appliedFilters);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating user:', error);
-      const errorMessage = error?.message || error?.error || t('updateFailed');
+      const errorMessage = (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || t('updateFailed');
       toast.error(t('updateFailed'), {
         description: errorMessage,
       });
@@ -319,11 +320,11 @@ export default function UsersPage() {
       
       // Reload users to reflect role changes
       await loadUsers(currentPage, appliedFilters);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error assigning role:', error);
       console.error('Full error details:', JSON.stringify(error, null, 2));
       toast.error(t('assignRoleFailed'), {
-        description: error.message || tCommon('tryAgain'),
+        description: (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || tCommon('tryAgain'),
       });
     } finally {
       setIsAssigningRole(false);
@@ -401,9 +402,9 @@ export default function UsersPage() {
       
       // Reload the page data
       await loadUsers(currentPage, appliedFilters);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating user:', error);
-      const errorMessage = error?.message || error?.error || t('createFailed');
+      const errorMessage = (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || t('createFailed');
       toast.error(t('createFailed'), {
         description: errorMessage,
       });
@@ -468,17 +469,17 @@ export default function UsersPage() {
         // For other users, they will be logged out on their next request
         toast.info(t('userWillBeLoggedOut', { name: getDisplayName(userToChangePassword) }));
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error changing password:', error);
       
       // Handle validation errors
-      if (error.errors) {
-        const errorMessages = Object.values(error.errors).flat().join(', ');
+      if (error && typeof error === 'object' && 'errors' in error) {
+        const errorMessages = Object.values((error as {errors: Record<string, string[]>}).errors).flat().join(', ');
         toast.error(t('passwordChangeFailed'), {
           description: errorMessages,
         });
       } else {
-        const errorMessage = error?.message || error?.error || t('passwordChangeFailed');
+        const errorMessage = (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || t('passwordChangeFailed');
         toast.error(t('passwordChangeFailed'), {
           description: errorMessage,
         });
@@ -519,28 +520,36 @@ export default function UsersPage() {
     ).join(' ');
   };
 
-  const getRoleBadge = (roles: string[]) => {
-    if (!roles || roles.length === 0) {
-      return <Badge variant="outline">{t('noRole')}</Badge>;
-    }
-    
-    const roleName = roles[0];
-    const variants: Record<string, "default" | "secondary" | "outline"> = {
-      admin: "default",
-      manager: "secondary",
-      viewer: "outline",
-    };
-    
-    // Find role in available roles to get slug
-    const roleData = availableRoles.find(r => r.name === roleName);
-    const displayName = getRoleDisplayName(roleName, roleData);
-    
-    return <Badge variant={variants[roleName] || "outline"}>{displayName}</Badge>;
-  };
+   const getRoleBadge = (roles: string[]) => {
+     if (!roles || roles.length === 0) {
+       return <Badge variant="outline">{t('noRole')}</Badge>;
+     }
+     
+     const roleName = roles[0];
+     const variants: Record<string, "default" | "secondary" | "outline"> = {
+       "super-admin": "default",
+       admin: "default",
+       manager: "secondary",
+       viewer: "outline",
+     };
+     
+     // Find role in available roles to get slug
+     const roleData = availableRoles.find(r => r.name === roleName);
+     const displayName = getRoleDisplayName(roleName, roleData);
+     
+     return <Badge variant={variants[roleName] || "outline"}>{displayName}</Badge>;
+   };
 
   const getStatusBadge = (status: string) => {
+    if (status === 'active') {
+      return (
+        <Badge className="bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800">
+          {t(status)}
+        </Badge>
+      );
+    }
     return (
-      <Badge variant={status === 'active' ? 'outline' : 'secondary'}>
+      <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800">
         {t(status)}
       </Badge>
     );
@@ -566,36 +575,78 @@ export default function UsersPage() {
     );
   }
 
-  return (
-    <div className="space-y-4 md:space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-2">
-            {t('subtitle')}
-          </p>
-        </div>
-        <Button className="w-full sm:w-auto">
-          <UserPlus className="h-4 w-4 mr-2" />
-          {t('addUser')}
-        </Button>
-      </div>
+   return (
+     <div className="space-y-4 md:space-y-6">
+       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+         <div>
+           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
+           <p className="text-sm md:text-base text-muted-foreground mt-2">
+             {t('totalUsers', { count: total })}
+           </p>
+         </div>
+         {isSuperAdmin() && (
+           <Button className="w-full sm:w-auto" onClick={handleOpenAddDialog}>
+             <UserPlus className="h-4 w-4 me-2" />
+             {t('addUser')}
+           </Button>
+         )}
+       </div>
 
-      {/* Users Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {users.map((user) => (
-          <Card key={user.id}>
-            <CardHeader className="pb-4">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-14 w-14">
-                    <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg">
-                      {displayName.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <CardTitle className="text-base font-semibold truncate">{displayName}</CardTitle>
+       {/* Summary Stats */}
+       <div className="grid gap-4 md:grid-cols-3">
+         <Card>
+           <CardContent className="p-4">
+             <p className="text-sm text-muted-foreground">{t('totalUsersLabel')}</p>
+             <p className="text-2xl font-bold">{total}</p>
+           </CardContent>
+         </Card>
+         <Card>
+           <CardContent className="p-4">
+             <p className="text-sm text-muted-foreground">{t('activeUsers')}</p>
+             <p className="text-2xl font-bold">
+               {users.filter(u => u.status === 'active').length}
+             </p>
+           </CardContent>
+         </Card>
+         <Card>
+           <CardContent className="p-4">
+             <p className="text-sm text-muted-foreground">{t('inactiveUsers')}</p>
+             <p className="text-2xl font-bold">
+               {users.filter(u => u.status === 'inactive').length}
+             </p>
+           </CardContent>
+         </Card>
+       </div>
+
+       {/* Filters */}
+       <FilterBar
+         filters={filters as Record<string, string>}
+         filterConfigs={filterConfigs}
+         onFilterChange={handleFilterChange}
+         onClearFilters={handleClearFilters}
+         onClearAllFilters={handleClearAllFilters}
+         onApplyFilters={handleApplyFilters}
+         onRemoveFilter={handleRemoveFilter}
+         defaultFilters={[locale === 'ar' ? 'name_ar' : 'name_en']}
+       />
+
+       {/* Users Grid */}
+       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+         {users.map((user) => {
+           const displayName = getDisplayName(user);
+           return (
+           <Card key={user.id}>
+             <CardHeader className="pb-4">
+               <div className="flex items-start justify-between">
+                 <div className="flex items-center gap-3">
+                   <Avatar className="h-14 w-14">
+                     <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg">
+                       {displayName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                     </AvatarFallback>
+                   </Avatar>
+                   <div className="flex-1 min-w-0">
+                     <div className="flex items-center gap-2">
+                       <CardTitle className="text-base font-semibold truncate">{displayName}</CardTitle>
                       {currentUser?.id === user.id && (
                         <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 flex-shrink-0">
                           {t('me')}
@@ -669,48 +720,42 @@ export default function UsersPage() {
                   </>
                 )}
               </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+             </div>
+           </Card>
+           );
+         })}
+       </div>
 
-      {/* Summary Stats */}
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs md:text-sm text-muted-foreground">{t('admin')}</p>
-            <p className="text-xl md:text-2xl font-bold">
-              {users.filter(u => u.role === 'admin').length}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs md:text-sm text-muted-foreground">{t('manager')}</p>
-            <p className="text-xl md:text-2xl font-bold">
-              {users.filter(u => u.role === 'manager').length}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs md:text-sm text-muted-foreground">{t('viewer')}</p>
-            <p className="text-xl md:text-2xl font-bold">
-              {users.filter(u => u.role === 'viewer').length}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs md:text-sm text-muted-foreground">{t('active')}</p>
-            <p className="text-xl md:text-2xl font-bold">
-              {users.filter(u => u.status === 'active').length}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+       {/* Pagination */}
+       {totalPages > 1 && (
+         <div className="flex items-center justify-between">
+           <p className="text-sm text-muted-foreground">
+             {t('page')} {currentPage} {t('of')} {totalPages}
+           </p>
+           <div className="flex gap-2">
+             <Button
+               variant="outline"
+               size="sm"
+               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+               disabled={currentPage === 1}
+             >
+               <ChevronLeft className="h-4 w-4 me-1" />
+               {t('previous')}
+             </Button>
+             <Button
+               variant="outline"
+               size="sm"
+               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+               disabled={currentPage === totalPages}
+             >
+               {t('next')}
+               <ChevronRight className="h-4 w-4 ms-1" />
+             </Button>
+           </div>
+         </div>
+       )}
 
-      {/* Edit User Dialog */}
+       {/* Edit User Dialog */}
       <Dialog open={!!userToEdit} onOpenChange={() => setUserToEdit(null)}>
         <DialogContent className="sm:max-w-[525px]">
           <DialogHeader>
@@ -1111,9 +1156,9 @@ export default function UsersPage() {
                         <div className="flex flex-wrap gap-1.5">
                           {permissions.map((permission, index) => {
                             // Handle both string and object formats
-                            const permissionName = typeof permission === 'string' 
+                             const permissionName = typeof permission === 'string' 
                               ? permission 
-                              : (permission as any)?.name || 'unknown';
+                              : (permission as {name?: string})?.name || 'unknown';
                             
                             return (
                               <Badge key={index} variant="secondary" className="text-xs">

@@ -8,7 +8,6 @@ import { Link } from "@/i18n/routing";
 
 export default function UnauthorizedPage() {
   const t = useTranslations('unauthorized');
-  const tCommon = useTranslations('common');
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/20 px-4">

@@ -126,17 +126,17 @@ export default function ProfilePage() {
         logout();
         router.push('/login');
       }, 1500);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error changing password:', error);
       
-      if (error.errors) {
-        const errorMessages = Object.values(error.errors).flat().join(', ');
+      if (error && typeof error === 'object' && 'errors' in error) {
+        const errorMessages = Object.values((error as {errors: Record<string, string[]>}).errors).flat().join(', ');
         toast.error(tUsers('passwordChangeFailed'), {
           description: errorMessages,
         });
       } else {
         toast.error(tUsers('passwordChangeFailed'), {
-          description: error.message || tCommon('tryAgain'),
+          description: (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || tCommon('tryAgain'),
         });
       }
       setIsChangingPassword(false);
