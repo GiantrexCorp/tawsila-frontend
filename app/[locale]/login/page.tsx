@@ -160,6 +160,7 @@ export default function LoginPage() {
                   onChange={handleInputChange}
                   disabled={isLoading}
                   required
+                  autoFocus
                   className={errors.email ? "border-red-500" : ""}
                 />
                 {errors.email && (
