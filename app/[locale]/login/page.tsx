@@ -13,11 +13,13 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { login } from "@/lib/auth";
 import { toast } from "sonner";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
   const t = useTranslations('login');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -37,13 +39,48 @@ export default function LoginPage() {
     });
   }, []);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Extracted error handling logic
+  const handleLoginError = useCallback((error: unknown) => {
+    console.error("Login error:", error);
+    
+    // Handle inactive account error
+    if (error && typeof error === 'object' && 'message' in error && (error as {message: string}).message === 'ACCOUNT_INACTIVE') {
+      toast.error(t('accountInactive'), {
+        description: t('accountInactiveDesc'),
+        duration: 5000,
+      });
+      return;
+    }
+    
+    // Handle validation errors
+    if (error && typeof error === 'object' && 'errors' in error) {
+      const errorObj = error as { errors?: Record<string, string[]> };
+      if (errorObj.errors) {
+        const formattedErrors: Record<string, string> = {};
+        Object.entries(errorObj.errors).forEach(([key, messages]) => {
+          formattedErrors[key] = messages[0];
+        });
+        setErrors(formattedErrors);
+      }
+    }
+    
+    // Show error toast
+    const errorMessage = (error && typeof error === 'object' && 'message' in error) 
+      ? String(error.message) 
+      : t('checkCredentials');
+    
+    toast.error(t('loginFailed'), {
+      description: errorMessage,
+    });
+  }, [t]);
+
+  // Reusable login handler
+  const performLogin = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
     setErrors({});
 
     try {
-      const response = await login(formData);
+      const response = await login({ email, password });
       
       // Check if password change is required (status_code 203)
       if (response.requires_password_change) {
@@ -70,305 +107,22 @@ export default function LoginPage() {
         }
       }
     } catch (error: unknown) {
-      console.error("Login error:", error);
-      
-      // Handle inactive account error
-      if (error && typeof error === 'object' && 'message' in error && (error as {message: string}).message === 'ACCOUNT_INACTIVE') {
-        toast.error(t('accountInactive'), {
-          description: t('accountInactiveDesc'),
-          duration: 5000,
-        });
-        return;
-      }
-      
-      // Handle validation errors
-      if (error && typeof error === 'object' && 'errors' in error) {
-        const errorObj = error as { errors?: Record<string, string[]> };
-        if (errorObj.errors) {
-          const formattedErrors: Record<string, string> = {};
-          Object.entries(errorObj.errors).forEach(([key, messages]) => {
-            formattedErrors[key] = messages[0];
-          });
-          setErrors(formattedErrors);
-        }
-      }
-      
-      // Show error toast
-      const errorMessage = (error && typeof error === 'object' && 'message' in error) 
-        ? String(error.message) 
-        : t('checkCredentials');
-      
-      toast.error(t('loginFailed'), {
-        description: errorMessage,
-      });
+      handleLoginError(error);
     } finally {
       setIsLoading(false);
     }
+  }, [router, t, handleLoginError]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await performLogin(formData.email, formData.password);
   };
 
-  const handleSuperAdminLogin = async () => {
-    setFormData({
-      email: "moay@gmail.com",
-      password: "password",
-    });
-    
-    setIsLoading(true);
-    setErrors({});
-
-    try {
-      const response = await login({
-        email: "moay@gmail.com",
-        password: "password",
-      });
-      
-      // Check if password change is required
-      if (response.requires_password_change) {
-        toast.info(t('passwordChangeRequired'), {
-          description: t('passwordChangeRequiredDesc'),
-        });
-        router.push('/set-password');
-        return;
-      }
-
-      // Normal login flow
-      if (response.data) {
-        toast.success(t('loginSuccess'), {
-          description: t('welcomeBack', { name: response.data.name }),
-        });
-
-        // Redirect based on role
-        if (response.data.roles?.includes('shipping-agent')) {
-          router.push('/dashboard/orders');
-        } else {
-          router.push('/dashboard');
-        }
-      }
-    } catch (error: unknown) {
-      console.error("Login error:", error);
-      
-      // Handle inactive account error
-      if (error && typeof error === 'object' && 'message' in error && (error as {message: string}).message === 'ACCOUNT_INACTIVE') {
-        toast.error(t('accountInactive'), {
-          description: t('accountInactiveDesc'),
-          duration: 5000,
-        });
-        return;
-      }
-      
-      if (error && typeof error === 'object' && 'errors' in error) {
-        const formattedErrors: Record<string, string> = {};
-        const errorObj = error as { errors: Record<string, string[]> };
-        Object.entries(errorObj.errors).forEach(([key, messages]) => {
-          formattedErrors[key] = messages[0];
-        });
-        setErrors(formattedErrors);
-      }
-      
-      toast.error(t('loginFailed'), {
-        description: (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || t('checkCredentials'),
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleInventoryManagerLogin = async () => {
-    setFormData({
-      email: "ahmedeid@gmail.com",
-      password: "87654321",
-    });
-    
-    setIsLoading(true);
-    setErrors({});
-
-    try {
-      const response = await login({
-        email: "ahmedeid@gmail.com",
-        password: "87654321",
-      });
-      
-      // Check if password change is required
-      if (response.requires_password_change) {
-        toast.info(t('passwordChangeRequired'), {
-          description: t('passwordChangeRequiredDesc'),
-        });
-        router.push('/set-password');
-        return;
-      }
-
-      // Normal login flow
-      if (response.data) {
-        toast.success(t('loginSuccess'), {
-          description: t('welcomeBack', { name: response.data.name }),
-        });
-
-        // Redirect based on role
-        if (response.data.roles?.includes('shipping-agent')) {
-          router.push('/dashboard/orders');
-        } else {
-          router.push('/dashboard');
-        }
-      }
-    } catch (error: unknown) {
-      console.error("Login error:", error);
-      
-      // Handle inactive account error
-      if (error && typeof error === 'object' && 'message' in error && (error as {message: string}).message === 'ACCOUNT_INACTIVE') {
-        toast.error(t('accountInactive'), {
-          description: t('accountInactiveDesc'),
-          duration: 5000,
-        });
-        return;
-      }
-      
-      if (error && typeof error === 'object' && 'errors' in error) {
-        const formattedErrors: Record<string, string> = {};
-        const errorObj = error as { errors: Record<string, string[]> };
-        Object.entries(errorObj.errors).forEach(([key, messages]) => {
-          formattedErrors[key] = messages[0];
-        });
-        setErrors(formattedErrors);
-      }
-      
-      toast.error(t('loginFailed'), {
-        description: (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || t('checkCredentials'),
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleShippingAgentLogin = async () => {
-    setFormData({
-      email: "uncleahmed@gmail.com",
-      password: "password",
-    });
-    
-    setIsLoading(true);
-    setErrors({});
-
-    try {
-      const response = await login({
-        email: "uncleahmed@gmail.com",
-        password: "password",
-      });
-      
-      // Check if password change is required
-      if (response.requires_password_change) {
-        toast.info(t('passwordChangeRequired'), {
-          description: t('passwordChangeRequiredDesc'),
-        });
-        router.push('/set-password');
-        return;
-      }
-
-      // Normal login flow
-      if (response.data) {
-        toast.success(t('loginSuccess'), {
-          description: t('welcomeBack', { name: response.data.name }),
-        });
-
-        // Redirect based on role
-        if (response.data.roles?.includes('shipping-agent')) {
-          router.push('/dashboard/orders');
-        } else {
-          router.push('/dashboard');
-        }
-      }
-    } catch (error: unknown) {
-      console.error("Login error:", error);
-      
-      // Handle inactive account error
-      if (error && typeof error === 'object' && 'message' in error && (error as {message: string}).message === 'ACCOUNT_INACTIVE') {
-        toast.error(t('accountInactive'), {
-          description: t('accountInactiveDesc'),
-          duration: 5000,
-        });
-        return;
-      }
-      
-      if (error && typeof error === 'object' && 'errors' in error) {
-        const formattedErrors: Record<string, string> = {};
-        const errorObj = error as { errors: Record<string, string[]> };
-        Object.entries(errorObj.errors).forEach(([key, messages]) => {
-          formattedErrors[key] = messages[0];
-        });
-        setErrors(formattedErrors);
-      }
-      
-      toast.error(t('loginFailed'), {
-        description: (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || t('checkCredentials'),
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleOrderPreparerLogin = async () => {
-    setFormData({
-      email: "metwaly@gmail.com",
-      password: "password",
-    });
-    
-    setIsLoading(true);
-    setErrors({});
-
-    try {
-      const response = await login({
-        email: "metwaly@gmail.com",
-        password: "password",
-      });
-      
-      // Check if password change is required
-      if (response.requires_password_change) {
-        toast.info(t('passwordChangeRequired'), {
-          description: t('passwordChangeRequiredDesc'),
-        });
-        router.push('/set-password');
-        return;
-      }
-
-      // Normal login flow
-      if (response.data) {
-        toast.success(t('loginSuccess'), {
-          description: t('welcomeBack', { name: response.data.name }),
-        });
-
-        // Redirect based on role
-        if (response.data.roles?.includes('shipping-agent')) {
-          router.push('/dashboard/orders');
-        } else {
-          router.push('/dashboard');
-        }
-      }
-    } catch (error: unknown) {
-      console.error("Login error:", error);
-      
-      // Handle inactive account error
-      if (error && typeof error === 'object' && 'message' in error && (error as {message: string}).message === 'ACCOUNT_INACTIVE') {
-        toast.error(t('accountInactive'), {
-          description: t('accountInactiveDesc'),
-          duration: 5000,
-        });
-        return;
-      }
-      
-      if (error && typeof error === 'object' && 'errors' in error) {
-        const formattedErrors: Record<string, string> = {};
-        const errorObj = error as { errors: Record<string, string[]> };
-        Object.entries(errorObj.errors).forEach(([key, messages]) => {
-          formattedErrors[key] = messages[0];
-        });
-        setErrors(formattedErrors);
-      }
-      
-      toast.error(t('loginFailed'), {
-        description: (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || t('checkCredentials'),
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Reusable handler for test logins
+  const handleTestLogin = useCallback((email: string, password: string) => {
+    setFormData({ email, password });
+    performLogin(email, password);
+  }, [performLogin]);
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/20">
@@ -419,16 +173,26 @@ export default function LoginPage() {
                     {t('forgotPassword')}
                   </Link>
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder={t('passwordPlaceholder')}
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  disabled={isLoading}
-                  required
-                  className={errors.password ? "border-red-500" : ""}
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder={t('passwordPlaceholder')}
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    disabled={isLoading}
+                    required
+                    className={errors.password ? "border-red-500 pr-10" : "pr-10"}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    disabled={isLoading}
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
                 {errors.password && (
                   <p className="text-sm text-red-500">{errors.password}</p>
                 )}
@@ -436,10 +200,7 @@ export default function LoginPage() {
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? (
                   <>
-                    <svg className="animate-spin -ms-1 me-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     {t('signingIn')}
                   </>
                 ) : (
@@ -454,7 +215,7 @@ export default function LoginPage() {
                 type="button" 
                 variant="outline" 
                 className="w-full bg-purple-50 hover:bg-purple-100 dark:bg-purple-950 dark:hover:bg-purple-900 border-purple-300 dark:border-purple-800 text-purple-900 dark:text-purple-100"
-                onClick={handleSuperAdminLogin}
+                onClick={() => handleTestLogin("moay@gmail.com", "password")}
                 disabled={isLoading}
               >
                 👑 Super Admin Login
@@ -463,7 +224,7 @@ export default function LoginPage() {
                 type="button" 
                 variant="outline" 
                 className="w-full bg-blue-50 hover:bg-blue-100 dark:bg-blue-950 dark:hover:bg-blue-900 border-blue-300 dark:border-blue-800 text-blue-900 dark:text-blue-100"
-                onClick={handleInventoryManagerLogin}
+                onClick={() => handleTestLogin("ahmedeid@gmail.com", "87654321")}
                 disabled={isLoading}
               >
                 📦 Inventory Manager Login
@@ -472,7 +233,7 @@ export default function LoginPage() {
                 type="button" 
                 variant="outline" 
                 className="w-full bg-green-50 hover:bg-green-100 dark:bg-green-950 dark:hover:bg-green-900 border-green-300 dark:border-green-800 text-green-900 dark:text-green-100"
-                onClick={handleShippingAgentLogin}
+                onClick={() => handleTestLogin("uncleahmed@gmail.com", "password")}
                 disabled={isLoading}
               >
                 🚚 Shipping Agent Login
@@ -481,7 +242,7 @@ export default function LoginPage() {
                 type="button" 
                 variant="outline" 
                 className="w-full bg-orange-50 hover:bg-orange-100 dark:bg-orange-950 dark:hover:bg-orange-900 border-orange-300 dark:border-orange-800 text-orange-900 dark:text-orange-100"
-                onClick={handleOrderPreparerLogin}
+                onClick={() => handleTestLogin("metwaly@gmail.com", "password")}
                 disabled={isLoading}
               >
                 📋 Order Preparer Login
