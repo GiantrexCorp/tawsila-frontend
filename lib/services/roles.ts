@@ -41,6 +41,10 @@ export async function fetchRole(id: number): Promise<Role> {
     method: 'GET',
   });
 
+  if (!response.data) {
+    throw new Error('Role not found');
+  }
+
   return response.data;
 }
 
@@ -57,6 +61,10 @@ export async function createRole(roleData: {
     method: 'POST',
     body: JSON.stringify(roleData),
   });
+
+  if (!response.data) {
+    throw new Error('Failed to create role');
+  }
 
   return response.data;
 }
@@ -80,6 +88,10 @@ export async function updateRole(
       _method: 'PUT',
     }),
   });
+
+  if (!response.data) {
+    throw new Error('Failed to update role');
+  }
 
   return response.data;
 }

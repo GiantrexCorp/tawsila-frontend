@@ -55,7 +55,7 @@ export interface SetPasswordResponse {
  * Login user with credentials
  */
 export async function login(credentials: LoginCredentials): Promise<LoginResponse> {
-  const response = await apiRequest<LoginResponse>('/login', {
+  const response = await apiRequest<User>('/login', {
     method: 'POST',
     body: JSON.stringify(credentials),
   });
@@ -74,7 +74,11 @@ export async function login(credentials: LoginCredentials): Promise<LoginRespons
       message: response.message,
       requires_password_change: true,
       status_code: 203,
-      meta: response.meta || { access_token: '', token_type: 'Bearer' },
+      meta: {
+        access_token: response.meta?.access_token || '',
+        token_type: response.meta?.token_type || 'Bearer',
+        expires_at: response.meta?.expires_at,
+      },
     };
   }
 
@@ -97,7 +101,7 @@ export async function login(credentials: LoginCredentials): Promise<LoginRespons
  * Set password for first-time login users
  */
 export async function setPassword(data: SetPasswordRequest): Promise<SetPasswordResponse> {
-  const response = await apiRequest<SetPasswordResponse>('/set-password', {
+  const response = await apiRequest<User>('/set-password', {
     method: 'POST',
     body: JSON.stringify(data),
   });
@@ -112,7 +116,7 @@ export async function setPassword(data: SetPasswordRequest): Promise<SetPassword
     }
   }
 
-  return response;
+  return response as SetPasswordResponse;
 }
 
 /**

@@ -51,6 +51,7 @@ export default function SetPasswordPage() {
     setFormData((prev) => ({ ...prev, new_password: e.target.value }));
     if (errors.new_password) {
       setErrors((prev) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { new_password: _, ...rest } = prev;
         return rest;
       });
@@ -61,6 +62,7 @@ export default function SetPasswordPage() {
     setFormData((prev) => ({ ...prev, new_password_confirmation: e.target.value }));
     if (errors.new_password_confirmation) {
       setErrors((prev) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { new_password_confirmation: _, ...rest } = prev;
         return rest;
       });
