@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 import { useRouter } from "@/i18n/routing";
@@ -24,18 +24,18 @@ export default function LoginPage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: value }));
-    // Clear error for this field when user types
-    if (errors[id]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[id];
-        return newErrors;
-      });
-    }
-  };
+    // Clear error for this field when user types (only if it exists)
+    setErrors((prev) => {
+      if (prev[id]) {
+        const { [id]: _, ...rest } = prev;
+        return rest;
+      }
+      return prev;
+    });
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,17 +43,31 @@ export default function LoginPage() {
     setErrors({});
 
     try {
-      const user = await login(formData);
+      const response = await login(formData);
       
-      toast.success(t('loginSuccess'), {
-        description: t('welcomeBack', { name: user.name }),
-      });
+      // Check if password change is required (status_code 203)
+      if (response.requires_password_change) {
+        toast.info(t('passwordChangeRequired'), {
+          description: t('passwordChangeRequiredDesc'),
+        });
+        router.push('/set-password');
+        return;
+      }
 
-      // Redirect based on role
-      if (user.roles?.includes('shipping-agent')) {
-        router.push('/dashboard/orders');
-      } else {
-        router.push('/dashboard');
+      // Normal login flow (status_code 200)
+      if (response.data) {
+        const userName = response.data.name_en || response.data.name_ar || response.data.email;
+        
+        toast.success(t('loginSuccess'), {
+          description: t('welcomeBack', { name: userName }),
+        });
+
+        // Redirect based on role
+        if (response.data.roles?.includes('shipping-agent')) {
+          router.push('/dashboard/orders');
+        } else {
+          router.push('/dashboard');
+        }
       }
     } catch (error: unknown) {
       console.error("Login error:", error);
@@ -102,20 +116,32 @@ export default function LoginPage() {
     setErrors({});
 
     try {
-      const user = await login({
+      const response = await login({
         email: "moay@gmail.com",
         password: "password",
       });
       
-      toast.success(t('loginSuccess'), {
-        description: t('welcomeBack', { name: user.name }),
-      });
+      // Check if password change is required
+      if (response.requires_password_change) {
+        toast.info(t('passwordChangeRequired'), {
+          description: t('passwordChangeRequiredDesc'),
+        });
+        router.push('/set-password');
+        return;
+      }
 
-      // Redirect based on role
-      if (user.roles?.includes('shipping-agent')) {
-        router.push('/dashboard/orders');
-      } else {
-        router.push('/dashboard');
+      // Normal login flow
+      if (response.data) {
+        toast.success(t('loginSuccess'), {
+          description: t('welcomeBack', { name: response.data.name }),
+        });
+
+        // Redirect based on role
+        if (response.data.roles?.includes('shipping-agent')) {
+          router.push('/dashboard/orders');
+        } else {
+          router.push('/dashboard');
+        }
       }
     } catch (error: unknown) {
       console.error("Login error:", error);
@@ -156,20 +182,32 @@ export default function LoginPage() {
     setErrors({});
 
     try {
-      const user = await login({
+      const response = await login({
         email: "ahmedeid@gmail.com",
         password: "87654321",
       });
       
-      toast.success(t('loginSuccess'), {
-        description: t('welcomeBack', { name: user.name }),
-      });
+      // Check if password change is required
+      if (response.requires_password_change) {
+        toast.info(t('passwordChangeRequired'), {
+          description: t('passwordChangeRequiredDesc'),
+        });
+        router.push('/set-password');
+        return;
+      }
 
-      // Redirect based on role
-      if (user.roles?.includes('shipping-agent')) {
-        router.push('/dashboard/orders');
-      } else {
-        router.push('/dashboard');
+      // Normal login flow
+      if (response.data) {
+        toast.success(t('loginSuccess'), {
+          description: t('welcomeBack', { name: response.data.name }),
+        });
+
+        // Redirect based on role
+        if (response.data.roles?.includes('shipping-agent')) {
+          router.push('/dashboard/orders');
+        } else {
+          router.push('/dashboard');
+        }
       }
     } catch (error: unknown) {
       console.error("Login error:", error);
@@ -210,20 +248,32 @@ export default function LoginPage() {
     setErrors({});
 
     try {
-      const user = await login({
+      const response = await login({
         email: "uncleahmed@gmail.com",
         password: "password",
       });
       
-      toast.success(t('loginSuccess'), {
-        description: t('welcomeBack', { name: user.name }),
-      });
+      // Check if password change is required
+      if (response.requires_password_change) {
+        toast.info(t('passwordChangeRequired'), {
+          description: t('passwordChangeRequiredDesc'),
+        });
+        router.push('/set-password');
+        return;
+      }
 
-      // Redirect based on role
-      if (user.roles?.includes('shipping-agent')) {
-        router.push('/dashboard/orders');
-      } else {
-        router.push('/dashboard');
+      // Normal login flow
+      if (response.data) {
+        toast.success(t('loginSuccess'), {
+          description: t('welcomeBack', { name: response.data.name }),
+        });
+
+        // Redirect based on role
+        if (response.data.roles?.includes('shipping-agent')) {
+          router.push('/dashboard/orders');
+        } else {
+          router.push('/dashboard');
+        }
       }
     } catch (error: unknown) {
       console.error("Login error:", error);
@@ -264,20 +314,32 @@ export default function LoginPage() {
     setErrors({});
 
     try {
-      const user = await login({
+      const response = await login({
         email: "metwaly@gmail.com",
         password: "password",
       });
       
-      toast.success(t('loginSuccess'), {
-        description: t('welcomeBack', { name: user.name }),
-      });
+      // Check if password change is required
+      if (response.requires_password_change) {
+        toast.info(t('passwordChangeRequired'), {
+          description: t('passwordChangeRequiredDesc'),
+        });
+        router.push('/set-password');
+        return;
+      }
 
-      // Redirect based on role
-      if (user.roles?.includes('shipping-agent')) {
-        router.push('/dashboard/orders');
-      } else {
-        router.push('/dashboard');
+      // Normal login flow
+      if (response.data) {
+        toast.success(t('loginSuccess'), {
+          description: t('welcomeBack', { name: response.data.name }),
+        });
+
+        // Redirect based on role
+        if (response.data.roles?.includes('shipping-agent')) {
+          router.push('/dashboard/orders');
+        } else {
+          router.push('/dashboard');
+        }
       }
     } catch (error: unknown) {
       console.error("Login error:", error);

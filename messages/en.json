@@ -271,7 +271,27 @@
     "sessionExpired": "Session Expired",
     "sessionExpiredDesc": "You have been logged out. This may be because you logged in from another device.",
     "accountInactive": "Account Inactive",
-    "accountInactiveDesc": "Your account has been deactivated. Please contact your administrator for assistance."
+    "accountInactiveDesc": "Your account has been deactivated. Please contact your administrator for assistance.",
+    "passwordChangeRequired": "Password Change Required",
+    "passwordChangeRequiredDesc": "This is your first login. Please set a new password to continue."
+  },
+  "setPassword": {
+    "title": "Set Your Password",
+    "subtitle": "Welcome! Please set a new password for your account.",
+    "newPassword": "New Password",
+    "enterNewPassword": "Enter your new password",
+    "confirmPassword": "Confirm Password",
+    "confirmPasswordPlaceholder": "Re-enter your password",
+    "setPassword": "Set Password",
+    "settingPassword": "Setting Password...",
+    "passwordRequired": "Password is required",
+    "passwordTooShort": "Password must be at least 6 characters",
+    "passwordMismatch": "Passwords do not match",
+    "passwordChangeSuccess": "Password Changed Successfully!",
+    "welcomeMessage": "Welcome to Tawsila, {name}!",
+    "passwordChangeFailed": "Password change failed",
+    "passwordHint": "Your password must be at least 6 characters long.",
+    "noTokenError": "No authentication token found. Please login again."
   },
   "trackSearch": {
     "howItWorks": "How it Works",
@@ -413,6 +433,7 @@
     "addFilter": "Add Filter",
     "selectFilter": "Select Filter",
     "allFiltersAdded": "All filters added",
-    "tryAgain": "Please try again"
+    "tryAgain": "Please try again",
+    "allRightsReserved": "All rights reserved"
   }
 }

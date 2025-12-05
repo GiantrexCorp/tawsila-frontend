@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -105,6 +105,57 @@ export default function UsersPage() {
     });
     return isSuper;
   };
+
+  // Memoized handlers for Edit User Dialog
+  const handleEditNameEnChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setEditFormData(prev => ({ ...prev, name_en: e.target.value }));
+  }, []);
+
+  const handleEditNameArChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setEditFormData(prev => ({ ...prev, name_ar: e.target.value }));
+  }, []);
+
+  const handleEditEmailChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setEditFormData(prev => ({ ...prev, email: e.target.value }));
+  }, []);
+
+  const handleEditMobileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setEditFormData(prev => ({ ...prev, mobile: e.target.value }));
+  }, []);
+
+  // Memoized handlers for Add User Dialog
+  const handleAddNameEnChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setAddFormData(prev => ({ ...prev, name_en: e.target.value }));
+  }, []);
+
+  const handleAddNameArChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setAddFormData(prev => ({ ...prev, name_ar: e.target.value }));
+  }, []);
+
+  const handleAddEmailChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setAddFormData(prev => ({ ...prev, email: e.target.value }));
+  }, []);
+
+  const handleAddMobileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setAddFormData(prev => ({ ...prev, mobile: e.target.value }));
+  }, []);
+
+  const handleAddPasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setAddFormData(prev => ({ ...prev, password: e.target.value }));
+  }, []);
+
+  const handleAddConfirmPasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setAddFormData(prev => ({ ...prev, confirmPassword: e.target.value }));
+  }, []);
+
+  // Memoized handlers for Change Password Dialog
+  const handlePasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setPasswordFormData(prev => ({ ...prev, password: e.target.value }));
+  }, []);
+
+  const handleConfirmPasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setPasswordFormData(prev => ({ ...prev, confirmPassword: e.target.value }));
+  }, []);
 
   // Filter configuration - show name filter based on locale
   const filterConfigs: FilterConfig[] = [
@@ -769,7 +820,7 @@ export default function UsersPage() {
               <Input
                 id="name_en"
                 value={editFormData.name_en}
-                onChange={(e) => setEditFormData(prev => ({ ...prev, name_en: e.target.value }))}
+                onChange={handleEditNameEnChange}
                 disabled={isUpdating}
               />
             </div>
@@ -780,7 +831,7 @@ export default function UsersPage() {
               <Input
                 id="name_ar"
                 value={editFormData.name_ar}
-                onChange={(e) => setEditFormData(prev => ({ ...prev, name_ar: e.target.value }))}
+                onChange={handleEditNameArChange}
                 disabled={isUpdating}
               />
             </div>
@@ -792,7 +843,7 @@ export default function UsersPage() {
                 id="email"
                 type="email"
                 value={editFormData.email}
-                onChange={(e) => setEditFormData(prev => ({ ...prev, email: e.target.value }))}
+                onChange={handleEditEmailChange}
                 disabled={isUpdating}
               />
             </div>
@@ -803,7 +854,7 @@ export default function UsersPage() {
               <Input
                 id="mobile"
                 value={editFormData.mobile}
-                onChange={(e) => setEditFormData(prev => ({ ...prev, mobile: e.target.value }))}
+                onChange={handleEditMobileChange}
                 disabled={isUpdating}
               />
             </div>
@@ -867,7 +918,7 @@ export default function UsersPage() {
               <Input
                 id="add_name_en"
                 value={addFormData.name_en}
-                onChange={(e) => setAddFormData(prev => ({ ...prev, name_en: e.target.value }))}
+                onChange={handleAddNameEnChange}
                 disabled={isCreating}
                 required
               />
@@ -879,7 +930,7 @@ export default function UsersPage() {
               <Input
                 id="add_name_ar"
                 value={addFormData.name_ar}
-                onChange={(e) => setAddFormData(prev => ({ ...prev, name_ar: e.target.value }))}
+                onChange={handleAddNameArChange}
                 disabled={isCreating}
                 required
               />
@@ -892,7 +943,7 @@ export default function UsersPage() {
                 id="add_email"
                 type="email"
                 value={addFormData.email}
-                onChange={(e) => setAddFormData(prev => ({ ...prev, email: e.target.value }))}
+                onChange={handleAddEmailChange}
                 disabled={isCreating}
                 required
               />
@@ -904,7 +955,7 @@ export default function UsersPage() {
               <Input
                 id="add_mobile"
                 value={addFormData.mobile}
-                onChange={(e) => setAddFormData(prev => ({ ...prev, mobile: e.target.value }))}
+                onChange={handleAddMobileChange}
                 disabled={isCreating}
                 required
               />
@@ -917,7 +968,7 @@ export default function UsersPage() {
                 id="add_password"
                 type="password"
                 value={addFormData.password}
-                onChange={(e) => setAddFormData(prev => ({ ...prev, password: e.target.value }))}
+                onChange={handleAddPasswordChange}
                 disabled={isCreating}
                 required
               />
@@ -930,7 +981,7 @@ export default function UsersPage() {
                 id="add_confirm_password"
                 type="password"
                 value={addFormData.confirmPassword}
-                onChange={(e) => setAddFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                onChange={handleAddConfirmPasswordChange}
                 disabled={isCreating}
                 required
               />
@@ -1019,7 +1070,7 @@ export default function UsersPage() {
                 id="new_password"
                 type="password"
                 value={passwordFormData.password}
-                onChange={(e) => setPasswordFormData(prev => ({ ...prev, password: e.target.value }))}
+                onChange={handlePasswordChange}
                 disabled={isChangingPassword}
                 placeholder={t('enterNewPassword')}
                 required
@@ -1033,7 +1084,7 @@ export default function UsersPage() {
                 id="confirm_new_password"
                 type="password"
                 value={passwordFormData.confirmPassword}
-                onChange={(e) => setPasswordFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                onChange={handleConfirmPasswordChange}
                 disabled={isChangingPassword}
                 placeholder={t('confirmNewPassword')}
                 required

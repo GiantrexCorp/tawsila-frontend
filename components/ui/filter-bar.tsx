@@ -137,22 +137,23 @@ export function FilterBar({
     }
   };
 
-  const handleDateRangeChange = (key: string, field: 'start' | 'end', value: string) => {
-    const currentRange = dateRanges[key] || { start: '', end: '' };
-    const newRange = { ...currentRange, [field]: value };
-    
-    // Always update the local state immediately
-    setDateRanges(prev => ({ ...prev, [key]: newRange }));
-    
-    // Update filter if both dates are set
-    if (newRange.start && newRange.end) {
-      onFilterChange(key, `${newRange.start},${newRange.end}`);
-    } else if (!newRange.start && !newRange.end) {
-      // Clear filter if both dates are empty
-      onFilterChange(key, '');
-    }
-    // Don't clear the filter if only one date is set, wait for the other
-  };
+  const handleDateRangeChange = React.useCallback((key: string, field: 'start' | 'end', value: string) => {
+    setDateRanges(prev => {
+      const currentRange = prev[key] || { start: '', end: '' };
+      const newRange = { ...currentRange, [field]: value };
+      
+      // Update filter if both dates are set
+      if (newRange.start && newRange.end) {
+        onFilterChange(key, `${newRange.start},${newRange.end}`);
+      } else if (!newRange.start && !newRange.end) {
+        // Clear filter if both dates are empty
+        onFilterChange(key, '');
+      }
+      // Don't clear the filter if only one date is set, wait for the other
+      
+      return { ...prev, [key]: newRange };
+    });
+  }, [onFilterChange]);
 
   const renderFilter = (config: FilterConfig) => {
     const value = filters[config.key] || '';

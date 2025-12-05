@@ -271,7 +271,27 @@
     "sessionExpired": "انتهت الجلسة",
     "sessionExpiredDesc": "تم تسجيل خروجك. قد يكون ذلك بسبب تسجيل الدخول من جهاز آخر.",
     "accountInactive": "الحساب غير نشط",
-    "accountInactiveDesc": "تم إلغاء تفعيل حسابك. يرجى الاتصال بالمسؤول للحصول على المساعدة."
+    "accountInactiveDesc": "تم إلغاء تفعيل حسابك. يرجى الاتصال بالمسؤول للحصول على المساعدة.",
+    "passwordChangeRequired": "يجب تغيير كلمة المرور",
+    "passwordChangeRequiredDesc": "هذا هو تسجيل الدخول الأول. يرجى تعيين كلمة مرور جديدة للمتابعة."
+  },
+  "setPassword": {
+    "title": "تعيين كلمة المرور",
+    "subtitle": "مرحباً! يرجى تعيين كلمة مرور جديدة لحسابك.",
+    "newPassword": "كلمة المرور الجديدة",
+    "enterNewPassword": "أدخل كلمة المرور الجديدة",
+    "confirmPassword": "تأكيد كلمة المرور",
+    "confirmPasswordPlaceholder": "أعد إدخال كلمة المرور",
+    "setPassword": "تعيين كلمة المرور",
+    "settingPassword": "جاري تعيين كلمة المرور...",
+    "passwordRequired": "كلمة المرور مطلوبة",
+    "passwordTooShort": "يجب أن تتكون كلمة المرور من 6 أحرف على الأقل",
+    "passwordMismatch": "كلمات المرور غير متطابقة",
+    "passwordChangeSuccess": "تم تغيير كلمة المرور بنجاح!",
+    "welcomeMessage": "مرحباً بك في توصيلة، {name}!",
+    "passwordChangeFailed": "فشل تغيير كلمة المرور",
+    "passwordHint": "يجب أن تتكون كلمة المرور من 6 أحرف على الأقل.",
+    "noTokenError": "لم يتم العثور على رمز المصادقة. يرجى تسجيل الدخول مرة أخرى."
   },
   "trackSearch": {
     "howItWorks": "كيف يعمل",
@@ -413,6 +433,7 @@
     "addFilter": "إضافة تصفية",
     "selectFilter": "اختر التصفية",
     "allFiltersAdded": "تمت إضافة جميع التصفيات",
-    "tryAgain": "يرجى المحاولة مرة أخرى"
+    "tryAgain": "يرجى المحاولة مرة أخرى",
+    "allRightsReserved": "جميع الحقوق محفوظة"
   }
 }

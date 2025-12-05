@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -87,6 +87,15 @@ export default function ProfilePage() {
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
   };
+
+  // Memoized handlers for password change
+  const handlePasswordInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setPasswordFormData(prev => ({ ...prev, password: e.target.value }));
+  }, []);
+
+  const handleConfirmPasswordInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setPasswordFormData(prev => ({ ...prev, confirmPassword: e.target.value }));
+  }, []);
 
   const handleChangePassword = async () => {
     if (!user) return;
@@ -289,7 +298,7 @@ export default function ProfilePage() {
                 id="new_password"
                 type="password"
                 value={passwordFormData.password}
-                onChange={(e) => setPasswordFormData(prev => ({ ...prev, password: e.target.value }))}
+                onChange={handlePasswordInputChange}
                 disabled={isChangingPassword}
                 placeholder={tUsers('enterNewPassword')}
                 required
@@ -303,7 +312,7 @@ export default function ProfilePage() {
                 id="confirm_new_password"
                 type="password"
                 value={passwordFormData.confirmPassword}
-                onChange={(e) => setPasswordFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                onChange={handleConfirmPasswordInputChange}
                 disabled={isChangingPassword}
                 placeholder={tUsers('confirmNewPassword')}
                 required
