@@ -15,7 +15,7 @@ export default function RequestsPage() {
   const locale = useLocale();
   
   // Check if user has permission to access requests page
-  const hasPermission = usePagePermission(['super-admin', 'admin', 'manager', 'inventory-manager']);
+  const hasPermission = usePagePermission(['super-admin', 'admin', 'manager', 'inventory-manager', 'order-preparer']);
 
   // Don't render page if permission check hasn't completed or user lacks permission
   if (hasPermission === null || hasPermission === false) {

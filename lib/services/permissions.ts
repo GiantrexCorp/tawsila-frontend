@@ -41,3 +41,4 @@ export async function fetchPermissions(page: number = 1): Promise<PermissionsRes
   return response as unknown as PermissionsResponse;
 }
 
+

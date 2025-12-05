@@ -48,7 +48,7 @@ export default function UsersPage() {
   const currentUser = getCurrentUser();
   
   // Check if user has permission to access users page
-  const hasPermission = usePagePermission(['super-admin', 'admin', 'inventory-manager', 'order-preparer']);
+  const hasPermission = usePagePermission(['super-admin', 'admin', 'inventory-manager']);
   
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -75,7 +75,7 @@ export default function UsersPage() {
     mobile: '',
     password: '',
     confirmPassword: '',
-    role: '',
+    roleId: null as number | null,
     status: 'active' as 'active' | 'inactive',
   });
   const [userToChangePassword, setUserToChangePassword] = useState<User | null>(null);
@@ -340,7 +340,7 @@ export default function UsersPage() {
       mobile: '',
       password: '',
       confirmPassword: '',
-      role: '',
+      roleId: null,
       status: 'active',
     });
     setShowAddDialog(true);
@@ -352,7 +352,7 @@ export default function UsersPage() {
 
     // Validation
     if (!addFormData.name_en || !addFormData.name_ar || !addFormData.email || 
-        !addFormData.mobile || !addFormData.password || !addFormData.role) {
+        !addFormData.mobile || !addFormData.password || !addFormData.roleId) {
       toast.error(t('fillAllFields'));
       console.error('Validation failed - missing fields:', {
         name_en: !!addFormData.name_en,
@@ -360,7 +360,7 @@ export default function UsersPage() {
         email: !!addFormData.email,
         mobile: !!addFormData.mobile,
         password: !!addFormData.password,
-        role: !!addFormData.role,
+        roleId: !!addFormData.roleId,
       });
       return;
     }
@@ -370,6 +370,7 @@ export default function UsersPage() {
       return;
     }
 
+    // Create user first
     const createData = {
       name: addFormData.name_en,
       name_en: addFormData.name_en,
@@ -378,7 +379,6 @@ export default function UsersPage() {
       mobile: addFormData.mobile,
       password: addFormData.password,
       status: addFormData.status,
-      roles: [addFormData.role],
     };
 
     console.log('Sending create request with data:', createData);
@@ -386,7 +386,16 @@ export default function UsersPage() {
 
     setIsCreating(true);
     try {
-      await createUser(createData);
+      const newUser = await createUser(createData);
+      
+      // Assign role to the newly created user
+      if (addFormData.roleId) {
+        console.log('Assigning role to new user:', {
+          userId: newUser.id,
+          roleId: addFormData.roleId,
+        });
+        await assignUserRole(newUser.id, addFormData.roleId);
+      }
       
       toast.success(t('createSuccess'));
       setShowAddDialog(false);
@@ -480,6 +489,37 @@ export default function UsersPage() {
     // Note: Don't set isChangingPassword to false if it's own password (logout will happen)
   };
 
+  const getRoleDisplayName = (roleName: string, roleData?: Role) => {
+    // Try to get localized slug from API first
+    if (roleData) {
+      const slug = locale === 'ar' ? roleData.slug_ar : roleData.slug_en;
+      if (slug) {
+        return slug;
+      }
+    }
+    
+    // Fallback to translation keys
+    const roleTranslationMap: Record<string, string> = {
+      'super-admin': 'superAdmin',
+      'admin': 'admin',
+      'manager': 'manager',
+      'viewer': 'viewer',
+      'inventory-manager': 'inventoryManager',
+      'order-preparer': 'orderPreparer',
+      'shipping-agent': 'shippingAgent',
+    };
+    
+    const translationKey = roleTranslationMap[roleName];
+    if (translationKey) {
+      return t(translationKey);
+    }
+    
+    // Last fallback: format the role name
+    return roleName.split('-').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  };
+
   const getRoleBadge = (roles: string[]) => {
     if (!roles || roles.length === 0) {
       return <Badge variant="outline">{t('noRole')}</Badge>;
@@ -495,18 +535,7 @@ export default function UsersPage() {
     
     // Find role in available roles to get slug
     const roleData = availableRoles.find(r => r.name === roleName);
-    
-    // Use slug based on locale, fallback to formatted role name
-    let displayName = roleName.split('-').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
-    
-    if (roleData) {
-      const slug = locale === 'ar' ? roleData.slug_ar : roleData.slug_en;
-      if (slug) {
-        displayName = slug;
-      }
-    }
+    const displayName = getRoleDisplayName(roleName, roleData);
     
     return <Badge variant={variants[roleName] || "outline"}>{displayName}</Badge>;
   };
@@ -911,18 +940,19 @@ export default function UsersPage() {
             <div className="grid gap-2">
               <Label htmlFor="add_role">{t('role')} *</Label>
               <Select
-                value={addFormData.role}
-                onValueChange={(value) => setAddFormData(prev => ({ ...prev, role: value }))}
+                value={addFormData.roleId?.toString() || ''}
+                onValueChange={(value) => setAddFormData(prev => ({ ...prev, roleId: Number(value) }))}
                 disabled={isCreating}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={tCommon('select')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="super-admin">{t('superAdmin')}</SelectItem>
-                  <SelectItem value="admin">{t('admin')}</SelectItem>
-                  <SelectItem value="manager">{t('manager')}</SelectItem>
-                  <SelectItem value="viewer">{t('viewer')}</SelectItem>
+                  {availableRoles.map(role => (
+                    <SelectItem key={role.id} value={role.id.toString()}>
+                      {getRoleDisplayName(role.name, role)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -1106,7 +1136,7 @@ export default function UsersPage() {
                     <Shield className="h-4 w-4 text-muted-foreground" />
                     <span>
                       {userToView.roles && userToView.roles.length > 0
-                        ? userToView.roles[0].split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+                        ? getRoleDisplayName(userToView.roles[0], availableRoles.find(r => r.name === userToView.roles[0]))
                         : t('noRole')}
                     </span>
                   </div>
@@ -1194,7 +1224,7 @@ export default function UsersPage() {
                 <SelectContent>
                   {availableRoles.map(role => (
                     <SelectItem key={role.id} value={role.id.toString()}>
-                      {role.name}
+                      {getRoleDisplayName(role.name, role)}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -208,6 +208,50 @@ export default function LoginPage() {
     }
   };
 
+  const handleOrderPreparerLogin = async () => {
+    setFormData({
+      email: "metwaly@gmail.com",
+      password: "password",
+    });
+    
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      const user = await login({
+        email: "metwaly@gmail.com",
+        password: "password",
+      });
+      
+      toast.success(t('loginSuccess'), {
+        description: t('welcomeBack', { name: user.name }),
+      });
+
+      // Redirect based on role
+      if (user.roles?.includes('shipping-agent')) {
+        router.push('/dashboard/orders');
+      } else {
+        router.push('/dashboard');
+      }
+    } catch (error: any) {
+      console.error("Login error:", error);
+      
+      if (error.errors) {
+        const formattedErrors: Record<string, string> = {};
+        Object.entries(error.errors).forEach(([key, messages]) => {
+          formattedErrors[key] = (messages as string[])[0];
+        });
+        setErrors(formattedErrors);
+      }
+      
+      toast.error(t('loginFailed'), {
+        description: error.message || t('checkCredentials'),
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/20">
       {/* Header */}
@@ -314,6 +358,15 @@ export default function LoginPage() {
                 disabled={isLoading}
               >
                 🚚 Shipping Agent Login
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full bg-orange-50 hover:bg-orange-100 dark:bg-orange-950 dark:hover:bg-orange-900 border-orange-300 dark:border-orange-800 text-orange-900 dark:text-orange-100"
+                onClick={handleOrderPreparerLogin}
+                disabled={isLoading}
+              >
+                📋 Order Preparer Login
               </Button>
             </div>
           </CardContent>

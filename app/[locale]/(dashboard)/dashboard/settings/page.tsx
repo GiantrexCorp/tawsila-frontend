@@ -57,7 +57,7 @@ export default function SettingsPage() {
   const isSuperAdmin = () => currentUser?.roles?.includes('super-admin');
 
   // Check if user has permission to access settings page
-  const hasPermission = usePagePermission(['super-admin', 'admin', 'manager', 'viewer', 'inventory-manager', 'order-preparer']);
+  const hasPermission = usePagePermission(['super-admin', 'admin', 'manager', 'viewer', 'inventory-manager']);
 
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
