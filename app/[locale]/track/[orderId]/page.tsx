@@ -68,7 +68,7 @@ export default function TrackOrderPage({ params }: Props) {
   const copyTrackingNumber = () => {
     if (tracking) {
       navigator.clipboard.writeText(tracking.track_number);
-      toast.success('Tracking number copied!');
+      toast.success(t('trackingNumberCopied'));
     }
   };
 
@@ -100,7 +100,7 @@ export default function TrackOrderPage({ params }: Props) {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="text-muted-foreground">Loading tracking information...</p>
+            <p className="text-muted-foreground">{t('loadingTracking')}</p>
           </div>
         </div>
       </div>
@@ -193,7 +193,7 @@ export default function TrackOrderPage({ params }: Props) {
                   </Button>
                 </div>
                 <p className="text-muted-foreground">
-                  Order: <span className="font-mono">{tracking.order_number}</span>
+                  {t('order')}: <span className="font-mono">{tracking.order_number}</span>
                 </p>
               </div>
 
@@ -216,7 +216,7 @@ export default function TrackOrderPage({ params }: Props) {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {completedSteps} of {totalSteps} steps completed
+                  {t('stepsCompleted', { completed: completedSteps, total: totalSteps })}
                 </p>
               </div>
             </div>
@@ -224,11 +224,11 @@ export default function TrackOrderPage({ params }: Props) {
 
           {/* Tracking Timeline */}
           <div className="rounded-2xl border border-border/50 bg-card p-6 md:p-8">
-            <h2 className="text-lg font-semibold mb-6">Tracking Timeline</h2>
+            <h2 className="text-lg font-semibold mb-6">{t('trackingTimeline')}</h2>
 
             <div className="relative">
-              {/* Vertical Line */}
-              <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-border" />
+              {/* Vertical Line - use start-6 for RTL support */}
+              <div className="absolute start-6 top-0 bottom-0 w-0.5 bg-border" />
 
               {/* Steps */}
               <div className="space-y-1">
@@ -253,7 +253,7 @@ export default function TrackOrderPage({ params }: Props) {
                   <Building2 className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Vendor</p>
+                  <p className="text-xs text-muted-foreground">{t('vendor')}</p>
                   <p className="font-semibold">{tracking.vendor.name}</p>
                 </div>
               </div>
@@ -266,13 +266,13 @@ export default function TrackOrderPage({ params }: Props) {
                   <MapPin className="h-5 w-5 text-orange-500" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-muted-foreground">Delivery Address</p>
+                  <p className="text-xs text-muted-foreground">{t('deliveryAddress')}</p>
                   <p className="font-medium text-sm truncate">{tracking.delivery_address.full_address}</p>
                 </div>
               </div>
               {tracking.delivery_address.address_notes && (
                 <p className="text-xs text-muted-foreground pl-13">
-                  Note: {tracking.delivery_address.address_notes}
+                  {t('note')}: {tracking.delivery_address.address_notes}
                 </p>
               )}
             </div>
@@ -280,7 +280,7 @@ export default function TrackOrderPage({ params }: Props) {
 
           {/* Status History */}
           <div className="rounded-2xl border border-border/50 bg-card p-6 md:p-8">
-            <h2 className="text-lg font-semibold mb-6">Status History</h2>
+            <h2 className="text-lg font-semibold mb-6">{t('statusHistory')}</h2>
 
             <div className="relative overflow-x-auto">
               <div className="flex gap-4 pb-2 min-w-max">
@@ -324,7 +324,7 @@ export default function TrackOrderPage({ params }: Props) {
               className="gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
-              Track Another Order
+              {t('trackAnother')}
             </Button>
           </div>
 
@@ -334,7 +334,7 @@ export default function TrackOrderPage({ params }: Props) {
       {/* Footer */}
       <footer className="border-t py-6 bg-background">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} Tawsila. All rights reserved.</p>
+          <p>{t('copyright', { year: new Date().getFullYear() })}</p>
         </div>
       </footer>
     </div>
@@ -366,6 +366,7 @@ function TrackingStepItem({
   isLast: boolean;
   formatDate: (date: string) => string;
 }) {
+  const t = useTranslations('tracking');
   const Icon = stepIcons[step.key] || Package;
 
   return (
@@ -408,7 +409,7 @@ function TrackingStepItem({
             className="inline-flex items-center gap-1 mt-2 text-xs text-primary hover:underline"
           >
             <MapPin className="h-3 w-3" />
-            View location
+            {t('viewLocation')}
             <ExternalLink className="h-3 w-3" />
           </a>
         )}

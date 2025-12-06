@@ -293,7 +293,19 @@
     "orderStatus": "Order Status",
     "orderedOn": "Ordered on",
     "totalAmount": "Total Amount",
-    "orderItems": "Order Items"
+    "orderItems": "Order Items",
+    "loadingTracking": "Loading tracking information...",
+    "trackingNumberCopied": "Tracking number copied!",
+    "order": "Order",
+    "stepsCompleted": "{completed} of {total} steps completed",
+    "trackingTimeline": "Tracking Timeline",
+    "vendor": "Vendor",
+    "deliveryAddress": "Delivery Address",
+    "note": "Note",
+    "statusHistory": "Status History",
+    "trackAnother": "Track Another Order",
+    "viewLocation": "View location",
+    "copyright": "© {year} Tawsila. All rights reserved."
   },
   "landing": {
     "subtitle": "Streamline your inventory and delivery operations with Tawsila's intelligent management system",

@@ -30,7 +30,7 @@ export interface ApiError {
 /**
  * Get current locale from URL
  */
-function getCurrentLocale(): string {
+export function getCurrentLocale(): string {
   if (typeof window === 'undefined') return 'en';
   
   // Extract locale from pathname (e.g., /en/dashboard -> en, /ar/users -> ar)
