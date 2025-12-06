@@ -19,6 +19,7 @@ interface LocationPickerProps {
   longitude: string;
   onLocationChange: (lat: string, lng: string) => void;
   disabled?: boolean;
+  height?: string;
 }
 
 function LocationMarker({ onLocationChange }: { onLocationChange: (lat: string, lng: string) => void }) {
@@ -35,7 +36,7 @@ function LocationMarker({ onLocationChange }: { onLocationChange: (lat: string, 
   return position === null ? null : <Marker position={position} />;
 }
 
-export function LocationPicker({ latitude, longitude, onLocationChange, disabled = false }: LocationPickerProps) {
+export function LocationPicker({ latitude, longitude, onLocationChange, disabled = false, height = "400px" }: LocationPickerProps) {
   const [mounted, setMounted] = useState(false);
   
   // Default to Cairo, Egypt
@@ -53,14 +54,14 @@ export function LocationPicker({ latitude, longitude, onLocationChange, disabled
 
   if (!mounted) {
     return (
-      <div className="w-full h-[400px] bg-muted rounded-lg flex items-center justify-center">
+      <div className={`w-full bg-muted rounded-lg flex items-center justify-center`} style={{ height }}>
         <p className="text-muted-foreground">Loading map...</p>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-[400px] rounded-lg overflow-hidden border-2 border-muted relative">
+    <div className="w-full rounded-lg overflow-hidden border-2 border-muted relative" style={{ height }}>
       <MapContainer
         center={center}
         zoom={13}
@@ -77,14 +78,23 @@ export function LocationPicker({ latitude, longitude, onLocationChange, disabled
           <Marker position={[parseFloat(latitude), parseFloat(longitude)]} />
         )}
       </MapContainer>
-      <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg z-[1000] text-sm">
-        <p className="font-medium">📍 Click on the map to set location</p>
-        {latitude && longitude && (
-          <p className="text-xs text-muted-foreground mt-1">
+      {!disabled && (
+        <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg z-[1000] text-sm">
+          <p className="font-medium">📍 Click on the map to set location</p>
+          {latitude && longitude && (
+            <p className="text-xs text-muted-foreground mt-1">
+              {latitude}, {longitude}
+            </p>
+          )}
+        </div>
+      )}
+      {disabled && latitude && longitude && (
+        <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg z-[1000] text-sm">
+          <p className="text-xs text-muted-foreground">
             {latitude}, {longitude}
           </p>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

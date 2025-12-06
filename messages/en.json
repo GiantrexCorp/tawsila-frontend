@@ -137,6 +137,7 @@
     "phone": "Phone",
     "address": "Address",
     "createdOn": "Created On",
+    "since": "Since",
     "copyKey": "Copy Key",
     "regenerate": "Regenerate",
     "configure": "Configure",
@@ -196,7 +197,17 @@
     "status": "Status",
     "selectStatus": "Select Status",
     "selectLocation": "Select Location on Map",
-    "selectLocationDesc": "Click anywhere on the map to set the vendor's location. The coordinates will be automatically filled."
+    "selectLocationDesc": "Click anywhere on the map to set the vendor's location. The coordinates will be automatically filled.",
+    "editVendor": "Edit Vendor",
+    "editVendorDescription": "Update vendor information and settings",
+    "updateVendor": "Update Vendor",
+    "vendorUpdatedSuccess": "Vendor updated successfully",
+    "errorUpdatingVendor": "Failed to update vendor",
+    "updateFailed": "Update Failed",
+    "errorLoadingVendor": "Failed to load vendor",
+    "view": "View",
+    "viewVendor": "View Vendor",
+    "viewVendorDescription": "View complete vendor information and details"
   },
   "analyticsPage": {
     "title": "Analytics Dashboard",
@@ -438,6 +449,7 @@
     "view": "View",
     "viewUser": "View User",
     "viewUserDetails": "View user profile and details",
+    "since": "Since",
     "createdAt": "Created At",
     "assignRole": "Assign Role",
     "assignRoleDesc": "Assign a role to {name}",
@@ -488,6 +500,8 @@
     "selectFilter": "Select Filter",
     "allFiltersAdded": "All filters added",
     "tryAgain": "Please try again",
-    "allRightsReserved": "All rights reserved"
+    "allRightsReserved": "All rights reserved",
+    "details": "Details",
+    "lastUpdated": "Last Updated"
   }
 }

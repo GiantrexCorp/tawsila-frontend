@@ -6,13 +6,7 @@ import { useRouter } from "@/i18n/routing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Mail, Phone, MapPin, Key, User, FileText, Calendar, Plus, Copy, MoreVertical, Loader2 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Building2, Mail, Phone, MapPin, Key, User, FileText, Calendar, Plus, Copy, Loader2, Edit, CheckCircle2, XCircle, Briefcase, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { fetchVendors, type Vendor } from "@/lib/services/vendors";
@@ -117,124 +111,95 @@ export default function VendorsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
+        <div className="grid gap-4 md:gap-6 lg:grid-cols-2 xl:grid-cols-3">
           {vendors.map((vendor) => (
-            <Card key={vendor.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Building2 className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">
-                        {locale === 'ar' ? vendor.name_ar : vendor.name_en}
-                      </CardTitle>
-                      <Badge variant={vendor.status === 'active' ? 'outline' : 'secondary'} className="mt-1">
-                        {vendor.status === 'active' ? t('activeOrgs') : t('inactiveOrgs')}
-                      </Badge>
-                    </div>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon-sm">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>{tCommon('edit')}</DropdownMenuItem>
-                      <DropdownMenuItem>Toggle Status</DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-600">{tCommon('delete')}</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Description */}
-                <div className="flex items-start gap-2 text-sm">
-                  <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
-                  <span className="text-muted-foreground">
-                    {locale === 'ar' ? vendor.description_ar : vendor.description_en}
-                  </span>
-                </div>
-
-                {/* Contact Info */}
-                <div className="space-y-2 pt-2 border-t">
-                  <div className="flex items-center gap-2 text-sm">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{vendor.contact_person}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{vendor.email}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{vendor.mobile}</span>
-                  </div>
-                </div>
-
-                {/* Location */}
-                <div className="space-y-2 pt-2 border-t">
-                  <div className="flex items-center gap-2 text-sm">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{vendor.address}</span>
-                  </div>
-                  <div className="text-sm text-muted-foreground ml-6">
-                    {locale === 'ar' ? vendor.city.name_ar : vendor.city.name_en},{' '}
-                    {locale === 'ar' ? vendor.governorate.name_ar : vendor.governorate.name_en}
-                  </div>
-                  {(vendor.latitude || vendor.longitude) && (
-                    <div className="text-xs text-muted-foreground ml-6">
-                      {t('coordinates')}: {vendor.latitude}, {vendor.longitude}
-                    </div>
-                  )}
-                </div>
-
-                {/* Business Info */}
-                {(vendor.commercial_registration || vendor.tax_number) && (
-                  <div className="space-y-2 pt-2 border-t">
-                    {vendor.commercial_registration && (
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">{t('commercialRegistration')}: </span>
-                        <span className="font-medium">{vendor.commercial_registration}</span>
-                      </div>
-                    )}
-                    {vendor.tax_number && (
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">{t('taxNumber')}: </span>
-                        <span className="font-medium">{vendor.tax_number}</span>
-                      </div>
-                    )}
-                  </div>
+            <Card 
+              key={vendor.id} 
+              className="group hover:shadow-lg transition-all duration-300 overflow-hidden border-border/50 hover:border-primary/20 !p-0 !gap-0 cursor-pointer"
+              onClick={() => router.push(`/dashboard/vendors/${vendor.id}`)}
+            >
+              {/* Banner */}
+              <div className="relative h-32 bg-gradient-to-br from-primary/20 via-primary/10 to-muted overflow-hidden w-full">
+                {vendor.cover_image ? (
+                  <img 
+                    src={vendor.cover_image} 
+                    alt={`${locale === 'ar' ? vendor.name_ar : vendor.name_en} cover`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5" />
                 )}
+                <div className="absolute inset-0 bg-black/5" />
 
-                {/* Secret Key */}
-                <div className="pt-2 border-t space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Key className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">{t('secretKey')}</span>
+                {/* Logo Overlay */}
+                <div className="absolute -bottom-8 left-4">
+                  <div className="relative">
+                    <div className="h-20 w-20 rounded-xl bg-background border-4 border-background shadow-lg overflow-hidden flex items-center justify-center">
+                      {vendor.logo ? (
+                        <img 
+                          src={vendor.logo} 
+                          alt={`${locale === 'ar' ? vendor.name_ar : vendor.name_en} logo`}
+                          className="w-full h-full object-contain p-1"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-primary/10 flex items-center justify-center">
+                          <Building2 className="h-8 w-8 text-primary" />
+                        </div>
+                      )}
                     </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon-sm"
-                      onClick={() => copySecretKey(vendor.secret_key)}
-                    >
-                      <Copy className="h-3 w-3" />
-                    </Button>
                   </div>
-                  <div className="bg-muted/50 px-3 py-2 rounded-md">
-                    <code className="text-xs font-mono">{'*'.repeat(12)}</code>
+                </div>
+              </div>
+
+              <CardContent className="pt-8 pb-4 px-6">
+                {/* Vendor Name and Description */}
+                <div className="space-y-2 mb-4">
+                  <CardTitle className="text-xl font-bold mb-1 line-clamp-1">
+                    {locale === 'ar' ? vendor.name_ar : vendor.name_en}
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                    {locale === 'ar' ? vendor.description_ar : vendor.description_en}
+                  </p>
+                </div>
+
+                {/* Dates */}
+                <div className="flex items-center gap-4 mb-4 text-xs text-muted-foreground pb-3 border-b">
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>{t('since')} {new Date(vendor.created_at).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>{tCommon('lastUpdated')} {new Date(vendor.updated_at).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
                   </div>
                 </div>
 
-                {/* Created Date */}
-                <div className="pt-2 border-t flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">
-                    {t('createdOn')}: {new Date(vendor.created_at).toLocaleDateString(locale)}
-                  </span>
+                {/* Action Buttons */}
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/dashboard/vendors/${vendor.id}`);
+                    }}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    {t('view')}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/dashboard/vendors/${vendor.id}/edit`);
+                    }}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    {tCommon('edit')}
+                  </Button>
                 </div>
               </CardContent>
             </Card>

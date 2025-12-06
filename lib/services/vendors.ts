@@ -44,11 +44,11 @@ export interface Vendor {
 export interface CreateVendorRequest {
   name_en: string;
   name_ar: string;
-  email: string;
+  email?: string;
   mobile: string;
   contact_person: string;
-  description_en?: string;
-  description_ar?: string;
+  description_en: string;
+  description_ar: string;
   address: string;
   governorate_id: number;
   city_id: number;
@@ -141,16 +141,49 @@ export async function updateVendor(
   id: number,
   vendorData: Partial<CreateVendorRequest>
 ): Promise<Vendor> {
-  const response = await apiRequest<Vendor>(`/vendors/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(vendorData),
-  });
+  // Use FormData if there are file uploads
+  const hasFileUpload = vendorData.logo instanceof File || vendorData.cover_image instanceof File;
+  
+  if (hasFileUpload) {
+    const formData = new FormData();
+    
+    // Laravel requires _method field for PUT via POST
+    formData.append('_method', 'PUT');
+    
+    // Append all fields to FormData
+    Object.entries(vendorData).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        if (value instanceof File) {
+          formData.append(key, value);
+        } else {
+          formData.append(key, String(value));
+        }
+      }
+    });
 
-  if (!response.data) {
-    throw new Error('Failed to update vendor');
+    const response = await apiRequest<Vendor>(`/vendors/${id}`, {
+      method: 'POST', // Use POST with _method=PUT for file uploads
+      body: formData,
+    });
+
+    if (!response.data) {
+      throw new Error('Failed to update vendor');
+    }
+
+    return response.data;
+  } else {
+    // Use JSON for non-file uploads
+    const response = await apiRequest<Vendor>(`/vendors/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(vendorData),
+    });
+
+    if (!response.data) {
+      throw new Error('Failed to update vendor');
+    }
+
+    return response.data;
   }
-
-  return response.data;
 }
 
 /**

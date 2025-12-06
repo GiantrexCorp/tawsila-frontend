@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { useParams } from "next/navigation";
 import { useRouter } from "@/i18n/routing";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Image from "next/image";
 import { ArrowLeft, Loader2, Building2, Upload, X } from "lucide-react";
 import {
   Select,
@@ -18,18 +18,30 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
-import { createVendor, fetchGovernorates, fetchCities, type Governorate, type City, type CreateVendorRequest } from "@/lib/services/vendors";
+import { 
+  fetchVendor,
+  updateVendor, 
+  fetchGovernorates, 
+  fetchCities, 
+  type Governorate, 
+  type City, 
+  type CreateVendorRequest,
+  type Vendor 
+} from "@/lib/services/vendors";
 import { Separator } from "@/components/ui/separator";
 import { LocationPicker } from "@/components/ui/location-picker";
 
-export default function NewVendorPage() {
+export default function EditVendorPage() {
   const t = useTranslations('organizations');
   const tCommon = useTranslations('common');
   const router = useRouter();
+  const params = useParams();
+  const vendorId = parseInt(params.id as string);
   
   // Check if user has permission
   const hasPermission = usePagePermission(['super-admin', 'admin', 'manager', 'inventory-manager']);
 
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string>('');
   const [coverPreview, setCoverPreview] = useState<string>('');
@@ -63,12 +75,64 @@ export default function NewVendorPage() {
   const [cities, setCities] = useState<City[]>([]);
   const [isLoadingCities, setIsLoadingCities] = useState(false);
 
-  // Load governorates on mount
+  // Load vendor data and governorates on mount
   useEffect(() => {
-    fetchGovernorates()
-      .then(setGovernorates)
-      .catch(() => toast.error(t('errorLoadingGovernorates')));
-  }, [t]);
+    const loadData = async () => {
+      try {
+        const [vendor, govs] = await Promise.all([
+          fetchVendor(vendorId),
+          fetchGovernorates()
+        ]);
+
+        // Set governorates
+        setGovernorates(govs);
+
+        // Set form data from vendor
+        setFormData({
+          name_en: vendor.name_en,
+          name_ar: vendor.name_ar,
+          email: vendor.email || '',
+          mobile: vendor.mobile,
+          contact_person: vendor.contact_person,
+          description_en: vendor.description_en,
+          description_ar: vendor.description_ar,
+          address: vendor.address || '',
+          governorate_id: vendor.governorate.id,
+          city_id: vendor.city.id,
+          latitude: vendor.latitude,
+          longitude: vendor.longitude,
+          commercial_registration: vendor.commercial_registration || '',
+          tax_number: vendor.tax_number || '',
+          status: vendor.status,
+          secret_key: vendor.secret_key,
+          logo: undefined,
+          cover_image: undefined,
+        });
+
+        // Set image previews
+        if (vendor.logo) {
+          setLogoPreview(vendor.logo);
+        }
+        if (vendor.cover_image) {
+          setCoverPreview(vendor.cover_image);
+        }
+
+        // Load cities for the vendor's governorate
+        if (vendor.governorate.id) {
+          const fetchedCities = await fetchCities(vendor.governorate.id);
+          setCities(fetchedCities);
+        }
+
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Failed to load vendor:', error);
+        toast.error(t('errorLoadingVendor') || 'Failed to load vendor');
+        router.push('/dashboard/vendors');
+      }
+    };
+
+    loadData();
+  }, [vendorId, t, router]);
 
   // Load cities when governorate changes
   const handleGovernorateChange = useCallback(async (governorateId: string) => {
@@ -82,7 +146,6 @@ export default function NewVendorPage() {
         const fetchedCities = await fetchCities(id);
         setCities(fetchedCities);
       } catch (error) {
-        // Show error toast only, don't log to console to avoid visual clutter
         const errorMessage = error && typeof error === 'object' && 'message' in error 
           ? String(error.message) 
           : t('errorLoadingCities');
@@ -115,14 +178,12 @@ export default function NewVendorPage() {
         return;
       }
       
-      // Create preview URL
       const reader = new FileReader();
       reader.onloadend = () => {
         setLogoPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
       
-      // Store actual file object for upload
       setFormData(prev => ({ ...prev, logo: file }));
     }
   }, [t]);
@@ -143,14 +204,12 @@ export default function NewVendorPage() {
         return;
       }
       
-      // Create preview URL
       const reader = new FileReader();
       reader.onloadend = () => {
         setCoverPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
       
-      // Store actual file object for upload
       setFormData(prev => ({ ...prev, cover_image: file }));
     }
   }, [t]);
@@ -165,11 +224,9 @@ export default function NewVendorPage() {
 
   const handleLocationChange = useCallback((lat: string, lng: string) => {
     setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }));
-    // Clear errors for latitude/longitude when location is set
     if (errors.latitude || errors.longitude) {
       setErrors(prev => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { latitude: _lat, longitude: _lng, ...rest } = prev;
+        const { latitude, longitude, ...rest } = prev;
         return rest;
       });
     }
@@ -178,7 +235,6 @@ export default function NewVendorPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setErrors({});
 
     // Validate required location fields
     const validationErrors: Record<string, string> = {};
@@ -210,12 +266,11 @@ export default function NewVendorPage() {
       // Clean up form data - remove empty optional fields only
       const cleanedData = { ...formData };
       
-      // Remove empty optional string fields
       if (!cleanedData.email) delete cleanedData.email;
       if (!cleanedData.commercial_registration) delete cleanedData.commercial_registration;
       if (!cleanedData.tax_number) delete cleanedData.tax_number;
       
-      // Only delete logo/cover_image if they are not File objects
+      // Only send logo/cover_image if they are File objects (new uploads)
       if (!cleanedData.logo || (typeof cleanedData.logo === 'string' && !cleanedData.logo)) {
         delete cleanedData.logo;
       }
@@ -223,12 +278,12 @@ export default function NewVendorPage() {
         delete cleanedData.cover_image;
       }
 
-      console.log('Sending vendor data:', cleanedData);
-      await createVendor(cleanedData);
-      toast.success(t('vendorCreatedSuccess'));
+      console.log('Updating vendor data:', cleanedData);
+      await updateVendor(vendorId, cleanedData);
+      toast.success(t('vendorUpdatedSuccess') || 'Vendor updated successfully');
       router.push('/dashboard/vendors');
     } catch (error: unknown) {
-      console.error('Create vendor error:', error);
+      console.error('Update vendor error:', error);
       
       if (error && typeof error === 'object' && 'errors' in error) {
         const errorObj = error as { errors?: Record<string, string[]> };
@@ -243,9 +298,9 @@ export default function NewVendorPage() {
       
       const errorMessage = (error && typeof error === 'object' && 'message' in error) 
         ? String(error.message) 
-        : t('errorCreatingVendor');
+        : t('errorUpdatingVendor') || 'Failed to update vendor';
       
-      toast.error(t('createFailed'), {
+      toast.error(t('updateFailed') || 'Update Failed', {
         description: errorMessage,
       });
     } finally {
@@ -253,7 +308,7 @@ export default function NewVendorPage() {
     }
   };
 
-  if (hasPermission === null || hasPermission === false) {
+  if (hasPermission === null || hasPermission === false || isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -274,16 +329,16 @@ export default function NewVendorPage() {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('addOrganization')}</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('editVendor') || 'Edit Vendor'}</h1>
           <p className="text-sm md:text-base text-muted-foreground mt-1">
-            {t('addVendorDescription')}
+            {t('editVendorDescription') || 'Update vendor information'}
           </p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit}>
         <div className="max-w-5xl mx-auto space-y-6">
-          {/* Basic Information with Logo */}
+          {/* Basic Information with Logo & Cover */}
           <Card>
             <CardHeader>
               <CardTitle>{t('basicInformation')}</CardTitle>
@@ -777,7 +832,7 @@ export default function NewVendorPage() {
               ) : (
                 <>
                   <Building2 className="mr-2 h-4 w-4" />
-                  {t('createVendor')}
+                  {t('updateVendor') || 'Update Vendor'}
                 </>
               )}
             </Button>
