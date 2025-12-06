@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "@/i18n/routing";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Image from "next/image";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Building2, Mail, Phone, MapPin, Key, User, FileText, Calendar, Plus, Copy, Loader2, Edit, CheckCircle2, XCircle, Briefcase, Eye } from "lucide-react";
+import { Building2, Calendar, Plus, Loader2, Edit, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { fetchVendors, type Vendor } from "@/lib/services/vendors";
@@ -50,11 +50,6 @@ export default function VendorsPage() {
       </div>
     );
   }
-
-  const copySecretKey = (key: string) => {
-    navigator.clipboard.writeText(key);
-    toast.success(t('secretKeyCopied'));
-  };
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -121,10 +116,11 @@ export default function VendorsPage() {
               {/* Banner */}
               <div className="relative h-32 bg-gradient-to-br from-primary/20 via-primary/10 to-muted overflow-hidden w-full">
                 {vendor.cover_image ? (
-                  <img 
-                    src={vendor.cover_image} 
+                  <Image
+                    src={vendor.cover_image}
                     alt={`${locale === 'ar' ? vendor.name_ar : vendor.name_en} cover`}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5" />
@@ -136,9 +132,11 @@ export default function VendorsPage() {
                   <div className="relative">
                     <div className="h-20 w-20 rounded-xl bg-background border-4 border-background shadow-lg overflow-hidden flex items-center justify-center">
                       {vendor.logo ? (
-                        <img 
-                          src={vendor.logo} 
+                        <Image
+                          src={vendor.logo}
                           alt={`${locale === 'ar' ? vendor.name_ar : vendor.name_en} logo`}
+                          width={80}
+                          height={80}
                           className="w-full h-full object-contain p-1"
                         />
                       ) : (

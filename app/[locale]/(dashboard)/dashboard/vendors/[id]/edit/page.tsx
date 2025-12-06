@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import Image from "next/image";
 import { ArrowLeft, Loader2, Building2, Upload, X } from "lucide-react";
 import {
   Select,
@@ -18,15 +19,14 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
-import { 
+import {
   fetchVendor,
-  updateVendor, 
-  fetchGovernorates, 
-  fetchCities, 
-  type Governorate, 
-  type City, 
-  type CreateVendorRequest,
-  type Vendor 
+  updateVendor,
+  fetchGovernorates,
+  fetchCities,
+  type Governorate,
+  type City,
+  type CreateVendorRequest
 } from "@/lib/services/vendors";
 import { Separator } from "@/components/ui/separator";
 import { LocationPicker } from "@/components/ui/location-picker";
@@ -226,7 +226,8 @@ export default function EditVendorPage() {
     setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }));
     if (errors.latitude || errors.longitude) {
       setErrors(prev => {
-        const { latitude, longitude, ...rest } = prev;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { latitude: _lat, longitude: _lng, ...rest } = prev;
         return rest;
       });
     }
@@ -353,9 +354,11 @@ export default function EditVendorPage() {
                     {logoPreview ? (
                       <div className="relative">
                         <div className="h-32 w-32 rounded-lg border-2 border-muted overflow-hidden bg-muted/30">
-                          <img 
-                            src={logoPreview} 
-                            alt="Logo preview" 
+                          <Image
+                            src={logoPreview}
+                            alt="Logo preview"
+                            width={128}
+                            height={128}
                             className="w-full h-full object-cover"
                           />
                         </div>
@@ -415,9 +418,11 @@ export default function EditVendorPage() {
                     {coverPreview ? (
                       <div className="relative">
                         <div className="h-32 w-32 rounded-lg border-2 border-muted overflow-hidden bg-muted/30">
-                          <img 
-                            src={coverPreview} 
-                            alt="Cover preview" 
+                          <Image
+                            src={coverPreview}
+                            alt="Cover preview"
+                            width={128}
+                            height={128}
                             className="w-full h-full object-cover"
                           />
                         </div>

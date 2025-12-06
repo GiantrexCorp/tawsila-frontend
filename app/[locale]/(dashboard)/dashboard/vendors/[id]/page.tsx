@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useParams } from "next/navigation";
 import { useRouter } from "@/i18n/routing";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import Image from "next/image";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -104,10 +105,11 @@ export default function ViewVendorPage() {
       <Card className="overflow-hidden !p-0 !gap-0">
         <div className="relative h-32 bg-gradient-to-br from-primary/20 via-primary/10 to-muted overflow-hidden w-full">
           {vendor.cover_image ? (
-            <img 
-              src={vendor.cover_image} 
+            <Image
+              src={vendor.cover_image}
               alt={`${displayName} cover`}
-              className="w-full h-full object-cover"
+              fill
+              className="object-cover"
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5" />
@@ -138,9 +140,11 @@ export default function ViewVendorPage() {
             <div className="relative">
               <div className="h-24 w-24 rounded-xl bg-background border-4 border-background shadow-lg flex items-center justify-center p-3">
                 {vendor.logo ? (
-                  <img 
-                    src={vendor.logo} 
+                  <Image
+                    src={vendor.logo}
                     alt={`${displayName} logo`}
+                    width={72}
+                    height={72}
                     className="max-w-full max-h-full w-auto h-auto object-contain"
                   />
                 ) : (

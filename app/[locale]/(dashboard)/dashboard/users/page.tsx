@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Mail, Phone, Clock, MoreVertical, UserPlus, ChevronLeft, ChevronRight, Loader2, Eye, Calendar, Shield, CheckCircle2, XCircle, Edit, User as UserIcon } from "lucide-react";
+import { Mail, Phone, Clock, MoreVertical, UserPlus, ChevronLeft, ChevronRight, Loader2, Eye, Calendar, Shield, Edit } from "lucide-react";
 import { fetchUsers, updateUser, createUser, changeUserPassword, assignUserRole, User, UserFilters } from "@/lib/services/users";
 import { fetchRoles, Role } from "@/lib/services/roles";
 import { usePagePermission } from "@/hooks/use-page-permission";

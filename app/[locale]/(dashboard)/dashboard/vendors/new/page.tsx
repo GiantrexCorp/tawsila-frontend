@@ -298,9 +298,11 @@ export default function NewVendorPage() {
                     {logoPreview ? (
                       <div className="relative">
                         <div className="h-32 w-32 rounded-lg border-2 border-muted overflow-hidden bg-muted/30">
-                          <img 
-                            src={logoPreview} 
-                            alt="Logo preview" 
+                          <Image
+                            src={logoPreview}
+                            alt="Logo preview"
+                            width={128}
+                            height={128}
                             className="w-full h-full object-cover"
                           />
                         </div>
@@ -360,9 +362,11 @@ export default function NewVendorPage() {
                     {coverPreview ? (
                       <div className="relative">
                         <div className="h-32 w-32 rounded-lg border-2 border-muted overflow-hidden bg-muted/30">
-                          <img 
-                            src={coverPreview} 
-                            alt="Cover preview" 
+                          <Image
+                            src={coverPreview}
+                            alt="Cover preview"
+                            width={128}
+                            height={128}
                             className="w-full h-full object-cover"
                           />
                         </div>
