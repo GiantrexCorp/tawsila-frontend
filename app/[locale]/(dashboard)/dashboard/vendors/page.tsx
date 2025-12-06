@@ -13,7 +13,6 @@ import { fetchVendors, type Vendor } from "@/lib/services/vendors";
 
 export default function VendorsPage() {
   const t = useTranslations('organizations');
-  const tCommon = useTranslations('common');
   const locale = useLocale();
   const router = useRouter();
   
