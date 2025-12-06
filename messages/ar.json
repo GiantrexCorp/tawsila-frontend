@@ -137,6 +137,7 @@
     "phone": "الهاتف",
     "address": "العنوان",
     "createdOn": "تم الإنشاء في",
+    "since": "منذ",
     "copyKey": "نسخ المفتاح",
     "regenerate": "إعادة إنشاء",
     "configure": "تكوين",
@@ -196,7 +197,17 @@
     "status": "الحالة",
     "selectStatus": "اختر الحالة",
     "selectLocation": "اختر الموقع على الخريطة",
-    "selectLocationDesc": "انقر في أي مكان على الخريطة لتحديد موقع المورد. سيتم ملء الإحداثيات تلقائيًا."
+    "selectLocationDesc": "انقر في أي مكان على الخريطة لتحديد موقع المورد. سيتم ملء الإحداثيات تلقائيًا.",
+    "editVendor": "تعديل المورد",
+    "editVendorDescription": "تحديث معلومات وإعدادات المورد",
+    "updateVendor": "تحديث المورد",
+    "vendorUpdatedSuccess": "تم تحديث المورد بنجاح",
+    "errorUpdatingVendor": "فشل في تحديث المورد",
+    "updateFailed": "فشل التحديث",
+    "errorLoadingVendor": "فشل في تحميل المورد",
+    "view": "عرض",
+    "viewVendor": "عرض المورد",
+    "viewVendorDescription": "عرض معلومات وتفاصيل المورد الكاملة"
   },
   "analyticsPage": {
     "title": "لوحة التحليلات",
@@ -438,6 +449,7 @@
     "view": "عرض",
     "viewUser": "عرض المستخدم",
     "viewUserDetails": "عرض ملف المستخدم وتفاصيله",
+    "since": "منذ",
     "createdAt": "تاريخ الإنشاء",
     "assignRole": "تعيين دور",
     "assignRoleDesc": "تعيين دور لـ {name}",
@@ -487,6 +499,8 @@
     "addFilter": "إضافة تصفية",
     "selectFilter": "اختر التصفية",
     "allFiltersAdded": "تمت إضافة جميع التصفيات",
-    "tryAgain": "يرجى المحاولة مرة أخرى"
+    "tryAgain": "يرجى المحاولة مرة أخرى",
+    "details": "التفاصيل",
+    "lastUpdated": "آخر تحديث"
   }
 }
