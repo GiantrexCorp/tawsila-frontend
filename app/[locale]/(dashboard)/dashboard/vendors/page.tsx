@@ -4,9 +4,9 @@ import { useState, useEffect } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import Image from "next/image";
-import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Building2, Calendar, Plus, Loader2, Edit, Eye } from "lucide-react";
+import { Building2, Plus, Loader2, MapPin, ArrowUpRight } from "lucide-react";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { fetchVendors, type Vendor } from "@/lib/services/vendors";
@@ -106,101 +106,96 @@ export default function VendorsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:gap-6 lg:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {vendors.map((vendor) => (
-            <Card 
-              key={vendor.id} 
-              className="group hover:shadow-lg transition-all duration-300 overflow-hidden border-border/50 hover:border-primary/20 !p-0 !gap-0 cursor-pointer"
+            <div
+              key={vendor.id}
               onClick={() => router.push(`/dashboard/vendors/${vendor.id}`)}
+              className="group relative cursor-pointer"
             >
-              {/* Banner */}
-              <div className="relative h-32 bg-gradient-to-br from-primary/20 via-primary/10 to-muted overflow-hidden w-full">
-                {vendor.cover_image ? (
-                  <Image
-                    src={vendor.cover_image}
-                    alt={`${locale === 'ar' ? vendor.name_ar : vendor.name_en} cover`}
-                    fill
-                    className="object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5" />
-                )}
-                <div className="absolute inset-0 bg-black/5" />
+              {/* Card Container with glassmorphism */}
+              <div className="relative h-full rounded-2xl bg-card border border-border/40 overflow-hidden transition-all duration-500 ease-out group-hover:border-primary/30 group-hover:shadow-xl group-hover:shadow-primary/5 group-hover:-translate-y-1">
 
-                {/* Logo Overlay */}
-                <div className="absolute -bottom-8 left-4">
-                  <div className="relative">
-                    <div className="h-20 w-20 rounded-xl bg-background border-4 border-background shadow-lg overflow-hidden flex items-center justify-center">
-                      {vendor.logo ? (
-                        <Image
-                          src={vendor.logo}
-                          alt={`${locale === 'ar' ? vendor.name_ar : vendor.name_en} logo`}
-                          width={80}
-                          height={80}
-                          className="w-full h-full object-contain p-1"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-primary/10 flex items-center justify-center">
-                          <Building2 className="h-8 w-8 text-primary" />
-                        </div>
-                      )}
+                {/* Gradient Overlay on hover */}
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                {/* Status Indicator - Floating pill */}
+                <div className="absolute top-3 right-3 z-20">
+                  <div className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider backdrop-blur-md ${
+                    vendor.status === 'active'
+                      ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/30'
+                      : 'bg-zinc-500/20 text-zinc-600 dark:text-zinc-400 ring-1 ring-zinc-500/30'
+                  }`}>
+                    {vendor.status === 'active' ? t('activeOrgs') : t('inactiveOrgs')}
+                  </div>
+                </div>
+
+                {/* Top Section - Logo & Name */}
+                <div className="p-5 pb-4">
+                  <div className="flex items-start gap-4">
+                    {/* Logo */}
+                    <div className="relative flex-shrink-0">
+                      <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-muted to-muted/50 overflow-hidden ring-1 ring-border/50 transition-transform duration-300 group-hover:scale-105">
+                        {vendor.logo ? (
+                          <Image
+                            src={vendor.logo}
+                            alt={locale === 'ar' ? vendor.name_ar : vendor.name_en}
+                            width={56}
+                            height={56}
+                            className="w-full h-full object-contain p-1.5"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-primary/10">
+                            <Building2 className="h-6 w-6 text-primary" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Name & Location */}
+                    <div className="flex-1 min-w-0 pt-0.5">
+                      <h3 className="font-semibold text-base text-foreground truncate group-hover:text-primary transition-colors duration-300">
+                        {locale === 'ar' ? vendor.name_ar : vendor.name_en}
+                      </h3>
+                      <div className="flex items-center gap-1 mt-1.5 text-muted-foreground">
+                        <MapPin className="h-3 w-3 flex-shrink-0" />
+                        <span className="text-xs truncate">
+                          {locale === 'ar' ? vendor.city.name_ar : vendor.city.name_en}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <CardContent className="pt-8 pb-4 px-6">
-                {/* Vendor Name and Description */}
-                <div className="space-y-2 mb-4">
-                  <CardTitle className="text-xl font-bold mb-1 line-clamp-1">
-                    {locale === 'ar' ? vendor.name_ar : vendor.name_en}
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                {/* Description */}
+                <div className="px-5 pb-3">
+                  <p className="text-sm text-muted-foreground/80 line-clamp-2 leading-relaxed">
                     {locale === 'ar' ? vendor.description_ar : vendor.description_en}
                   </p>
                 </div>
 
-                {/* Dates */}
-                <div className="flex items-center gap-4 mb-4 text-xs text-muted-foreground pb-3 border-b">
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="h-3.5 w-3.5" />
-                    <span>{t('since')} {new Date(vendor.created_at).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="h-3.5 w-3.5" />
-                    <span>{tCommon('lastUpdated')} {new Date(vendor.updated_at).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                {/* Vendor Since Badge */}
+                <div className="px-5 pb-4">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/50 text-[11px] text-muted-foreground">
+                    <span className="font-medium">{t('vendorSince')}</span>
+                    <span>{new Date(vendor.created_at).toLocaleDateString(locale, { year: 'numeric', month: 'short' })}</span>
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="flex-1"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/dashboard/vendors/${vendor.id}`);
-                    }}
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    {t('view')}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="flex-1"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/dashboard/vendors/${vendor.id}/edit`);
-                    }}
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    {tCommon('edit')}
-                  </Button>
+                {/* Bottom Action Bar */}
+                <div className="px-5 pb-4 pt-2 border-t border-border/40">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-muted-foreground/60 font-medium">
+                      {t('viewDetails')}
+                    </span>
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center transition-all duration-300 group-hover:bg-primary group-hover:scale-110">
+                      <ArrowUpRight className="h-4 w-4 text-primary group-hover:text-primary-foreground transition-colors duration-300" />
+                    </div>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+
+              </div>
+            </div>
           ))}
         </div>
       )}

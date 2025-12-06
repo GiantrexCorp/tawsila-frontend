@@ -207,7 +207,13 @@
     "errorLoadingVendor": "فشل في تحميل المورد",
     "view": "عرض",
     "viewVendor": "عرض المورد",
-    "viewVendorDescription": "عرض معلومات وتفاصيل المورد الكاملة"
+    "viewVendorDescription": "عرض معلومات وتفاصيل المورد الكاملة",
+    "viewDetails": "عرض التفاصيل",
+    "vendorSince": "مورد منذ",
+    "details": "التفاصيل",
+    "contactInfo": "التواصل",
+    "location": "الموقع",
+    "businessDetails": "تفاصيل العمل"
   },
   "analyticsPage": {
     "title": "لوحة التحليلات",

@@ -207,7 +207,13 @@
     "errorLoadingVendor": "Failed to load vendor",
     "view": "View",
     "viewVendor": "View Vendor",
-    "viewVendorDescription": "View complete vendor information and details"
+    "viewVendorDescription": "View complete vendor information and details",
+    "viewDetails": "View Details",
+    "vendorSince": "Vendor since",
+    "details": "Details",
+    "contactInfo": "Contact",
+    "location": "Location",
+    "businessDetails": "Business Details"
   },
   "analyticsPage": {
     "title": "Analytics Dashboard",
