@@ -176,7 +176,7 @@ export function AppSidebar() {
         },
         {
           title: t('vendors'),
-          href: "/dashboard/organizations",
+          href: "/dashboard/vendors",
           icon: Building2,
           allowedRoles: ['super-admin', 'admin', 'manager', 'inventory-manager'],
         },

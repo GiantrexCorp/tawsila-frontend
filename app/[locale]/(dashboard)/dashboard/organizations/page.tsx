@@ -1,11 +1,12 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useState, useEffect } from "react";
+import { useTranslations, useLocale } from "next-intl";
+import { useRouter } from "@/i18n/routing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Mail, Phone, MapPin, Key, Webhook, Copy, RefreshCw, Plus, MoreVertical, Loader2 } from "lucide-react";
-import { organizations, productRequests } from "@/lib/mock-data";
+import { Building2, Mail, Phone, MapPin, Key, User, FileText, Calendar, Plus, Copy, MoreVertical, Loader2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,13 +15,38 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
+import { fetchVendors, type Vendor } from "@/lib/services/vendors";
 
 export default function OrganizationsPage() {
   const t = useTranslations('organizations');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
+  const router = useRouter();
   
   // Check if user has permission to access vendors page
   const hasPermission = usePagePermission(['super-admin', 'admin', 'manager', 'inventory-manager']);
+
+  // Vendors state
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [isLoadingVendors, setIsLoadingVendors] = useState(true);
+
+  // Load vendors on mount
+  useEffect(() => {
+    const loadVendors = async () => {
+      setIsLoadingVendors(true);
+      try {
+        const fetchedVendors = await fetchVendors();
+        setVendors(fetchedVendors);
+      } catch (error) {
+        console.error('Failed to load vendors:', error);
+        toast.error(t('errorLoadingVendors'));
+      } finally {
+        setIsLoadingVendors(false);
+      }
+    };
+
+    loadVendors();
+  }, [t]);
 
   // Don't render page if permission check hasn't completed or user lacks permission
   if (hasPermission === null || hasPermission === false) {
@@ -31,13 +57,9 @@ export default function OrganizationsPage() {
     );
   }
 
-  const copyApiKey = (key: string) => {
+  const copySecretKey = (key: string) => {
     navigator.clipboard.writeText(key);
-    toast.success('API Key copied to clipboard!');
-  };
-
-  const getOrgRequestCount = (orgId: string) => {
-    return productRequests.filter(req => req.organizationId === orgId).length;
+    toast.success(t('secretKeyCopied'));
   };
 
   return (
@@ -49,25 +71,25 @@ export default function OrganizationsPage() {
             {t('subtitle')}
           </p>
         </div>
-        <Button className="w-full sm:w-auto">
+        <Button className="w-full sm:w-auto" onClick={() => router.push('/dashboard/organizations/new')}>
           <Plus className="h-4 w-4 mr-2" />
           {t('addOrganization')}
         </Button>
       </div>
 
       {/* Summary Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">{t('totalOrganizations')}</p>
-            <p className="text-2xl font-bold">{organizations.length}</p>
+            <p className="text-2xl font-bold">{isLoadingVendors ? '-' : vendors.length}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">{t('activeOrgs')}</p>
             <p className="text-2xl font-bold text-green-600">
-              {organizations.filter(o => o.status === 'active').length}
+              {isLoadingVendors ? '-' : vendors.filter(v => v.status === 'active').length}
             </p>
           </CardContent>
         </Card>
@@ -75,126 +97,150 @@ export default function OrganizationsPage() {
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">{t('inactiveOrgs')}</p>
             <p className="text-2xl font-bold text-muted-foreground">
-              {organizations.filter(o => o.status === 'inactive').length}
+              {isLoadingVendors ? '-' : vendors.filter(v => v.status === 'inactive').length}
             </p>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Vendors Grid */}
+      {isLoadingVendors ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : vendors.length === 0 ? (
         <Card>
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">{t('totalRequests')}</p>
-            <p className="text-2xl font-bold">{productRequests.length}</p>
+          <CardContent className="py-12 text-center">
+            <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-lg font-medium">{t('noVendors')}</p>
+            <p className="text-sm text-muted-foreground mt-2">{t('noVendorsDesc')}</p>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Organizations Grid */}
-      <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
-        {organizations.map((org) => (
-          <Card key={org.id}>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Building2 className="h-6 w-6 text-primary" />
+      ) : (
+        <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
+          {vendors.map((vendor) => (
+            <Card key={vendor.id}>
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Building2 className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">
+                        {locale === 'ar' ? vendor.name_ar : vendor.name_en}
+                      </CardTitle>
+                      <Badge variant={vendor.status === 'active' ? 'outline' : 'secondary'} className="mt-1">
+                        {vendor.status === 'active' ? t('activeOrgs') : t('inactiveOrgs')}
+                      </Badge>
+                    </div>
                   </div>
-                  <div>
-                    <CardTitle className="text-lg">{org.name}</CardTitle>
-                    <Badge variant={org.status === 'active' ? 'outline' : 'secondary'} className="mt-1">
-                      {org.status === 'active' ? t('activeOrgs') : t('inactiveOrgs')}
-                    </Badge>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon-sm">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem>{tCommon('edit')}</DropdownMenuItem>
+                      <DropdownMenuItem>Toggle Status</DropdownMenuItem>
+                      <DropdownMenuItem className="text-red-600">{tCommon('delete')}</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Description */}
+                <div className="flex items-start gap-2 text-sm">
+                  <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <span className="text-muted-foreground">
+                    {locale === 'ar' ? vendor.description_ar : vendor.description_en}
+                  </span>
+                </div>
+
+                {/* Contact Info */}
+                <div className="space-y-2 pt-2 border-t">
+                  <div className="flex items-center gap-2 text-sm">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">{vendor.contact_person}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">{vendor.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">{vendor.mobile}</span>
                   </div>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon-sm">
-                      <MoreVertical className="h-4 w-4" />
+
+                {/* Location */}
+                <div className="space-y-2 pt-2 border-t">
+                  <div className="flex items-center gap-2 text-sm">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">{vendor.address}</span>
+                  </div>
+                  <div className="text-sm text-muted-foreground ml-6">
+                    {locale === 'ar' ? vendor.city.name_ar : vendor.city.name_en},{' '}
+                    {locale === 'ar' ? vendor.governorate.name_ar : vendor.governorate.name_en}
+                  </div>
+                  {(vendor.latitude || vendor.longitude) && (
+                    <div className="text-xs text-muted-foreground ml-6">
+                      {t('coordinates')}: {vendor.latitude}, {vendor.longitude}
+                    </div>
+                  )}
+                </div>
+
+                {/* Business Info */}
+                {(vendor.commercial_registration || vendor.tax_number) && (
+                  <div className="space-y-2 pt-2 border-t">
+                    {vendor.commercial_registration && (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">{t('commercialRegistration')}: </span>
+                        <span className="font-medium">{vendor.commercial_registration}</span>
+                      </div>
+                    )}
+                    {vendor.tax_number && (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">{t('taxNumber')}: </span>
+                        <span className="font-medium">{vendor.tax_number}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Secret Key */}
+                <div className="pt-2 border-t space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Key className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">{t('secretKey')}</span>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon-sm"
+                      onClick={() => copySecretKey(vendor.secret_key)}
+                    >
+                      <Copy className="h-3 w-3" />
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem>{tCommon('edit')}</DropdownMenuItem>
-                    <DropdownMenuItem>Toggle Status</DropdownMenuItem>
-                    <DropdownMenuItem className="text-red-600">{tCommon('delete')}</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Contact Info */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">{org.email}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">{org.phone}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">{org.address}</span>
-                </div>
-              </div>
-
-              {/* API Key */}
-              <div className="pt-4 border-t space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Key className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{t('apiKey')}</span>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon-sm"
-                    onClick={() => copyApiKey(org.apiKey)}
-                  >
-                    <Copy className="h-3 w-3" />
-                  </Button>
-                </div>
-                <div className="bg-muted/50 px-3 py-2 rounded-md">
-                  <code className="text-xs font-mono">{org.apiKey}</code>
-                </div>
-              </div>
-
-              {/* Webhook */}
-              {org.webhookUrl && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Webhook className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{t('webhookUrl')}</span>
                   </div>
                   <div className="bg-muted/50 px-3 py-2 rounded-md">
-                    <code className="text-xs font-mono truncate block">{org.webhookUrl}</code>
+                    <code className="text-xs font-mono">{'*'.repeat(12)}</code>
                   </div>
                 </div>
-              )}
 
-              {/* Stats */}
-              <div className="pt-4 border-t grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">{t('totalRequests')}</p>
-                  <p className="text-lg font-semibold">{getOrgRequestCount(org.id)}</p>
+                {/* Created Date */}
+                <div className="pt-2 border-t flex items-center gap-2 text-sm">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">
+                    {t('createdOn')}: {new Date(vendor.created_at).toLocaleDateString(locale)}
+                  </span>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">{t('createdOn')}</p>
-                  <p className="text-sm font-medium">{org.createdAt.toLocaleDateString()}</p>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-2 pt-2">
-                <Button variant="outline" size="sm" className="flex-1">
-                  <RefreshCw className="h-4 w-4 mr-1" />
-                  {t('regenerate')}
-                </Button>
-                <Button variant="outline" size="sm" className="flex-1">
-                  <Webhook className="h-4 w-4 mr-1" />
-                  {t('configure')}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
