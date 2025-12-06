@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import Image from "next/image";
 import { ArrowLeft, Loader2, Building2, Upload, X } from "lucide-react";
 import {
   Select,
@@ -48,6 +49,7 @@ export default function NewVendorPage() {
     longitude: '',
     commercial_registration: '',
     tax_number: '',
+    status: 'active',
     secret_key: '',
     logo: '',
     cover_image: '',
@@ -206,9 +208,11 @@ export default function NewVendorPage() {
                   {logoPreview ? (
                     <div className="relative">
                       <div className="h-32 w-32 rounded-lg border-2 border-muted overflow-hidden bg-muted/30">
-                        <img 
-                          src={logoPreview} 
-                          alt="Logo preview" 
+                        <Image
+                          src={logoPreview}
+                          alt="Logo preview"
+                          width={128}
+                          height={128}
                           className="w-full h-full object-cover"
                         />
                       </div>
