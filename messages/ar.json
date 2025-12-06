@@ -293,7 +293,19 @@
     "orderStatus": "حالة الطلب",
     "orderedOn": "تم الطلب في",
     "totalAmount": "المبلغ الإجمالي",
-    "orderItems": "عناصر الطلب"
+    "orderItems": "عناصر الطلب",
+    "loadingTracking": "جاري تحميل معلومات التتبع...",
+    "trackingNumberCopied": "تم نسخ رقم التتبع!",
+    "order": "الطلب",
+    "stepsCompleted": "{completed} من {total} خطوات مكتملة",
+    "trackingTimeline": "الجدول الزمني للتتبع",
+    "vendor": "المورد",
+    "deliveryAddress": "عنوان التوصيل",
+    "note": "ملاحظة",
+    "statusHistory": "سجل الحالة",
+    "trackAnother": "تتبع طلب آخر",
+    "viewLocation": "عرض الموقع",
+    "copyright": "© {year} توصيلة. جميع الحقوق محفوظة."
   },
   "landing": {
     "subtitle": "قم بتبسيط عمليات المخزون والتوصيل الخاصة بك باستخدام نظام الإدارة الذكي من توصيلة",

@@ -3,6 +3,8 @@
  * Uses X-Tracking-Key header for authentication
  */
 
+import { getCurrentLocale } from '../api';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000/api';
 const TRACKING_API_KEY = process.env.NEXT_PUBLIC_TRACKING_API_KEY || '';
 
@@ -69,11 +71,15 @@ export interface TrackingResponse {
 export async function fetchTracking(trackingNumber: string): Promise<TrackingData> {
   const url = `${API_BASE_URL}/track/${trackingNumber}`;
 
+  const locale = getCurrentLocale();
+
   const response = await fetch(url, {
     method: 'GET',
     headers: {
       'Accept': 'application/json',
+      'Accept-Language': locale,
       'Content-Type': 'application/json',
+      'X-Locale': locale,
       'X-Tracking-Key': TRACKING_API_KEY,
     },
   });
