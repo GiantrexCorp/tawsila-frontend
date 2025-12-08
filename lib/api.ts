@@ -45,12 +45,16 @@ export function getCurrentLocale(): string {
   return 'en'; // Default to English
 }
 
+export interface ApiRequestOptions extends RequestInit {
+  skipRedirectOn403?: boolean;
+}
+
 /**
  * Makes an API request with proper error handling
  */
 export async function apiRequest<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: ApiRequestOptions = {}
 ): Promise<ApiResponse<T>> {
   const url = `${API_BASE_URL}${endpoint}`;
   
@@ -74,11 +78,14 @@ export async function apiRequest<T>(
     defaultHeaders['Authorization'] = `Bearer ${token}`;
   }
 
+  // Extract skipRedirectOn403 from options before passing to fetch
+  const { skipRedirectOn403, ...fetchOptions } = options;
+  
   const config: RequestInit = {
-    ...options,
+    ...fetchOptions,
     headers: {
       ...defaultHeaders,
-      ...options.headers,
+      ...fetchOptions.headers,
     },
   };
 
@@ -117,7 +124,10 @@ export async function apiRequest<T>(
 
       // Handle 403 Forbidden - user doesn't have permission
       if (response.status === 403) {
-        handleForbidden();
+        // Only redirect if skipRedirectOn403 is not set to true
+        if (!skipRedirectOn403) {
+          handleForbidden();
+        }
         throw {
           message: data.message || 'You do not have permission to access this resource.',
           errors: data.errors,

@@ -102,6 +102,8 @@ export default function LoginPage() {
         // Redirect based on role
         if (response.data.roles?.includes('shipping-agent')) {
           router.push('/dashboard/orders');
+        } else if (response.data.roles?.includes('vendor')) {
+          router.push('/dashboard/vendor/profile');
         } else {
           router.push('/dashboard');
         }

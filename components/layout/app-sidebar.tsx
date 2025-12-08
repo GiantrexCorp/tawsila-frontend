@@ -17,6 +17,7 @@ import {
   Users,
   LogOut,
   User,
+  Plus,
 } from "lucide-react";
 import { getCurrentUser, logout } from "@/lib/auth";
 import { fetchRoles, Role } from "@/lib/services/roles";
@@ -135,7 +136,33 @@ export function AppSidebar() {
     return user.roles.some(role => allowedRoles.includes(role));
   };
 
-  const navigation = [
+  // Check if user is vendor - vendors see profile and create order
+  const isVendor = user?.roles?.includes('vendor');
+  
+  const navigation = isVendor ? [
+    {
+      title: t('myAccount'),
+      items: [
+        {
+          title: t('vendorProfile'),
+          href: "/dashboard/vendor/profile",
+          icon: Building2,
+          allowedRoles: ['vendor'],
+        },
+      ],
+    },
+    {
+      title: t('orders'),
+      items: [
+        {
+          title: t('orders'),
+          href: "/dashboard/orders",
+          icon: ShoppingCart,
+          allowedRoles: ['vendor'],
+        },
+      ],
+    },
+  ] : [
     {
       title: t('overview'),
       items: [
@@ -166,7 +193,7 @@ export function AppSidebar() {
           title: t('orders'),
           href: "/dashboard/orders",
           icon: ShoppingCart,
-          allowedRoles: ['super-admin', 'admin', 'manager', 'order-preparer', 'shipping-agent', 'inventory-manager'],
+          allowedRoles: ['super-admin', 'inventory-manager'],
         },
         {
           title: t('agents'),
@@ -216,6 +243,9 @@ export function AppSidebar() {
   const getHomePage = () => {
     if (user?.roles?.includes('shipping-agent')) {
       return '/dashboard/orders';
+    }
+    if (user?.roles?.includes('vendor')) {
+      return '/dashboard/vendor/profile';
     }
     return '/dashboard';
   };
