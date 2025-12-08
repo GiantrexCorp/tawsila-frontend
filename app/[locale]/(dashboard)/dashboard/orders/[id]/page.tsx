@@ -93,6 +93,7 @@ export default function OrderDetailPage() {
           fetchOrderAssignments(orderId)
         ]);
         setOrder(fetchedOrder);
+        console.log('Fetched assignments:', fetchedAssignments);
         setAssignments(fetchedAssignments);
       } catch (error) {
         console.error('Failed to load order:', error);
@@ -402,28 +403,38 @@ export default function OrderDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {assignments.map((assignment) => (
-                <div key={assignment.id} className="p-4 border rounded-lg space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{assignment.assignment_type_label}</p>
-                      <p className="text-xs text-muted-foreground">{assignment.status_label}</p>
+              {assignments.map((assignment) => {
+                console.log('Rendering assignment:', assignment);
+                console.log('  - assigned_to exists:', !!assignment.assigned_to);
+                console.log('  - assigned_to value:', assignment.assigned_to);
+                console.log('  - assigned_by exists:', !!assignment.assigned_by);
+                console.log('  - assigned_by value:', assignment.assigned_by);
+                return (
+                  <div key={assignment.id} className="p-4 border rounded-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{assignment.assignment_type_label}</p>
+                        <p className="text-xs text-muted-foreground">{assignment.status_label}</p>
+                      </div>
+                      <Badge variant={assignment.is_active ? "default" : "secondary"}>
+                        {assignment.is_active ? t('active') : t('inactive')}
+                      </Badge>
                     </div>
-                    <Badge variant={assignment.is_active ? "default" : "secondary"}>
-                      {assignment.is_active ? t('active') : t('inactive')}
-                    </Badge>
-                  </div>
-                  
-                  <div className="grid md:grid-cols-2 gap-4 pt-2 border-t">
+                    
+                    <div className="grid md:grid-cols-2 gap-4 pt-2 border-t">
                     {/* Assigned To (Agent) */}
-                    {assignment.assigned_to && (
+                    {assignment.assigned_to && Object.keys(assignment.assigned_to).length > 0 ? (
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <UserPlus className="h-4 w-4 text-muted-foreground" />
                           <p className="text-xs font-medium text-muted-foreground">{t('assignedTo')}</p>
                         </div>
                         <div className="pl-6 space-y-1">
-                          <p className="font-medium">{assignment.assigned_to.name}</p>
+                          <p className="font-medium">
+                            {locale === 'ar' && assignment.assigned_to.name_ar
+                              ? assignment.assigned_to.name_ar
+                              : assignment.assigned_to.name_en || assignment.assigned_to.name || 'N/A'}
+                          </p>
                           {assignment.assigned_to.mobile && (
                             <div className="flex items-center gap-2">
                               <p className="text-sm text-muted-foreground" dir="ltr">{assignment.assigned_to.mobile}</p>
@@ -437,19 +448,62 @@ export default function OrderDetailPage() {
                               </Button>
                             </div>
                           )}
+                          {assignment.assigned_to.email && (
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs text-muted-foreground">{assignment.assigned_to.email}</p>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => copyToClipboard(assignment.assigned_to!.email || '', t('customerEmail'))}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <UserPlus className="h-4 w-4 text-muted-foreground" />
+                          <p className="text-xs font-medium text-muted-foreground">{t('assignedTo')}</p>
+                        </div>
+                        <div className="pl-6">
+                          <p className="text-sm text-muted-foreground italic">{t('notAssigned')}</p>
                         </div>
                       </div>
                     )}
 
                     {/* Assigned By */}
-                    {assignment.assigned_by && (
+                    {assignment.assigned_by && Object.keys(assignment.assigned_by).length > 0 ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <p className="text-xs font-medium text-muted-foreground">{t('assignedBy')}</p>
+                        </div>
+                        <div className="pl-6 space-y-1">
+                          <p className="font-medium">
+                            {locale === 'ar' && assignment.assigned_by.name_ar
+                              ? assignment.assigned_by.name_ar
+                              : assignment.assigned_by.name_en || assignment.assigned_by.name || 'N/A'}
+                          </p>
+                          {assignment.assigned_by.mobile && (
+                            <p className="text-xs text-muted-foreground" dir="ltr">{assignment.assigned_by.mobile}</p>
+                          )}
+                          {assignment.assigned_by.email && (
+                            <p className="text-xs text-muted-foreground">{assignment.assigned_by.email}</p>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <User className="h-4 w-4 text-muted-foreground" />
                           <p className="text-xs font-medium text-muted-foreground">{t('assignedBy')}</p>
                         </div>
                         <div className="pl-6">
-                          <p className="font-medium">{assignment.assigned_by.name}</p>
+                          <p className="text-sm text-muted-foreground italic">{t('notAssigned')}</p>
                         </div>
                       </div>
                     )}
@@ -489,7 +543,8 @@ export default function OrderDetailPage() {
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -1058,25 +1113,27 @@ export default function OrderDetailPage() {
           {/* Header with Logo, QR Code */}
           <div className="flex items-start justify-between border-b-2 border-gray-900 pb-3">
             <div className="flex-1">
-              <div className="mb-2">
-                <TawsilaLogo className="h-8 w-auto" />
-              </div>
               <h2 className="text-xl font-bold mb-1 uppercase tracking-wide">{t('shippingLabel')}</h2>
               <div className="mt-2">
                 <p className="text-xs text-gray-600 uppercase">{t('orderNumber')}</p>
                 <p className="font-bold text-2xl font-mono tracking-wider">{order.order_number}</p>
               </div>
             </div>
-            {order.qr_code && (
-              <div className="flex-shrink-0 ml-4">
-                <QRCodeSVG
-                  value={order.qr_code}
-                  size={100}
-                  level="M"
-                  includeMargin={true}
-                />
+            <div className="flex items-center gap-4 ml-4">
+              {order.qr_code && (
+                <div className="flex-shrink-0">
+                  <QRCodeSVG
+                    value={order.qr_code}
+                    size={100}
+                    level="M"
+                    includeMargin={true}
+                  />
+                </div>
+              )}
+              <div className="flex-shrink-0 ml-auto">
+                <TawsilaLogo className="h-8 w-auto" />
               </div>
-            )}
+            </div>
           </div>
 
           {/* Ship To Section */}

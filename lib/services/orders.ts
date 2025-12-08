@@ -167,8 +167,16 @@ export interface AssignPickupAgentRequest {
 
 export interface AssignedUser {
   id: number;
-  name: string;
+  name?: string; // Fallback for older API versions
+  name_en?: string;
+  name_ar?: string;
   mobile?: string;
+  email?: string;
+  status?: string;
+  last_active?: string;
+  created_at?: string;
+  updated_at?: string;
+  roles?: string[];
 }
 
 export interface Assignment {
@@ -223,6 +231,19 @@ export async function fetchOrderAssignments(id: number): Promise<Assignment[]> {
     method: 'GET',
   });
 
-  return response.data || [];
+  console.log('Assignments API response:', response);
+  
+  // apiRequest returns { data: T }, so response.data should be the array
+  const assignments = response.data || [];
+  console.log('Extracted assignments:', assignments);
+  
+  // Log each assignment to see its structure
+  assignments.forEach((assignment, index) => {
+    console.log(`Assignment ${index}:`, assignment);
+    console.log(`  - assigned_to:`, assignment.assigned_to);
+    console.log(`  - assigned_by:`, assignment.assigned_by);
+  });
+  
+  return assignments;
 }
 
