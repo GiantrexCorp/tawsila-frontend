@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, Eye, Loader2, CheckCircle, Plus, XCircle } from "lucide-react";
+import { Search, Eye, Loader2, CheckCircle, Plus, XCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { fetchOrders, acceptOrder, rejectOrder, type Order, type Customer } from "@/lib/services/orders";
@@ -58,7 +58,13 @@ export default function OrdersPage() {
         // Backend automatically filters orders for shipping agents
         // So we can use the same fetchOrders() function for all roles
         const fetchedOrders = await fetchOrders();
-        setOrders(fetchedOrders);
+        // Sort orders from old to new (ascending by created_at)
+        const sortedOrders = fetchedOrders.sort((a, b) => {
+          const dateA = new Date(a.created_at).getTime();
+          const dateB = new Date(b.created_at).getTime();
+          return dateA - dateB; // Oldest first
+        });
+        setOrders(sortedOrders);
       } catch (error) {
         console.error('Failed to load orders:', error);
         toast.error(t('errorLoadingOrders'));
@@ -185,24 +191,109 @@ export default function OrdersPage() {
     order.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const getStatusBadge = (status: string) => {
-    const config: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", label: string }> = {
-      pending: { variant: "secondary", label: t('pending') },
-      accepted: { variant: "outline", label: t('accepted') },
-      confirmed: { variant: "outline", label: t('confirmed') },
-      picked_up: { variant: "default", label: t('picked_up') },
-      in_transit: { variant: "default", label: t('in_transit') },
-      delivered: { variant: "outline", label: t('delivered') },
-      rejected: { variant: "destructive", label: t('rejected') },
+  const getStatusBadge = (status: string, statusLabel?: string) => {
+    const config: Record<string, { className: string }> = {
+      // Order Created - Amber/Orange
+      pending: { 
+        className: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30"
+      },
+      created: { 
+        className: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30"
+      },
+      // Order Confirmed - Blue
+      confirmed: { 
+        className: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30"
+      },
+      accepted: { 
+        className: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30"
+      },
+      // Order Rejected - Red
+      rejected: { 
+        className: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30"
+      },
+      // Pickup Assigned - Indigo
+      assigned: { 
+        className: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/30"
+      },
+      pickup_assigned: { 
+        className: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/30"
+      },
+      // Picked Up - Purple
+      picked_up: { 
+        className: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/30"
+      },
+      // In Transit to Hub - Cyan
+      in_transit: { 
+        className: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/30"
+      },
+      in_transit_to_hub: { 
+        className: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/30"
+      },
+      // Arrived at Hub - Teal
+      arrived_at_hub: { 
+        className: "bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/30"
+      },
+      at_hub: { 
+        className: "bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/30"
+      },
+      // Out for Delivery Assignment - Violet
+      out_for_delivery_assignment: { 
+        className: "bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/30"
+      },
+      // Out for Delivery - Pink
+      out_for_delivery: { 
+        className: "bg-pink-500/10 text-pink-700 dark:text-pink-400 border-pink-500/30"
+      },
+      // Delivered - Emerald/Green
+      delivered: { 
+        className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+      },
+      // Delivery Attempt Failed - Orange
+      delivery_failed: { 
+        className: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30"
+      },
+      delivery_attempt_failed: { 
+        className: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30"
+      },
     };
 
-    const { variant, label } = config[status] || { variant: "outline", label: status };
-    return <Badge variant={variant}>{label}</Badge>;
+    const { className } = config[status] || { 
+      className: "bg-muted text-muted-foreground border-border"
+    };
+    
+    // Use status_label from API if available, otherwise use status code
+    const label = statusLabel || status;
+    
+    return (
+      <Badge variant="outline" className={className}>
+        {label}
+      </Badge>
+    );
   };
 
   const filterByStatus = (status?: string) => {
     if (!status) return filteredOrders;
-    return filteredOrders.filter(order => order.status === status);
+    
+    // Map status groups to individual statuses
+    const statusMap: Record<string, string[]> = {
+      'pending': ['pending', 'created'],
+      'accepted': ['accepted', 'confirmed'],
+      'pickup_assigned': ['assigned', 'pickup_assigned'],
+      'picked_up': ['picked_up'],
+      'in_transit': ['in_transit', 'in_transit_to_hub'],
+      'at_hub': ['arrived_at_hub', 'at_hub'],
+      'delivery_assigned': ['out_for_delivery_assignment'],
+      'out_for_delivery': ['out_for_delivery'],
+      'delivered': ['delivered'],
+      'failed_delivery': ['delivery_failed', 'delivery_attempt_failed'],
+    };
+    
+    const statuses = statusMap[status] || [status];
+    return filteredOrders.filter(order => statuses.includes(order.status));
+  };
+  
+  const getStatusCount = (status: string): number => {
+    return filterByStatus(status).length;
   };
 
   const OrdersList = ({ ordersList }: { ordersList: Order[] }) => {
@@ -242,7 +333,7 @@ export default function OrdersPage() {
                   <div className="space-y-3 flex-1 w-full">
                     <div className="flex items-center gap-3 flex-wrap">
                       <h3 className="font-semibold text-sm md:text-base">{order.order_number}</h3>
-                      {getStatusBadge(order.status)}
+                      {getStatusBadge(order.status, order.status_label)}
                       {order.payment_method && (
                         <Badge variant="outline" className="text-xs">
                           {order.payment_method === 'cod' ? t('cashOnDelivery') : t('paid')}
@@ -355,31 +446,31 @@ export default function OrdersPage() {
         )}
       </div>
 
-      {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder={t('searchPlaceholder')}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Button variant="outline" className="w-full sm:w-auto gap-2">
-          <Filter className="h-4 w-4" />
-          {t('filters')}
-        </Button>
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder={t('searchPlaceholder')}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
       </div>
 
       {/* Orders Tabs */}
       <Tabs defaultValue="all" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="all">{t('allOrders')} ({filteredOrders.length})</TabsTrigger>
-          <TabsTrigger value="pending">{t('pending')} ({filterByStatus('pending').length})</TabsTrigger>
-          <TabsTrigger value="accepted">{t('accepted')} ({filterByStatus('accepted').length})</TabsTrigger>
-          <TabsTrigger value="in_transit">{t('in_transit')} ({filterByStatus('in_transit').length})</TabsTrigger>
-          <TabsTrigger value="delivered">{t('delivered')} ({filterByStatus('delivered').length})</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-11 gap-1 overflow-x-auto">
+          <TabsTrigger value="all" className="text-xs sm:text-sm">{t('allOrders')} ({filteredOrders.length})</TabsTrigger>
+          <TabsTrigger value="pending" className="text-xs sm:text-sm">{t('pending')} ({getStatusCount('pending')})</TabsTrigger>
+          <TabsTrigger value="accepted" className="text-xs sm:text-sm">{t('accepted')} ({getStatusCount('accepted')})</TabsTrigger>
+          <TabsTrigger value="pickup_assigned" className="text-xs sm:text-sm">{t('pickupAssigned')} ({getStatusCount('pickup_assigned')})</TabsTrigger>
+          <TabsTrigger value="picked_up" className="text-xs sm:text-sm">{t('pickedUp')} ({getStatusCount('picked_up')})</TabsTrigger>
+          <TabsTrigger value="in_transit" className="text-xs sm:text-sm">{t('inTransit')} ({getStatusCount('in_transit')})</TabsTrigger>
+          <TabsTrigger value="at_hub" className="text-xs sm:text-sm">{t('atHub')} ({getStatusCount('at_hub')})</TabsTrigger>
+          <TabsTrigger value="delivery_assigned" className="text-xs sm:text-sm">{t('deliveryAssigned')} ({getStatusCount('delivery_assigned')})</TabsTrigger>
+          <TabsTrigger value="out_for_delivery" className="text-xs sm:text-sm">{t('outForDelivery')} ({getStatusCount('out_for_delivery')})</TabsTrigger>
+          <TabsTrigger value="delivered" className="text-xs sm:text-sm">{t('delivered')} ({getStatusCount('delivered')})</TabsTrigger>
+          <TabsTrigger value="failed_delivery" className="text-xs sm:text-sm">{t('failedDelivery')} ({getStatusCount('failed_delivery')})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all">
@@ -394,12 +485,36 @@ export default function OrdersPage() {
           <OrdersList ordersList={filterByStatus('accepted')} />
         </TabsContent>
 
+        <TabsContent value="pickup_assigned">
+          <OrdersList ordersList={filterByStatus('pickup_assigned')} />
+        </TabsContent>
+
+        <TabsContent value="picked_up">
+          <OrdersList ordersList={filterByStatus('picked_up')} />
+        </TabsContent>
+
         <TabsContent value="in_transit">
           <OrdersList ordersList={filterByStatus('in_transit')} />
         </TabsContent>
 
+        <TabsContent value="at_hub">
+          <OrdersList ordersList={filterByStatus('at_hub')} />
+        </TabsContent>
+
+        <TabsContent value="delivery_assigned">
+          <OrdersList ordersList={filterByStatus('delivery_assigned')} />
+        </TabsContent>
+
+        <TabsContent value="out_for_delivery">
+          <OrdersList ordersList={filterByStatus('out_for_delivery')} />
+        </TabsContent>
+
         <TabsContent value="delivered">
           <OrdersList ordersList={filterByStatus('delivered')} />
+        </TabsContent>
+
+        <TabsContent value="failed_delivery">
+          <OrdersList ordersList={filterByStatus('failed_delivery')} />
         </TabsContent>
       </Tabs>
 

@@ -266,19 +266,84 @@ export default function OrderDetailPage() {
     });
   };
 
-  const getStatusBadge = (status: string) => {
-    const config: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", label: string }> = {
-      pending: { variant: "secondary", label: t('pending') },
-      accepted: { variant: "outline", label: t('accepted') },
-      confirmed: { variant: "outline", label: t('confirmed') },
-      picked_up: { variant: "default", label: t('picked_up') },
-      in_transit: { variant: "default", label: t('in_transit') },
-      delivered: { variant: "outline", label: t('delivered') },
-      rejected: { variant: "destructive", label: t('rejected') },
+  const getStatusBadge = (status: string, statusLabel?: string) => {
+    const config: Record<string, { className: string }> = {
+      // Order Created - Amber/Orange
+      pending: { 
+        className: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30"
+      },
+      created: { 
+        className: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30"
+      },
+      // Order Confirmed - Blue
+      confirmed: { 
+        className: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30"
+      },
+      accepted: { 
+        className: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30"
+      },
+      // Order Rejected - Red
+      rejected: { 
+        className: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30"
+      },
+      // Pickup Assigned - Indigo
+      assigned: { 
+        className: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/30"
+      },
+      pickup_assigned: { 
+        className: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/30"
+      },
+      // Picked Up - Purple
+      picked_up: { 
+        className: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/30"
+      },
+      // In Transit to Hub - Cyan
+      in_transit: { 
+        className: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/30"
+      },
+      in_transit_to_hub: { 
+        className: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/30"
+      },
+      // Arrived at Hub - Teal
+      arrived_at_hub: { 
+        className: "bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/30"
+      },
+      at_hub: { 
+        className: "bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/30"
+      },
+      // Out for Delivery Assignment - Violet
+      out_for_delivery_assignment: { 
+        className: "bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/30"
+      },
+      // Out for Delivery - Pink
+      out_for_delivery: { 
+        className: "bg-pink-500/10 text-pink-700 dark:text-pink-400 border-pink-500/30"
+      },
+      // Delivered - Emerald/Green
+      delivered: { 
+        className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+      },
+      // Delivery Attempt Failed - Orange
+      delivery_failed: { 
+        className: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30"
+      },
+      delivery_attempt_failed: { 
+        className: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30"
+      },
     };
 
-    const { variant, label } = config[status] || { variant: "outline", label: status };
-    return <Badge variant={variant}>{label}</Badge>;
+    const { className } = config[status] || { 
+      className: "bg-muted text-muted-foreground border-border"
+    };
+    
+    // Use status_label from API if available, otherwise use status code
+    const label = statusLabel || status;
+    
+    return (
+      <Badge variant="outline" className={className}>
+        {label}
+      </Badge>
+    );
   };
 
   const getPaymentStatusBadge = (status: string) => {
@@ -309,6 +374,8 @@ export default function OrderDetailPage() {
   const items = orderWithRelations.items || [];
   const vendor: { id?: number; name_en?: string; name_ar?: string; name?: string; [key: string]: unknown } = orderWithRelations.vendor || {};
   const canAccept = order.status === 'pending' && !isVendor;
+  // Can assign pickup agent only if order is accepted or confirmed
+  const canAssignPickupAgent = canAssignAgent && (order.status === 'accepted' || order.status === 'confirmed');
 
   return (
     <div className="space-y-6 pb-8">
@@ -330,22 +397,28 @@ export default function OrderDetailPage() {
           <p className="text-sm text-muted-foreground mt-1">{t('orderDetails')}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.print()}
-            className="gap-2"
-          >
-            <Printer className="h-4 w-4" />
-            {t('printLabel')}
-          </Button>
-          {getStatusBadge(order.status)}
+          {/* Print label button - only show if pickup agent is assigned (any active assignment) */}
+          {assignments.some(assignment => 
+            assignment.is_active && 
+            !assignment.is_finished
+          ) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.print()}
+              className="gap-2"
+            >
+              <Printer className="h-4 w-4" />
+              {t('printLabel')}
+            </Button>
+          )}
+          {getStatusBadge(order.status, order.status_label)}
           {getPaymentStatusBadge(order.payment_status)}
         </div>
       </div>
 
       {/* Action Buttons */}
-      {(canAccept || canAssignAgent) && (
+      {(canAccept || canAssignPickupAgent) && (
         <Card>
           <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -375,7 +448,7 @@ export default function OrderDetailPage() {
                     </Button>
                   </>
                 )}
-                {canAssignAgent && (
+                {canAssignPickupAgent && (
                   <Button
                     variant="outline"
                     onClick={handleAssignClick}
@@ -1111,93 +1184,156 @@ export default function OrderDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Print-Only Shipping Label - Amazon Style */}
-      <div className="hidden print:block print:fixed print:inset-0 print:p-4 print:bg-white">
-        <div className="max-w-lg mx-auto border-2 border-gray-900 p-6 space-y-4 bg-white">
-          {/* Header with Logo, QR Code */}
-          <div className="flex items-start justify-between border-b-2 border-gray-900 pb-3">
-            <div className="flex-1">
-              <h2 className="text-xl font-bold mb-1 uppercase tracking-wide">{t('shippingLabel')}</h2>
-              <div className="mt-2">
-                <p className="text-xs text-gray-600 uppercase">{t('orderNumber')}</p>
-                <p className="font-bold text-2xl font-mono tracking-wider">{order.order_number}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 ml-4">
-              {order.qr_code && (
-                <div className="flex-shrink-0">
-                  <QRCodeSVG
-                    value={order.qr_code}
-                    size={100}
-                    level="M"
-                    includeMargin={true}
-                  />
+      {/* Print-Only Shipping Label */}
+      <style jsx global>{`
+        @media print {
+          /* Hide everything except the print label */
+          body * {
+            visibility: hidden;
+          }
+          
+          /* Show only the print label */
+          .print-label,
+          .print-label * {
+            visibility: visible;
+          }
+          
+          /* Position the label */
+          .print-label {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+          }
+          
+          /* Hide navigation and other dashboard elements */
+          nav,
+          aside,
+          header,
+          .sidebar,
+          .app-sidebar,
+          button:not(.print-label button),
+          .no-print {
+            display: none !important;
+            visibility: hidden !important;
+          }
+          
+          /* Ensure only one page */
+          @page {
+            size: A4;
+            margin: 0;
+          }
+          
+          body {
+            margin: 0;
+            padding: 0;
+          }
+        }
+      `}</style>
+      
+      <div className="hidden print:block print-label">
+        <div className="w-full h-full p-4 bg-white">
+          <div className="max-w-lg mx-auto border-2 border-gray-900 bg-white relative" style={{ pageBreakAfter: 'avoid', pageBreakInside: 'avoid' }}>
+            {/* Vertical line on the left */}
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gray-900"></div>
+            
+            <div className="p-6 pl-8 space-y-4">
+              {/* Header with LABEL, ORDER NUMBER, QR Code, and Tawsila */}
+              <div className="flex items-start justify-between border-b-2 border-gray-900 pb-3">
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold mb-2 uppercase tracking-wide text-gray-900" style={{ fontFamily: 'sans-serif' }}>LABEL</h2>
+                  <div className="mt-2">
+                    <p className="text-xs text-gray-600 uppercase mb-1">{t('orderNumber')}</p>
+                    <div className="font-bold text-3xl font-mono tracking-wider text-gray-900 leading-tight">
+                      {order.order_number.split('-').map((part, idx) => (
+                        <div key={idx} className="break-all">{part}</div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              )}
-              <div className="flex-shrink-0 ml-auto">
-                <TawsilaLogo className="h-8 w-auto" />
+                <div className="flex flex-col items-end gap-3 ml-4">
+                  {order.qr_code && (
+                    <div className="flex-shrink-0">
+                      <QRCodeSVG
+                        value={order.qr_code}
+                        size={100}
+                        level="M"
+                        includeMargin={true}
+                      />
+                    </div>
+                  )}
+                  <div className="flex flex-col items-end text-right">
+                    <div className="text-gray-400 text-lg font-semibold opacity-60" style={{ fontFamily: 'sans-serif' }}>Tawsila</div>
+                    <div className="text-gray-400 text-xs opacity-60 leading-tight" style={{ maxWidth: '140px', wordWrap: 'break-word', fontFamily: 'sans-serif' }}>
+                      Smart Inventory & Delivery Management
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Ship To Section */}
-          <div className="space-y-2 border-b border-gray-300 pb-3">
-            <h3 className="font-bold text-base uppercase tracking-wide text-gray-900">{t('shipTo')}</h3>
-            <div className="space-y-1">
-              {customer.name && (
-                <p className="font-bold text-base text-gray-900">{customer.name}</p>
-              )}
-              {customer.mobile && (
-                <p className="text-sm font-mono" dir="ltr">{customer.mobile}</p>
-              )}
-              {(customer.full_address || customer.address) && (
-                <div className="mt-2">
-                  <p className="text-sm leading-relaxed text-gray-900">
-                    {customer.full_address || customer.address}
-                  </p>
-                  {customer.address_notes && (
-                    <p className="text-xs mt-1 text-gray-600 italic">{customer.address_notes}</p>
+              {/* Ship To Section */}
+              <div className="space-y-2 border-b border-gray-300 pb-3">
+                <h3 className="font-bold text-base uppercase tracking-wide text-gray-900" style={{ fontFamily: 'sans-serif' }}>{t('shipTo')}</h3>
+                <div className="space-y-1">
+                  {customer.name && (
+                    <p className="font-bold text-base text-gray-900">{customer.name}</p>
+                  )}
+                  {customer.mobile && (
+                    <p className="text-sm font-mono" dir="ltr">{customer.mobile}</p>
+                  )}
+                  {(customer.full_address || customer.address) && (
+                    <div className="mt-2">
+                      <p className="text-sm leading-relaxed text-gray-900">
+                        {customer.full_address || customer.address}
+                      </p>
+                      {customer.address_notes && (
+                        <p className="text-xs mt-1 text-gray-600 italic">{customer.address_notes}</p>
+                      )}
+                    </div>
+                  )}
+                  {(customer.governorate || customer.city) && (
+                    <p className="text-sm text-gray-700 font-medium">
+                      {[customer.city, customer.governorate].filter(Boolean).join(', ')}
+                    </p>
                   )}
                 </div>
-              )}
-              {(customer.governorate || customer.city) && (
-                <p className="text-sm text-gray-700 font-medium">
-                  {[customer.city, customer.governorate].filter(Boolean).join(', ')}
-                </p>
-              )}
-            </div>
-          </div>
+              </div>
 
-          {/* Order Items Summary */}
-          {items.length > 0 && (
-            <div className="border-b border-gray-300 pb-3">
-              <h3 className="font-bold text-sm uppercase tracking-wide text-gray-900 mb-2">{t('items')}: {items.length}</h3>
-              <div className="space-y-1 text-xs">
-                {items.slice(0, 5).map((item: OrderItem, index: number) => (
-                  <div key={index} className="flex justify-between text-gray-700">
-                    <span className="flex-1">{item.product_name || `${t('product')} ${index + 1}`}</span>
-                    <span className="font-semibold ml-2">Qty: {item.quantity}</span>
+              {/* Order Items Summary */}
+              {items.length > 0 && (
+                <div className="border-b border-gray-300 pb-3">
+                  <h3 className="font-bold text-sm uppercase tracking-wide text-gray-900 mb-2" style={{ fontFamily: 'sans-serif' }}>{t('items')}: {items.length}</h3>
+                  <div className="space-y-1 text-xs">
+                    {items.slice(0, 5).map((item: OrderItem, index: number) => (
+                      <div key={index} className="flex justify-between text-gray-700">
+                        <span className="flex-1">{item.product_name || `${t('product')} ${index + 1}`}</span>
+                        <span className="font-semibold ml-2">Qty: {item.quantity}</span>
+                      </div>
+                    ))}
+                    {items.length > 5 && (
+                      <p className="text-xs text-gray-600 italic mt-1">+{items.length - 5} {t('moreItems')}</p>
+                    )}
                   </div>
-                ))}
-                {items.length > 5 && (
-                  <p className="text-xs text-gray-600 italic mt-1">+{items.length - 5} {t('moreItems')}</p>
-                )}
-              </div>
-            </div>
-          )}
+                </div>
+              )}
 
-          {/* Footer */}
-          <div className="pt-2">
-            {(vendor.name_en || vendor.name_ar || vendor.name) && (
-              <div className="mb-2">
-                <p className="text-xs font-semibold text-gray-900 uppercase">{t('vendor')}</p>
-                <p className="text-xs text-gray-700 mt-1 font-medium">
-                  {locale === 'ar' && vendor.name_ar ? vendor.name_ar : vendor.name_en || vendor.name}
-                </p>
+              {/* Footer */}
+              <div className="pt-2">
+                {(vendor.name_en || vendor.name_ar || vendor.name) && (
+                  <div className="mb-2">
+                    <p className="text-xs font-semibold text-gray-900 uppercase" style={{ fontFamily: 'sans-serif' }}>{t('vendor')}</p>
+                    <p className="text-xs text-gray-700 mt-1 font-medium">
+                      {locale === 'ar' && vendor.name_ar ? vendor.name_ar : vendor.name_en || vendor.name}
+                    </p>
+                  </div>
+                )}
+                <div className="text-center pt-2 border-t border-gray-300">
+                  <p className="text-xs font-semibold text-gray-900" style={{ fontFamily: 'sans-serif' }}>{t('handleWithCare')}</p>
+                </div>
               </div>
-            )}
-            <div className="text-center pt-2 border-t border-gray-300">
-              <p className="text-xs font-semibold text-gray-900">{t('handleWithCare')}</p>
             </div>
           </div>
         </div>
