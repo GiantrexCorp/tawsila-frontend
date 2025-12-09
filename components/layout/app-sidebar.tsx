@@ -136,8 +136,9 @@ export function AppSidebar() {
     return user.roles.some(role => allowedRoles.includes(role));
   };
 
-  // Check if user is vendor - vendors see profile and create order
+  // Check if user is vendor or shipping agent
   const isVendor = user?.roles?.includes('vendor');
+  const isShippingAgent = user?.roles?.includes('shipping-agent');
   
   const navigation = isVendor ? [
     {
@@ -145,7 +146,7 @@ export function AppSidebar() {
       items: [
         {
           title: t('vendorProfile'),
-          href: "/dashboard/vendor/profile",
+          href: "/dashboard/my-vendor",
           icon: Building2,
           allowedRoles: ['vendor'],
         },
@@ -159,6 +160,18 @@ export function AppSidebar() {
           href: "/dashboard/orders",
           icon: ShoppingCart,
           allowedRoles: ['vendor'],
+        },
+      ],
+    },
+  ] : isShippingAgent ? [
+    {
+      title: t('orders'),
+      items: [
+        {
+          title: t('orders'),
+          href: "/dashboard/orders",
+          icon: ShoppingCart,
+          allowedRoles: ['shipping-agent'],
         },
       ],
     },

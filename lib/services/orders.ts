@@ -72,6 +72,7 @@ export async function createOrder(orderData: CreateOrderRequest): Promise<Order>
   const response = await apiRequest<Order>('/orders', {
     method: 'POST',
     body: JSON.stringify(orderData),
+    skipRedirectOn403: true, // Don't redirect on 403, show error message instead
   });
 
   if (!response.data) {
@@ -83,6 +84,7 @@ export async function createOrder(orderData: CreateOrderRequest): Promise<Order>
 
 /**
  * Fetch all orders
+ * For shipping agents, only returns orders assigned to them
  */
 export async function fetchOrders(): Promise<Order[]> {
   const response = await apiRequest<Order[]>('/orders', {
@@ -90,6 +92,48 @@ export async function fetchOrders(): Promise<Order[]> {
   });
 
   return response.data || [];
+}
+
+/**
+ * Fetch orders assigned to current shipping agent
+ * Backend should filter orders where the current user is assigned as the agent
+ * Includes assignments in the response to verify filtering
+ */
+export async function fetchMyAssignedOrders(): Promise<Order[]> {
+  // Fetch orders with assignments included
+  // Backend should automatically filter by authenticated user's ID for shipping agents
+  const response = await apiRequest<Order[]>('/orders?include=assignments', {
+    method: 'GET',
+  });
+
+  const orders = response.data || [];
+  
+  // If backend doesn't filter automatically, filter client-side
+  // Get current user ID to match against assignments
+  const { getCurrentUser } = await import('../auth');
+  const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.id;
+
+  if (!currentUserId) {
+    return [];
+  }
+
+  // Filter orders where current user is assigned as the agent
+  const assignedOrders = orders.filter(order => {
+    const orderWithAssignments = order as any;
+    if (!orderWithAssignments.assignments || !Array.isArray(orderWithAssignments.assignments)) {
+      return false;
+    }
+    
+    // Check if any active assignment has current user as assigned_to
+    return orderWithAssignments.assignments.some((assignment: any) => {
+      return assignment.is_active && 
+             assignment.assigned_to && 
+             assignment.assigned_to.id === currentUserId;
+    });
+  });
+
+  return assignedOrders;
 }
 
 /**

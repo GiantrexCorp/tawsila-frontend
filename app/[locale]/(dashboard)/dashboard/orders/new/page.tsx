@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Package, CreditCard, FileText, ShoppingCart, Plus, Trash2, DollarSign, Truck, User } from "lucide-react";
+import { Loader2, Package, CreditCard, FileText, ShoppingCart, Plus, Trash2, DollarSign, Truck, User, CheckCircle2, X } from "lucide-react";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { createOrder, type OrderItem } from "@/lib/services/orders";
@@ -24,6 +24,8 @@ export default function CreateOrderPage() {
   const hasPermission = usePagePermission(['super-admin', 'vendor']);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastCreatedOrder, setLastCreatedOrder] = useState<{ order_number: string } | null>(null);
+  const successBannerRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     vendor_notes: '',
     internal_notes: '',
@@ -54,8 +56,31 @@ export default function CreateOrderPage() {
     return subtotal + (formData.shipping_cost || 0);
   }, [subtotal, formData.shipping_cost, formData.payment_method]);
 
+  // Scroll to success banner when it appears
+  useEffect(() => {
+    if (lastCreatedOrder && successBannerRef.current) {
+      // Small delay to ensure banner is fully rendered
+      setTimeout(() => {
+        if (successBannerRef.current) {
+          const headerHeight = 64; // h-16 = 64px (sticky header)
+          const elementTop = successBannerRef.current.getBoundingClientRect().top;
+          const offsetPosition = elementTop + window.pageYOffset - headerHeight - 20; // 20px extra padding
+          
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+          });
+        }
+      }, 200);
+    }
+  }, [lastCreatedOrder]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Scroll to top of page when create button is pressed
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
     setIsSubmitting(true);
 
     try {
@@ -121,29 +146,26 @@ export default function CreateOrderPage() {
       // Don't include vendor_id - backend will automatically associate with vendor user's vendor
       const createdOrder = await createOrder(orderData);
       
+      // Set success state with order number
+      setLastCreatedOrder({ order_number: createdOrder.order_number });
+      
       toast.success(t('orderCreatedSuccess'), {
         description: `${t('orderNumber')}: ${createdOrder.order_number}`,
       });
 
-      // For vendor users, redirect back to create order page to create another order
-      // For super-admin, redirect to orders list
-      if (isSuperAdmin) {
-        router.push(`/dashboard/orders`);
-      } else {
-        // Reset form for vendor to create another order
-        setFormData({
-          vendor_notes: '',
-          internal_notes: '',
-          payment_method: 'cod',
-          shipping_cost: 70,
-          customer: {
-            name: '',
-            mobile: '',
-            address: '',
-          },
-        });
-        setItems([{ product_name: '', quantity: 1, price: 0, unit_price: 0 }]);
-      }
+      // Reset form for creating another order
+      setFormData({
+        vendor_notes: '',
+        internal_notes: '',
+        payment_method: 'cod',
+        shipping_cost: 70,
+        customer: {
+          name: '',
+          mobile: '',
+          address: '',
+        },
+      });
+      setItems([{ product_name: '', quantity: 1, price: 0, unit_price: 0 }]);
     } catch (error) {
       console.error('Failed to create order:', error);
       toast.error(t('orderCreatedFailed'), {
@@ -211,6 +233,40 @@ export default function CreateOrderPage() {
         <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
         <p className="text-muted-foreground mt-2">{t('subtitle')}</p>
       </div>
+
+      {/* Success Banner */}
+      {lastCreatedOrder && (
+        <Card ref={successBannerRef} className="border-green-500 bg-green-50 dark:bg-green-950/20" id="success-banner">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <div className="h-10 w-10 rounded-full bg-green-500 flex items-center justify-center">
+                  <CheckCircle2 className="h-6 w-6 text-white" />
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-semibold text-green-900 dark:text-green-100 mb-1">
+                  {t('orderCreatedSuccess')}
+                </h3>
+                <p className="text-sm text-green-800 dark:text-green-200">
+                  {t('orderNumber')}: <span className="font-mono font-bold">{lastCreatedOrder.order_number}</span>
+                </p>
+                <p className="text-xs text-green-700 dark:text-green-300 mt-2">
+                  {t('orderCreatedSuccessDesc') || 'You can create another order below.'}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-green-700 hover:text-green-900 hover:bg-green-100 dark:text-green-300 dark:hover:text-green-100"
+                onClick={() => setLastCreatedOrder(null)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Customer Information */}

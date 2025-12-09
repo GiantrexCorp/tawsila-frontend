@@ -75,10 +75,10 @@ export async function fetchVendors(): Promise<Vendor[]> {
 
 /**
  * Fetch current vendor's profile (for vendor users)
- * Uses /vendors/me endpoint
+ * Uses /my-vendor endpoint
  */
 export async function fetchCurrentVendor(): Promise<Vendor> {
-  const response = await apiRequest<Vendor>('/vendors/me', {
+  const response = await apiRequest<Vendor>('/my-vendor', {
     method: 'GET',
   });
 
@@ -248,19 +248,19 @@ export async function getCurrentUserVendorId(): Promise<number> {
     throw new Error('User not found');
   }
 
-  // Method 1: Try /vendors/me endpoint first (preferred method)
+  // Method 1: Try /my-vendor endpoint first (preferred method)
   try {
-    console.log('🔍 Trying /vendors/me endpoint...');
+    console.log('🔍 Trying /my-vendor endpoint...');
     const vendor = await fetchCurrentVendor();
-    console.log('✅ Found vendor_id from /vendors/me:', vendor.id);
+    console.log('✅ Found vendor_id from /my-vendor:', vendor.id);
     return vendor.id;
   } catch (meError: any) {
     if (meError.status === 404) {
-      console.log('⚠️ /vendors/me endpoint not available (404)');
+      console.log('⚠️ /my-vendor endpoint not available (404)');
     } else if (meError.status === 403) {
-      console.log('⚠️ /vendors/me endpoint forbidden (403)');
+      console.log('⚠️ /my-vendor endpoint forbidden (403)');
     } else {
-      console.log('⚠️ /vendors/me endpoint error:', meError);
+      console.log('⚠️ /my-vendor endpoint error:', meError);
     }
   }
 

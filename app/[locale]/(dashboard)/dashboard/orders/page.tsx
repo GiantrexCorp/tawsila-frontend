@@ -45,16 +45,19 @@ export default function OrdersPage() {
   const [rejectionReason, setRejectionReason] = useState("");
   const currentUser = getCurrentUser();
   const isVendor = currentUser?.roles?.includes('vendor');
+  const isShippingAgent = currentUser?.roles?.includes('shipping-agent');
   
   // Check if user has permission to access orders page
-  // Orders management is for super-admin, inventory-manager, and vendors (view-only)
-  const hasPermission = usePagePermission(['super-admin', 'inventory-manager', 'vendor']);
+  // Orders management is for super-admin, inventory-manager, vendors (view-only), and shipping-agents (assigned orders only)
+  const hasPermission = usePagePermission(['super-admin', 'inventory-manager', 'vendor', 'shipping-agent']);
 
   // Fetch orders on mount
   useEffect(() => {
     const loadOrders = async () => {
       setIsLoading(true);
       try {
+        // Backend automatically filters orders for shipping agents
+        // So we can use the same fetchOrders() function for all roles
         const fetchedOrders = await fetchOrders();
         setOrders(fetchedOrders);
       } catch (error) {
@@ -210,8 +213,12 @@ export default function OrdersPage() {
           <div className="rounded-full bg-muted p-6 mb-4">
             <Eye className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h3 className="text-lg font-semibold mb-2">{t('noOrders')}</h3>
-          <p className="text-sm text-muted-foreground mb-4">{t('noOrdersDesc')}</p>
+          <h3 className="text-lg font-semibold mb-2">
+            {isShippingAgent ? t('noAssignedOrders') : t('noOrders')}
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            {isShippingAgent ? t('noAssignedOrdersDesc') : t('noOrdersDesc')}
+          </p>
           {isVendor && (
             <Button onClick={() => router.push('/dashboard/orders/new')} className="gap-2">
               <Plus className="h-4 w-4" />
@@ -331,9 +338,11 @@ export default function OrdersPage() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+            {isShippingAgent ? t('myAssignedOrders') : t('title')}
+          </h1>
           <p className="text-sm md:text-base text-muted-foreground mt-2">
-            {t('subtitle')}
+            {isShippingAgent ? t('myAssignedOrdersDesc') : t('subtitle')}
           </p>
         </div>
         {isVendor && (
