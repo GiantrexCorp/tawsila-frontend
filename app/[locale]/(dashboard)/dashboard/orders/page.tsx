@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useTranslations, useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Filter, Eye, Loader2, CheckCircle, Plus, XCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePagePermission } from "@/hooks/use-page-permission";
-import { fetchOrders, acceptOrder, rejectOrder, type Order } from "@/lib/services/orders";
+import { fetchOrders, acceptOrder, rejectOrder, type Order, type Customer } from "@/lib/services/orders";
 import { fetchInventories, fetchCurrentInventory, type Inventory } from "@/lib/services/inventories";
 import { toast } from "sonner";
 import { getCurrentUser } from "@/lib/auth";
@@ -29,7 +29,6 @@ import { Textarea } from "@/components/ui/textarea";
 export default function OrdersPage() {
   const t = useTranslations('orders');
   const tCommon = useTranslations('common');
-  const locale = useLocale();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [orders, setOrders] = useState<Order[]>([]);
@@ -81,7 +80,7 @@ export default function OrdersPage() {
         const currentInventory = await fetchCurrentInventory();
         setInventories([currentInventory]);
         setSelectedInventoryId(currentInventory.id);
-      } catch (error) {
+      } catch {
         // If /inventories/me doesn't exist, fetch all inventories
         const allInventories = await fetchInventories();
         setInventories(allInventories);
@@ -183,7 +182,7 @@ export default function OrdersPage() {
   // Filter orders by search query
   const filteredOrders = orders.filter(order => 
     order.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (order as any).customer?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    order.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getStatusBadge = (status: string) => {
@@ -232,7 +231,7 @@ export default function OrdersPage() {
     return (
       <div className="space-y-4">
         {ordersList.map((order) => {
-          const customer = (order as any).customer || {};
+          const customer: Customer = order.customer || { name: '', mobile: '', address: '' };
           const canAccept = order.status === 'pending' && !isVendor;
           const canReject = order.status === 'pending' && !isVendor;
           

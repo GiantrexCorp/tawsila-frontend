@@ -119,14 +119,17 @@ export async function fetchMyAssignedOrders(): Promise<Order[]> {
   }
 
   // Filter orders where current user is assigned as the agent
+  interface OrderWithAssignments extends Order {
+    assignments?: Assignment[];
+  }
   const assignedOrders = orders.filter(order => {
-    const orderWithAssignments = order as any;
+    const orderWithAssignments = order as OrderWithAssignments;
     if (!orderWithAssignments.assignments || !Array.isArray(orderWithAssignments.assignments)) {
       return false;
     }
     
     // Check if any active assignment has current user as assigned_to
-    return orderWithAssignments.assignments.some((assignment: any) => {
+    return orderWithAssignments.assignments.some((assignment: Assignment) => {
       return assignment.is_active && 
              assignment.assigned_to && 
              assignment.assigned_to.id === currentUserId;

@@ -8,10 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2, Package, CreditCard, FileText, ShoppingCart, Plus, Trash2, DollarSign, Truck, User, CheckCircle2, X } from "lucide-react";
+import { ArrowLeft, Loader2, Package, CreditCard, FileText, ShoppingCart, Plus, Trash2, Truck, User, CheckCircle2, X } from "lucide-react";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
-import { createOrder, type OrderItem } from "@/lib/services/orders";
+import { createOrder, type OrderItem, type CreateOrderRequest } from "@/lib/services/orders";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -132,7 +132,7 @@ export default function CreateOrderPage() {
         unit_price: item.unit_price || item.price || 0,
       }));
 
-      const orderData: any = {
+      const orderData: CreateOrderRequest = {
         ...formData,
         vendor_id: parseInt(vendorId),
         customer: formData.customer,
@@ -194,13 +194,18 @@ export default function CreateOrderPage() {
   const handleItemChange = (index: number, field: keyof OrderItem, value: string | number) => {
     setItems(prev => {
       const newItems = [...prev];
-      const numValue = field === 'quantity' || field === 'price' || field === 'unit_price' ? Number(value) : value;
+      let processedValue: string | number;
+      if (field === 'quantity' || field === 'price' || field === 'unit_price') {
+        processedValue = Number(value) || 0;
+      } else {
+        processedValue = value;
+      }
       newItems[index] = {
         ...newItems[index],
-        [field]: numValue,
+        [field]: processedValue,
         // Keep both price and unit_price in sync for frontend calculation
-        ...(field === 'price' ? { unit_price: numValue } : {}),
-        ...(field === 'unit_price' ? { price: numValue } : {}),
+        ...(field === 'price' ? { unit_price: processedValue as number } : {}),
+        ...(field === 'unit_price' ? { price: processedValue as number } : {}),
       };
       return newItems;
     });
@@ -598,4 +603,3 @@ export default function CreateOrderPage() {
     </div>
   );
 }
-

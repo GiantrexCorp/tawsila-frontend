@@ -18,14 +18,13 @@ import {
   CreditCard,
   FileText,
   Calendar,
-  QrCode,
   Printer,
   XCircle,
   Truck,
   UserPlus
 } from "lucide-react";
 import { usePagePermission } from "@/hooks/use-page-permission";
-import { fetchOrder, acceptOrder, rejectOrder, assignPickupAgent, fetchOrderAssignments, type Order, type Assignment } from "@/lib/services/orders";
+import { fetchOrder, acceptOrder, rejectOrder, assignPickupAgent, fetchOrderAssignments, type Order, type OrderItem, type Customer, type Assignment } from "@/lib/services/orders";
 import { fetchInventories, fetchCurrentInventory, type Inventory } from "@/lib/services/inventories";
 import { fetchActiveAgents, type Agent } from "@/lib/services/agents";
 import { toast } from "sonner";
@@ -119,7 +118,7 @@ export default function OrderDetailPage() {
         const currentInventory = await fetchCurrentInventory();
         setInventories([currentInventory]);
         setSelectedInventoryId(currentInventory.id);
-      } catch (error) {
+      } catch {
         // If /inventories/me doesn't exist, fetch all inventories
         const allInventories = await fetchInventories();
         setInventories(allInventories);
@@ -301,9 +300,14 @@ export default function OrderDetailPage() {
     );
   }
 
-  const customer = (order as any).customer || {};
-  const items = (order as any).items || [];
-  const vendor = (order as any).vendor || {};
+  interface OrderWithRelations extends Order {
+    items?: OrderItem[];
+    vendor?: { id: number; name_en?: string; name_ar?: string; name?: string; [key: string]: unknown };
+  }
+  const orderWithRelations = order as OrderWithRelations;
+  const customer: Customer = orderWithRelations.customer || { name: '', mobile: '', address: '' };
+  const items = orderWithRelations.items || [];
+  const vendor: { id?: number; name_en?: string; name_ar?: string; name?: string; [key: string]: unknown } = orderWithRelations.vendor || {};
   const canAccept = order.status === 'pending' && !isVendor;
 
   return (
@@ -759,7 +763,7 @@ export default function OrderDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {items.map((item: any, index: number) => (
+                {items.map((item: OrderItem, index: number) => (
                   <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex-1">
                       <p className="font-medium">{item.product_name || t('product')} #{index + 1}</p>
@@ -1169,7 +1173,7 @@ export default function OrderDetailPage() {
             <div className="border-b border-gray-300 pb-3">
               <h3 className="font-bold text-sm uppercase tracking-wide text-gray-900 mb-2">{t('items')}: {items.length}</h3>
               <div className="space-y-1 text-xs">
-                {items.slice(0, 5).map((item: any, index: number) => (
+                {items.slice(0, 5).map((item: OrderItem, index: number) => (
                   <div key={index} className="flex justify-between text-gray-700">
                     <span className="flex-1">{item.product_name || `${t('product')} ${index + 1}`}</span>
                     <span className="font-semibold ml-2">Qty: {item.quantity}</span>

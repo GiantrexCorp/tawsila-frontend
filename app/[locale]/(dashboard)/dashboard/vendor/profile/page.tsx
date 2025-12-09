@@ -53,8 +53,9 @@ export default function VendorProfilePage() {
           setVendor(fetchedVendor);
           setIsLoading(false);
           return;
-        } catch (meError: any) {
-          if (meError.status === 404) {
+        } catch (meError: unknown) {
+          const error = meError as { status?: number };
+          if (error.status === 404) {
             console.log('⚠️ /vendors/me not available, falling back to vendor_id lookup');
           } else {
             console.log('⚠️ /vendors/me error, falling back:', meError);
@@ -295,7 +296,8 @@ export default function VendorProfilePage() {
                     variant="outline"
                     size="icon"
                     className="h-8 w-8 shrink-0"
-                    onClick={() => copySecretKey(vendor.secret_key)}
+                    onClick={() => vendor.secret_key && copySecretKey(vendor.secret_key)}
+                    disabled={!vendor.secret_key}
                   >
                     <Copy className="h-3.5 w-3.5" />
                   </Button>

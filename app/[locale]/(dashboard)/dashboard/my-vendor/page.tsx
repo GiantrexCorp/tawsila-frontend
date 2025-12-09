@@ -51,10 +51,13 @@ export default function MyVendorProfilePage() {
         const fetchedVendor = await fetchCurrentVendor();
         console.log('✅ Vendor loaded successfully:', fetchedVendor);
         setVendor(fetchedVendor);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Failed to load vendor:', error);
+        const errorMessage = error && typeof error === 'object' && 'message' in error 
+          ? String(error.message) 
+          : 'Please contact your administrator.';
         toast.error(t('errorLoadingVendor'), {
-          description: error?.message || 'Please contact your administrator.',
+          description: errorMessage,
         });
       } finally {
         setIsLoading(false);
@@ -71,7 +74,7 @@ export default function MyVendorProfilePage() {
     toast.success(t('secretKeyCopied'));
   };
 
-  const copyToClipboard = (text: string, label: string) => {
+  const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success(tCommon('copied'));
   };
@@ -202,7 +205,7 @@ export default function MyVendorProfilePage() {
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6"
-                      onClick={() => copyToClipboard(vendor.contact_person, t('contactPerson'))}
+                      onClick={() => copyToClipboard(vendor.contact_person)}
                     >
                       <Copy className="h-3 w-3" />
                     </Button>
@@ -221,7 +224,7 @@ export default function MyVendorProfilePage() {
                     variant="ghost"
                     size="icon"
                     className="h-6 w-6"
-                    onClick={() => copyToClipboard(vendor.mobile, t('mobile'))}
+                    onClick={() => copyToClipboard(vendor.mobile)}
                   >
                     <Copy className="h-3 w-3" />
                   </Button>
@@ -240,7 +243,7 @@ export default function MyVendorProfilePage() {
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 shrink-0"
-                      onClick={() => copyToClipboard(vendor.email || '', t('email'))}
+                      onClick={() => copyToClipboard(vendor.email || '')}
                     >
                       <Copy className="h-3 w-3" />
                     </Button>
@@ -350,7 +353,7 @@ export default function MyVendorProfilePage() {
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6"
-                        onClick={() => copyToClipboard(vendor.commercial_registration || '', t('commercialRegistration'))}
+                        onClick={() => copyToClipboard(vendor.commercial_registration || '')}
                       >
                         <Copy className="h-3 w-3" />
                       </Button>
@@ -370,7 +373,7 @@ export default function MyVendorProfilePage() {
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6"
-                        onClick={() => copyToClipboard(vendor.tax_number || '', t('taxNumber'))}
+                        onClick={() => copyToClipboard(vendor.tax_number || '')}
                       >
                         <Copy className="h-3 w-3" />
                       </Button>

@@ -254,13 +254,14 @@ export async function getCurrentUserVendorId(): Promise<number> {
     const vendor = await fetchCurrentVendor();
     console.log('✅ Found vendor_id from /my-vendor:', vendor.id);
     return vendor.id;
-  } catch (meError: any) {
-    if (meError.status === 404) {
+  } catch (meError: unknown) {
+    const error = meError as { status?: number };
+    if (error.status === 404) {
       console.log('⚠️ /my-vendor endpoint not available (404)');
-    } else if (meError.status === 403) {
+    } else if (error.status === 403) {
       console.log('⚠️ /my-vendor endpoint forbidden (403)');
     } else {
-      console.log('⚠️ /my-vendor endpoint error:', meError);
+      console.log('⚠️ /my-vendor endpoint error:', error);
     }
   }
 
@@ -268,12 +269,11 @@ export async function getCurrentUserVendorId(): Promise<number> {
   console.log('🔍 Searching for vendor_id in user object:', currentUser);
   console.log('📋 All user object keys:', Object.keys(currentUser));
 
-  // @ts-ignore - vendor_id might be in user object with different field names
   const vendorIdFromUser = currentUser.vendor_id || 
                            currentUser.organization_id || 
-                           // @ts-ignore
+                           // @ts-expect-error - vendor object might exist with different structure
                            currentUser.vendor?.id ||
-                           // @ts-ignore
+                           // @ts-expect-error - organization object might exist with different structure
                            currentUser.organization?.id ||
                            null;
 
@@ -301,11 +301,12 @@ export async function getCurrentUserVendorId(): Promise<number> {
       } else {
         console.log('❌ No vendor found matching user email or name');
       }
-    } catch (vendorsError: any) {
-      if (vendorsError.status === 403) {
+    } catch (vendorsError: unknown) {
+      const error = vendorsError as { status?: number };
+      if (error.status === 403) {
         console.log('❌ Vendor users do not have permission to list vendors (403 Forbidden)');
       } else {
-        console.log('❌ Could not fetch vendors list:', vendorsError);
+        console.log('❌ Could not fetch vendors list:', error);
       }
     }
   }

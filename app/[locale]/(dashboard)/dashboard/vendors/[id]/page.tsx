@@ -285,7 +285,8 @@ export default function ViewVendorPage() {
                   variant="outline"
                   size="icon"
                   className="h-8 w-8 shrink-0"
-                  onClick={() => copySecretKey(vendor.secret_key)}
+                  onClick={() => vendor.secret_key && copySecretKey(vendor.secret_key)}
+                  disabled={!vendor.secret_key}
                   title="Copy secret key"
                 >
                   <Copy className="h-3.5 w-3.5" />

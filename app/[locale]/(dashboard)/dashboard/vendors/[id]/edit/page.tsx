@@ -104,7 +104,7 @@ export default function EditVendorPage() {
           commercial_registration: vendor.commercial_registration || '',
           tax_number: vendor.tax_number || '',
           status: vendor.status,
-          secret_key: vendor.secret_key,
+          secret_key: vendor.secret_key || '',
           logo: undefined,
           cover_image: undefined,
         });

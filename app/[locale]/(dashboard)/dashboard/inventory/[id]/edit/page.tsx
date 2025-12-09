@@ -139,8 +139,14 @@ export default function EditInventoryPage() {
     }
   }, [errors]);
 
-  const handleLocationChange = useCallback((lat: number, lng: number) => {
-    setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }));
+  const handleLocationChange = useCallback((lat: string, lng: string) => {
+    const latNum = parseFloat(lat);
+    const lngNum = parseFloat(lng);
+    setFormData(prev => ({ 
+      ...prev, 
+      latitude: !isNaN(latNum) ? latNum : undefined, 
+      longitude: !isNaN(lngNum) ? lngNum : undefined 
+    }));
   }, []);
 
   const validateForm = (): boolean => {
@@ -378,7 +384,7 @@ export default function EditInventoryPage() {
                   {t('governorate')} <span className="text-destructive">*</span>
                 </Label>
                 <Select
-                  value={formData.governorate_id.toString()}
+                  value={formData.governorate_id?.toString() || ''}
                   onValueChange={handleGovernorateChange}
                 >
                   <SelectTrigger id="governorate_id" className={errors.governorate_id ? 'border-destructive' : ''}>
@@ -403,7 +409,7 @@ export default function EditInventoryPage() {
                   {t('city')} <span className="text-destructive">*</span>
                 </Label>
                 <Select
-                  value={formData.city_id.toString()}
+                  value={formData.city_id?.toString() || ''}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, city_id: parseInt(value) }))}
                   disabled={!formData.governorate_id || formData.governorate_id === 0 || isLoadingCities}
                 >
@@ -427,8 +433,8 @@ export default function EditInventoryPage() {
               <div className="space-y-2">
                 <Label>{t('coordinates')} ({t('optional')})</Label>
                 <LocationPicker
-                  latitude={formData.latitude}
-                  longitude={formData.longitude}
+                  latitude={formData.latitude?.toString() || ''}
+                  longitude={formData.longitude?.toString() || ''}
                   onLocationChange={handleLocationChange}
                 />
                 <p className="text-xs text-muted-foreground">{t('coordinatesDesc')}</p>
