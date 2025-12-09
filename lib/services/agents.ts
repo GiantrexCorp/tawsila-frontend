@@ -1,0 +1,55 @@
+/**
+ * Agents Service
+ */
+
+import { apiRequest } from '../api';
+
+export interface Agent {
+  id: number;
+  name: string;
+  name_en?: string;
+  name_ar?: string;
+  email?: string;
+  mobile?: string;
+  phone?: string;
+  status?: 'active' | 'inactive';
+  rating?: number;
+  total_deliveries?: number;
+  roles?: string[];
+  [key: string]: unknown;
+}
+
+/**
+ * Fetch all agents (pickup/delivery agents)
+ */
+export async function fetchAgents(): Promise<Agent[]> {
+  const response = await apiRequest<Agent[]>('/get-users', {
+    method: 'GET',
+  });
+
+  return response.data || [];
+}
+
+/**
+ * Fetch active shipping agents only
+ */
+export async function fetchActiveAgents(): Promise<Agent[]> {
+  const response = await apiRequest<Agent[]>('/get-users?filter[status]=active', {
+    method: 'GET',
+  });
+
+  const allUsers = response.data || [];
+  
+  // Filter to only shipping agents
+  const shippingAgents = allUsers.filter((user: Agent & { roles?: string[] }) => {
+    // Check if user has shipping-agent role
+    if (user.roles && Array.isArray(user.roles)) {
+      return user.roles.includes('shipping-agent');
+    }
+    // Fallback: check if role is in any other field
+    return false;
+  });
+
+  return shippingAgents;
+}
+

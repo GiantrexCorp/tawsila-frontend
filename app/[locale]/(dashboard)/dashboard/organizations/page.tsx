@@ -219,7 +219,8 @@ export default function OrganizationsPage() {
                     <Button 
                       variant="ghost" 
                       size="icon-sm"
-                      onClick={() => copySecretKey(vendor.secret_key)}
+                      onClick={() => vendor.secret_key && copySecretKey(vendor.secret_key)}
+                      disabled={!vendor.secret_key}
                     >
                       <Copy className="h-3 w-3" />
                     </Button>

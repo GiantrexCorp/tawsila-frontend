@@ -2,12 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { useParams } from "next/navigation";
 import { useRouter } from "@/i18n/routing";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
-  ArrowLeft,
   Loader2,
   Building2,
   Mail,
@@ -16,31 +14,30 @@ import {
   User,
   Key,
   Copy,
-  Edit,
   Calendar,
   ExternalLink,
   FileText,
   Hash,
+  Plus,
   Eye,
   EyeOff
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import {
-  fetchVendor,
-  type Vendor
+  type Vendor,
+  fetchCurrentVendor
 } from "@/lib/services/vendors";
 import { LocationPicker } from "@/components/ui/location-picker";
 
-export default function ViewVendorPage() {
+export default function MyVendorProfilePage() {
   const t = useTranslations('organizations');
   const tCommon = useTranslations('common');
+  const tOrders = useTranslations('orders');
   const locale = useLocale();
   const router = useRouter();
-  const params = useParams();
-  const vendorId = parseInt(params.id as string);
 
-  const hasPermission = usePagePermission(['super-admin', 'admin', 'manager', 'inventory-manager']);
+  const hasPermission = usePagePermission(['vendor']);
 
   const [isLoading, setIsLoading] = useState(true);
   const [vendor, setVendor] = useState<Vendor | null>(null);
@@ -50,12 +47,18 @@ export default function ViewVendorPage() {
     const loadVendor = async () => {
       setIsLoading(true);
       try {
-        const fetchedVendor = await fetchVendor(vendorId);
+        console.log('🔍 Fetching vendor from /my-vendor endpoint...');
+        const fetchedVendor = await fetchCurrentVendor();
+        console.log('✅ Vendor loaded successfully:', fetchedVendor);
         setVendor(fetchedVendor);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Failed to load vendor:', error);
-        toast.error(t('errorLoadingVendor'));
-        router.push('/dashboard/vendors');
+        const errorMessage = error && typeof error === 'object' && 'message' in error 
+          ? String(error.message) 
+          : 'Please contact your administrator.';
+        toast.error(t('errorLoadingVendor'), {
+          description: errorMessage,
+        });
       } finally {
         setIsLoading(false);
       }
@@ -64,11 +67,16 @@ export default function ViewVendorPage() {
     if (hasPermission) {
       loadVendor();
     }
-  }, [vendorId, t, router, hasPermission]);
+  }, [hasPermission, t]);
 
   const copySecretKey = (key: string) => {
     navigator.clipboard.writeText(key);
     toast.success(t('secretKeyCopied'));
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(tCommon('copied'));
   };
 
   if (hasPermission === null || hasPermission === false || isLoading || !vendor) {
@@ -84,17 +92,6 @@ export default function ViewVendorPage() {
 
   return (
     <div className="space-y-6 pb-8">
-      {/* Back Button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => router.push('/dashboard/vendors')}
-        className="gap-2 text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        {t('title')}
-      </Button>
-
       {/* Hero Section */}
       <div className="relative">
         {/* Background Gradient */}
@@ -144,13 +141,13 @@ export default function ViewVendorPage() {
                   <p className="text-muted-foreground mt-1 max-w-xl">{displayDescription}</p>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                <Button
-                  onClick={() => router.push(`/dashboard/vendors/${vendor.id}/edit`)}
+                  <Button
+                    onClick={() => router.push('/dashboard/orders/new')}
                     className="gap-2"
-                >
-                  <Edit className="h-4 w-4" />
-                  {tCommon('edit')}
-                </Button>
+                  >
+                    <Plus className="h-4 w-4" />
+                    {tOrders('createOrder')}
+                  </Button>
                 </div>
               </div>
 
@@ -167,10 +164,12 @@ export default function ViewVendorPage() {
                   {vendor.status === 'active' ? t('activeOrgs') : t('inactiveOrgs')}
                 </div>
 
-                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-xs font-medium text-muted-foreground">
-                  <MapPin className="h-3 w-3" />
-                  {locale === 'ar' ? vendor.city.name_ar : vendor.city.name_en}
-                </div>
+                {vendor.city && (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-xs font-medium text-muted-foreground">
+                    <MapPin className="h-3 w-3" />
+                    {locale === 'ar' ? vendor.city.name_ar : vendor.city.name_en}
+                  </div>
+                )}
 
                 <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-xs font-medium text-muted-foreground">
                   <Calendar className="h-3 w-3" />
@@ -195,28 +194,60 @@ export default function ViewVendorPage() {
           </div>
 
           <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <User className="h-4 w-4 text-muted-foreground shrink-0" />
-              <div>
-                <p className="text-xs text-muted-foreground">{t('contactPerson')}</p>
-                <p className="font-medium text-sm">{vendor.contact_person}</p>
+            {vendor.contact_person && (
+              <div className="flex items-center gap-3">
+                <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground">{t('contactPerson')}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-sm">{vendor.contact_person}</p>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => copyToClipboard(vendor.contact_person)}
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex items-center gap-3">
               <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
-              <div>
+              <div className="flex-1">
                 <p className="text-xs text-muted-foreground">{t('mobile')}</p>
-                <p className="font-medium text-sm" dir="ltr">{vendor.mobile}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-sm" dir="ltr">{vendor.mobile}</p>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => copyToClipboard(vendor.mobile)}
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
             </div>
 
             {vendor.email && (
               <div className="flex items-center gap-3">
                 <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-                <div className="min-w-0">
+                <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground">{t('email')}</p>
-                  <p className="font-medium text-sm truncate">{vendor.email}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-sm truncate">{vendor.email}</p>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 shrink-0"
+                      onClick={() => copyToClipboard(vendor.email || '')}
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
@@ -234,9 +265,11 @@ export default function ViewVendorPage() {
 
           <div className="space-y-2">
             <p className="text-sm">{vendor.address}</p>
-            <p className="text-xs text-muted-foreground">
-              {locale === 'ar' ? vendor.city.name_ar : vendor.city.name_en}, {locale === 'ar' ? vendor.governorate.name_ar : vendor.governorate.name_en}
-            </p>
+            {vendor.city && vendor.governorate && (
+              <p className="text-xs text-muted-foreground">
+                {locale === 'ar' ? vendor.city.name_ar : vendor.city.name_en}, {locale === 'ar' ? vendor.governorate.name_ar : vendor.governorate.name_en}
+              </p>
+            )}
           </div>
 
           {vendor.latitude && vendor.longitude && (
@@ -252,50 +285,51 @@ export default function ViewVendorPage() {
           )}
         </div>
 
-        {/* API Access Card */}
-        <div className="rounded-2xl border border-border/50 bg-card p-5 space-y-4 hover:border-border transition-colors">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
-              <Key className="h-4 w-4 text-violet-500" />
-            </div>
-            <h3 className="font-semibold">{t('securitySettings')}</h3>
-          </div>
-
-          <div className="space-y-3">
-            <div>
-              <p className="text-xs text-muted-foreground mb-2">{t('secretKey')}</p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 bg-muted/50 px-3 py-2 rounded-lg text-xs font-mono">
-                  {showSecretKey ? vendor.secret_key : '•'.repeat(32)}
-                </code>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8 shrink-0"
-                  onClick={() => setShowSecretKey(!showSecretKey)}
-                  title={showSecretKey ? 'Hide secret key' : 'Show secret key'}
-                >
-                  {showSecretKey ? (
-                    <EyeOff className="h-3.5 w-3.5" />
-                  ) : (
-                    <Eye className="h-3.5 w-3.5" />
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8 shrink-0"
-                  onClick={() => vendor.secret_key && copySecretKey(vendor.secret_key)}
-                  disabled={!vendor.secret_key}
-                  title="Copy secret key"
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                </Button>
+        {/* API Access Card - Only show if secret_key exists */}
+        {vendor.secret_key && (
+          <div className="rounded-2xl border border-border/50 bg-card p-5 space-y-4 hover:border-border transition-colors">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                <Key className="h-4 w-4 text-violet-500" />
               </div>
+              <h3 className="font-semibold">{t('securitySettings')}</h3>
             </div>
-            <p className="text-[11px] text-muted-foreground">{t('secretKeyHelp')}</p>
+
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs text-muted-foreground mb-2">{t('secretKey')}</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 bg-muted/50 px-3 py-2 rounded-lg text-xs font-mono">
+                    {showSecretKey ? vendor.secret_key : '•'.repeat(32)}
+                  </code>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => setShowSecretKey(!showSecretKey)}
+                    title={showSecretKey ? 'Hide secret key' : 'Show secret key'}
+                  >
+                    {showSecretKey ? (
+                      <EyeOff className="h-3.5 w-3.5" />
+                    ) : (
+                      <Eye className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => copySecretKey(vendor.secret_key!)}
+                    title="Copy secret key"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground">{t('secretKeyHelp')}</p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Business Details Card */}
         {(vendor.commercial_registration || vendor.tax_number) && (
@@ -311,9 +345,19 @@ export default function ViewVendorPage() {
               {vendor.commercial_registration && (
                 <div className="flex items-center gap-3">
                   <Hash className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <div>
+                  <div className="flex-1">
                     <p className="text-xs text-muted-foreground">{t('commercialRegistration')}</p>
-                    <p className="font-medium text-sm">{vendor.commercial_registration}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm">{vendor.commercial_registration}</p>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => copyToClipboard(vendor.commercial_registration || '')}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -321,9 +365,19 @@ export default function ViewVendorPage() {
               {vendor.tax_number && (
                 <div className="flex items-center gap-3">
                   <Hash className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <div>
+                  <div className="flex-1">
                     <p className="text-xs text-muted-foreground">{t('taxNumber')}</p>
-                    <p className="font-medium text-sm">{vendor.tax_number}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm">{vendor.tax_number}</p>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => copyToClipboard(vendor.tax_number || '')}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -375,3 +429,4 @@ export default function ViewVendorPage() {
     </div>
   );
 }
+

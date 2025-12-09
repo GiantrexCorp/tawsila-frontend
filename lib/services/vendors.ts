@@ -21,7 +21,7 @@ export interface Vendor {
   id: number;
   name_en: string;
   name_ar: string;
-  email: string;
+  email: string | null;
   mobile: string;
   contact_person: string;
   description_en: string;
@@ -34,7 +34,7 @@ export interface Vendor {
   commercial_registration: string | null;
   tax_number: string | null;
   status: 'active' | 'inactive';
-  secret_key: string;
+  secret_key?: string; // Optional - may not be included in all responses
   logo: string;
   cover_image: string;
   created_at: string;
@@ -71,6 +71,22 @@ export async function fetchVendors(): Promise<Vendor[]> {
   });
 
   return response.data || [];
+}
+
+/**
+ * Fetch current vendor's profile (for vendor users)
+ * Uses /my-vendor endpoint
+ */
+export async function fetchCurrentVendor(): Promise<Vendor> {
+  const response = await apiRequest<Vendor>('/my-vendor', {
+    method: 'GET',
+  });
+
+  if (!response.data) {
+    throw new Error('Vendor not found');
+  }
+
+  return response.data;
 }
 
 /**
@@ -215,5 +231,94 @@ export async function fetchCities(governorateId: number): Promise<City[]> {
   });
 
   return response.data || [];
+}
+
+/**
+ * Get vendor ID for current vendor user
+ * Tries multiple methods in order:
+ * 1. /vendors/me endpoint (preferred)
+ * 2. vendor_id from user object (from login response)
+ * 3. Fallback methods
+ */
+export async function getCurrentUserVendorId(): Promise<number> {
+  const { getCurrentUser } = await import('../auth');
+  const currentUser = getCurrentUser();
+  
+  if (!currentUser) {
+    throw new Error('User not found');
+  }
+
+  // Method 1: Try /my-vendor endpoint first (preferred method)
+  try {
+    console.log('🔍 Trying /my-vendor endpoint...');
+    const vendor = await fetchCurrentVendor();
+    console.log('✅ Found vendor_id from /my-vendor:', vendor.id);
+    return vendor.id;
+  } catch (meError: unknown) {
+    const error = meError as { status?: number };
+    if (error.status === 404) {
+      console.log('⚠️ /my-vendor endpoint not available (404)');
+    } else if (error.status === 403) {
+      console.log('⚠️ /my-vendor endpoint forbidden (403)');
+    } else {
+      console.log('⚠️ /my-vendor endpoint error:', error);
+    }
+  }
+
+  // Method 2: Try to get vendor_id from user object (from login response)
+  console.log('🔍 Searching for vendor_id in user object:', currentUser);
+  console.log('📋 All user object keys:', Object.keys(currentUser));
+
+  const vendorIdFromUser = currentUser.vendor_id || 
+                           currentUser.organization_id || 
+                           // @ts-expect-error - vendor object might exist with different structure
+                           currentUser.vendor?.id ||
+                           // @ts-expect-error - organization object might exist with different structure
+                           currentUser.organization?.id ||
+                           null;
+
+  if (vendorIdFromUser) {
+    console.log('✅ Found vendor_id in user object:', vendorIdFromUser);
+    return vendorIdFromUser;
+  }
+
+  // Method 3: Last resort - Try to fetch vendors and match by email
+  // Note: This might fail with 403 if vendor users don't have permission to list vendors
+  if (currentUser.email) {
+    try {
+      console.log('🔄 Trying to find vendor by matching email:', currentUser.email);
+      const vendors = await fetchVendors();
+      const matchingVendor = vendors.find(v => 
+        v.email === currentUser.email || 
+        v.email === currentUser.email?.toLowerCase() ||
+        v.contact_person === currentUser.name_en ||
+        v.contact_person === currentUser.name_ar
+      );
+      
+      if (matchingVendor) {
+        console.log('✅ Found vendor by matching email/name:', matchingVendor.id);
+        return matchingVendor.id;
+      } else {
+        console.log('❌ No vendor found matching user email or name');
+      }
+    } catch (vendorsError: unknown) {
+      const error = vendorsError as { status?: number };
+      if (error.status === 403) {
+        console.log('❌ Vendor users do not have permission to list vendors (403 Forbidden)');
+      } else {
+        console.log('❌ Could not fetch vendors list:', error);
+      }
+    }
+  }
+
+  // All methods failed
+  console.log('❌ vendor_id not found using any method');
+  console.log('📋 Full user object:', JSON.stringify(currentUser, null, 2));
+  console.log('💡 Backend should implement one of:');
+  console.log('   1. /vendors/me endpoint (GET) - returns current vendor profile');
+  console.log('   2. Include vendor_id in login response user object');
+  console.log('   3. Include vendor_id in /user endpoint response');
+
+  throw new Error('Vendor ID not found. Please contact your administrator to configure vendor_id retrieval.');
 }
 
