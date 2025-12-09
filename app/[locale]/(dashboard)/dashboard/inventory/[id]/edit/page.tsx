@@ -67,6 +67,14 @@ export default function EditInventoryPage() {
         setGovernorates(govs);
 
         // Set form data from inventory
+        // Convert latitude/longitude to numbers if they're strings
+        const latitude = typeof inventory.latitude === 'string' 
+          ? parseFloat(inventory.latitude) 
+          : inventory.latitude;
+        const longitude = typeof inventory.longitude === 'string' 
+          ? parseFloat(inventory.longitude) 
+          : inventory.longitude;
+
         setFormData({
           name_en: inventory.name_en || '',
           name_ar: inventory.name_ar || '',
@@ -74,8 +82,8 @@ export default function EditInventoryPage() {
           address: inventory.address || '',
           governorate_id: inventory.governorate_id || 0,
           city_id: inventory.city_id || 0,
-          latitude: inventory.latitude,
-          longitude: inventory.longitude,
+          latitude: !isNaN(latitude as number) ? latitude as number : undefined,
+          longitude: !isNaN(longitude as number) ? longitude as number : undefined,
           status: inventory.status || 'active',
         });
 
@@ -200,8 +208,13 @@ export default function EditInventoryPage() {
         status: formData.status || 'active',
       };
 
-      // Only include coordinates if they are provided
-      if (formData.latitude !== undefined && formData.longitude !== undefined) {
+      // Only include coordinates if they are provided and valid numbers
+      if (
+        formData.latitude !== undefined && 
+        formData.longitude !== undefined &&
+        !isNaN(formData.latitude) && 
+        !isNaN(formData.longitude)
+      ) {
         cleanedData.latitude = formData.latitude;
         cleanedData.longitude = formData.longitude;
       }

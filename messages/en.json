@@ -9,7 +9,7 @@
     "analyticsSection": "Analytics",
     "system": "System",
     "dashboard": "Dashboard",
-    "inventory": "Inventory",
+    "inventory": "Inventories",
     "requests": "Product Requests",
     "orders": "Orders",
     "agents": "Delivery Agents",
@@ -131,7 +131,12 @@
     "errorUpdatingInventory": "Failed to update inventory",
     "updateFailed": "Update failed",
     "updating": "Updating...",
-    "updateInventory": "Update Inventory"
+    "updateInventory": "Update Inventory",
+    "location": "Location",
+    "code": "Code",
+    "inventoryCode": "Inventory Code",
+    "openInGoogleMaps": "Open in Google Maps",
+    "viewDetails": "View Details"
   },
   "orders": {
     "title": "Order Management",
@@ -741,6 +746,7 @@
     "tryAgain": "Please try again",
     "allRightsReserved": "All rights reserved",
     "details": "Details",
+    "createdOn": "Created On",
     "lastUpdated": "Last Updated"
   }
 }
