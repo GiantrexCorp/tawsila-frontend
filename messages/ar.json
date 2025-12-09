@@ -9,7 +9,7 @@
     "analyticsSection": "التحليلات",
     "system": "النظام",
     "dashboard": "لوحة التحكم",
-    "inventory": "المخزون",
+    "inventory": "المخازن",
     "requests": "طلبات المنتجات",
     "orders": "الطلبات",
     "agents": "موظفي التوصيل",
@@ -131,16 +131,28 @@
     "errorUpdatingInventory": "فشل تحديث المخزن",
     "updateFailed": "فشل التحديث",
     "updating": "جاري التحديث...",
-    "updateInventory": "تحديث المخزن"
+    "updateInventory": "تحديث المخزن",
+    "location": "الموقع",
+    "code": "الرمز",
+    "inventoryCode": "رمز المخزن",
+    "openInGoogleMaps": "فتح في خرائط جوجل",
+    "viewDetails": "عرض التفاصيل"
   },
   "orders": {
     "title": "إدارة الطلبات",
     "pending": "قيد الانتظار",
     "accepted": "مقبول",
     "confirmed": "مؤكد",
+    "pickupAssigned": "تم تعيين الاستلام",
     "picked_up": "تم الاستلام",
+    "pickedUp": "تم الاستلام",
     "in_transit": "قيد التوصيل",
+    "inTransit": "قيد التوصيل",
+    "atHub": "في المستودع",
+    "deliveryAssigned": "تم تعيين التسليم",
+    "outForDelivery": "خارج للتسليم",
     "delivered": "تم التوصيل",
+    "failedDelivery": "فشل التسليم",
     "rejected": "مرفوض",
     "assignAgent": "تعيين لموظف",
     "subtitle": "تتبع وإدارة جميع طلباتك",
@@ -740,6 +752,7 @@
     "allFiltersAdded": "تمت إضافة جميع التصفيات",
     "tryAgain": "يرجى المحاولة مرة أخرى",
     "details": "التفاصيل",
+    "createdOn": "تم الإنشاء في",
     "lastUpdated": "آخر تحديث"
   }
 }

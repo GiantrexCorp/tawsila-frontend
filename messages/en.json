@@ -9,7 +9,7 @@
     "analyticsSection": "Analytics",
     "system": "System",
     "dashboard": "Dashboard",
-    "inventory": "Inventory",
+    "inventory": "Inventories",
     "requests": "Product Requests",
     "orders": "Orders",
     "agents": "Delivery Agents",
@@ -131,16 +131,28 @@
     "errorUpdatingInventory": "Failed to update inventory",
     "updateFailed": "Update failed",
     "updating": "Updating...",
-    "updateInventory": "Update Inventory"
+    "updateInventory": "Update Inventory",
+    "location": "Location",
+    "code": "Code",
+    "inventoryCode": "Inventory Code",
+    "openInGoogleMaps": "Open in Google Maps",
+    "viewDetails": "View Details"
   },
   "orders": {
     "title": "Order Management",
     "pending": "Pending",
     "accepted": "Accepted",
     "confirmed": "Confirmed",
+    "pickupAssigned": "Pickup Assigned",
     "picked_up": "Picked Up",
+    "pickedUp": "Picked Up",
     "in_transit": "In Transit",
+    "inTransit": "In Transit",
+    "atHub": "At Hub",
+    "deliveryAssigned": "Delivery Assigned",
+    "outForDelivery": "Out for Delivery",
     "delivered": "Delivered",
+    "failedDelivery": "Failed Delivery",
     "rejected": "Rejected",
     "assignAgent": "Assign to Agent",
     "subtitle": "Track and manage all your orders",
@@ -741,6 +753,7 @@
     "tryAgain": "Please try again",
     "allRightsReserved": "All rights reserved",
     "details": "Details",
+    "createdOn": "Created On",
     "lastUpdated": "Last Updated"
   }
 }
