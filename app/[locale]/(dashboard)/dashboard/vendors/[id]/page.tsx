@@ -52,8 +52,7 @@ export default function ViewVendorPage() {
       try {
         const fetchedVendor = await fetchVendor(vendorId);
         setVendor(fetchedVendor);
-      } catch (error) {
-        console.error('Failed to load vendor:', error);
+      } catch {
         toast.error(t('errorLoadingVendor'));
         router.push('/dashboard/vendors');
       } finally {

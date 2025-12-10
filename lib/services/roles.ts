@@ -18,8 +18,6 @@ export interface Role {
 
 export interface RolesResponse {
   data: Role[];
-  links?: unknown;
-  meta?: unknown;
 }
 
 /**
@@ -30,7 +28,9 @@ export async function fetchRoles(): Promise<RolesResponse> {
     method: 'GET',
   });
 
-  return response as unknown as RolesResponse;
+  return {
+    data: response.data || [],
+  };
 }
 
 /**

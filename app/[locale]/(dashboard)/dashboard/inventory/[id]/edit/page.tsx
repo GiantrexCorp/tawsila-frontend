@@ -93,13 +93,8 @@ export default function EditInventoryPage() {
           setCities(fetchedCities);
         }
       } catch (error) {
-        console.error('Failed to load inventory:', error);
-        const errorMessage = error && typeof error === 'object' && 'message' in error 
-          ? String(error.message) 
-          : t('errorLoadingInventory');
-        toast.error(t('errorLoadingInventory'), {
-          description: errorMessage,
-        });
+        const message = error instanceof Error ? error.message : t('errorLoadingInventory');
+        toast.error(t('errorLoadingInventory'), { description: message });
         router.push('/dashboard/inventory');
       } finally {
         setIsLoading(false);
@@ -219,13 +214,10 @@ export default function EditInventoryPage() {
         cleanedData.longitude = formData.longitude;
       }
 
-      console.log('Sending inventory update data:', cleanedData);
       await updateInventory(inventoryId, cleanedData);
       toast.success(t('inventoryUpdatedSuccess'));
       router.push('/dashboard/inventory');
     } catch (error: unknown) {
-      console.error('Update inventory error:', error);
-      
       if (error && typeof error === 'object' && 'errors' in error) {
         const errorObj = error as { errors?: Record<string, string[]> };
         if (errorObj.errors) {

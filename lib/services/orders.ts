@@ -1,67 +1,131 @@
 /**
  * Orders Service
+ *
+ * Handles all order-related API operations including creation, retrieval,
+ * status updates (accept/reject), and agent assignments.
  */
 
 import { apiRequest } from '../api';
 
+/**
+ * Order entity representing a delivery order in the system
+ */
 export interface Order {
+  /** Unique order identifier */
   id: number;
+  /** Human-readable order number (e.g., "ORD-2024-001") */
   order_number: string;
+  /** Tracking number for public order tracking */
   track_number: string;
+  /** Full URL for public order tracking page */
   tracking_url: string;
+  /** QR code data for quick tracking access */
   qr_code: string;
+  /** Current order status (e.g., 'pending', 'delivered') */
   status: string;
+  /** Localized status label for display */
   status_label: string;
+  /** Payment method (e.g., 'cash', 'card') */
   payment_method: string;
+  /** Payment status (e.g., 'paid', 'unpaid') */
   payment_status: string;
+  /** Localized payment status label */
   payment_status_label: string;
+  /** Sum of all item prices */
   subtotal: number;
+  /** Delivery/shipping cost */
   shipping_cost: number;
+  /** Total order amount (subtotal + shipping) */
   total_amount: number;
+  /** Reason for rejection (if rejected) */
   rejection_reason: string | null;
+  /** Timestamp when order was rejected */
   rejected_at: string | null;
+  /** Notes visible to vendor */
   vendor_notes: string | null;
+  /** Internal notes (admin only) */
   internal_notes: string | null;
+  /** Whether order is in phase 1 (vendor acceptance) */
   is_in_phase1: boolean;
+  /** Whether order is in phase 2 (inventory confirmation) */
   is_in_phase2: boolean;
+  /** Order creation timestamp */
   created_at: string;
+  /** Last update timestamp */
   updated_at: string;
-  customer?: Customer; // Customer information from API
+  /** Associated customer information */
+  customer?: Customer;
 }
 
+/**
+ * Individual item within an order
+ */
 export interface OrderItem {
+  /** Product ID (optional, for inventory-linked items) */
   product_id?: number;
+  /** Product/item name */
   product_name?: string;
+  /** Number of units */
   quantity: number;
-  price?: number; // Keep for frontend calculation
-  unit_price: number; // Backend expects this
+  /** Calculated price (quantity * unit_price) */
+  price?: number;
+  /** Price per single unit */
+  unit_price: number;
 }
 
+/**
+ * Customer information for delivery
+ */
 export interface Customer {
+  /** Customer ID (if registered) */
   id?: number;
+  /** Customer full name */
   name: string;
+  /** Mobile phone number */
   mobile: string;
+  /** Email address */
   email?: string | null;
+  /** Delivery address */
   address: string;
+  /** Additional address notes (e.g., "Ring doorbell") */
   address_notes?: string | null;
+  /** Complete formatted address */
   full_address?: string;
+  /** Delivery location latitude */
   latitude?: number | null;
+  /** Delivery location longitude */
   longitude?: number | null;
+  /** Whether coordinates are available */
   has_coordinates?: boolean;
+  /** Governorate/province name */
   governorate?: string | null;
+  /** City name */
   city?: string | null;
 }
 
+/**
+ * Request payload for creating a new order
+ */
 export interface CreateOrderRequest {
+  /** Notes visible to vendor */
   vendor_notes?: string;
+  /** Internal notes (admin only) */
   internal_notes?: string;
+  /** Payment method */
   payment_method?: string;
+  /** Vendor ID (required for admin-created orders) */
   vendor_id?: number;
+  /** Customer information */
   customer: Customer;
+  /** Order items */
   items: OrderItem[];
+  /** Shipping cost */
   shipping_cost?: number;
+  /** Calculated subtotal */
   subtotal?: number;
+  /** Calculated total amount */
   total_amount?: number;
+  /** Additional dynamic fields */
   [key: string]: unknown;
 }
 
@@ -197,10 +261,7 @@ export async function rejectOrder(id: number, rejectionReason?: string): Promise
     body: JSON.stringify(body),
   });
 
-  // The API returns { data: Order, message: string }
-  // Check if data exists in the response
   if (!response.data) {
-    console.error('Reject order response:', response);
     throw new Error(response.message || 'Failed to reject order');
   }
 
@@ -278,19 +339,6 @@ export async function fetchOrderAssignments(id: number): Promise<Assignment[]> {
     method: 'GET',
   });
 
-  console.log('Assignments API response:', response);
-  
-  // apiRequest returns { data: T }, so response.data should be the array
-  const assignments = response.data || [];
-  console.log('Extracted assignments:', assignments);
-  
-  // Log each assignment to see its structure
-  assignments.forEach((assignment, index) => {
-    console.log(`Assignment ${index}:`, assignment);
-    console.log(`  - assigned_to:`, assignment.assigned_to);
-    console.log(`  - assigned_by:`, assignment.assigned_by);
-  });
-  
-  return assignments;
+  return response.data || [];
 }
 

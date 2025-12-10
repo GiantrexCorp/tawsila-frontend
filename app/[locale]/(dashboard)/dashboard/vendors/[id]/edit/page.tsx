@@ -124,8 +124,7 @@ export default function EditVendorPage() {
         }
 
         setIsLoading(false);
-      } catch (error) {
-        console.error('Failed to load vendor:', error);
+      } catch {
         toast.error(t('errorLoadingVendor') || 'Failed to load vendor');
         router.push('/dashboard/vendors');
       }
@@ -279,13 +278,10 @@ export default function EditVendorPage() {
         delete cleanedData.cover_image;
       }
 
-      console.log('Updating vendor data:', cleanedData);
       await updateVendor(vendorId, cleanedData);
       toast.success(t('vendorUpdatedSuccess') || 'Vendor updated successfully');
       router.push('/dashboard/vendors');
     } catch (error: unknown) {
-      console.error('Update vendor error:', error);
-      
       if (error && typeof error === 'object' && 'errors' in error) {
         const errorObj = error as { errors?: Record<string, string[]> };
         if (errorObj.errors) {

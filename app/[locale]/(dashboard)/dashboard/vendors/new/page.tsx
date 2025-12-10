@@ -223,13 +223,10 @@ export default function NewVendorPage() {
         delete cleanedData.cover_image;
       }
 
-      console.log('Sending vendor data:', cleanedData);
       await createVendor(cleanedData);
       toast.success(t('vendorCreatedSuccess'));
       router.push('/dashboard/vendors');
     } catch (error: unknown) {
-      console.error('Create vendor error:', error);
-      
       if (error && typeof error === 'object' && 'errors' in error) {
         const errorObj = error as { errors?: Record<string, string[]> };
         if (errorObj.errors) {

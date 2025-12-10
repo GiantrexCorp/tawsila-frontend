@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, Eye, Loader2, CheckCircle, Plus, XCircle } from "lucide-react";
+import { OrderStatusBadge } from "@/components/ui/status-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { fetchOrders, acceptOrder, rejectOrder, type Order, type Customer } from "@/lib/services/orders";
@@ -65,8 +66,7 @@ export default function OrdersPage() {
           return dateA - dateB; // Oldest first
         });
         setOrders(sortedOrders);
-      } catch (error) {
-        console.error('Failed to load orders:', error);
+      } catch {
         toast.error(t('errorLoadingOrders'));
       } finally {
         setIsLoading(false);
@@ -78,7 +78,7 @@ export default function OrdersPage() {
     }
   }, [hasPermission, t]);
 
-  const loadInventories = async () => {
+  const loadInventories = useCallback(async () => {
     setIsLoadingInventories(true);
     try {
       // Try to get current user's inventory first
@@ -94,34 +94,33 @@ export default function OrdersPage() {
           setSelectedInventoryId(allInventories[0].id);
         }
       }
-    } catch (error) {
-      console.error('Failed to load inventories:', error);
+    } catch {
       toast.error(t('errorLoadingInventories'));
     } finally {
       setIsLoadingInventories(false);
     }
-  };
+  }, [t]);
 
-  const handleAcceptClick = (orderId: number) => {
+  const handleAcceptClick = useCallback((orderId: number) => {
     setSelectedOrderId(orderId);
     setShowAcceptDialog(true);
     loadInventories();
-  };
+  }, [loadInventories]);
 
-  const handleRejectClick = (orderId: number) => {
+  const handleRejectClick = useCallback((orderId: number) => {
     setSelectedOrderId(orderId);
     setShowRejectDialog(true);
     setRejectionReason("");
-  };
+  }, []);
 
-  const handleRejectOrder = async () => {
+  const handleRejectOrder = useCallback(async () => {
     if (!selectedOrderId) return;
 
     setRejectingOrderId(selectedOrderId);
     try {
       const updatedOrder = await rejectOrder(selectedOrderId, rejectionReason.trim() || undefined);
       // Update the order in the list
-      setOrders(prev => prev.map(order => 
+      setOrders(prev => prev.map(order =>
         order.id === selectedOrderId ? updatedOrder : order
       ));
       setShowRejectDialog(false);
@@ -129,21 +128,14 @@ export default function OrdersPage() {
       setSelectedOrderId(null);
       toast.success(t('orderRejectedSuccess'));
     } catch (error) {
-      console.error('Failed to reject order:', error);
-      const errorMessage = error && typeof error === 'object' && 'message' in error 
-        ? String(error.message) 
-        : error instanceof Error 
-          ? error.message 
-          : tCommon('tryAgain');
-      toast.error(t('orderRejectedFailed'), {
-        description: errorMessage,
-      });
+      const message = error instanceof Error ? error.message : tCommon('tryAgain');
+      toast.error(t('orderRejectedFailed'), { description: message });
     } finally {
       setRejectingOrderId(null);
     }
-  };
+  }, [selectedOrderId, rejectionReason, t, tCommon]);
 
-  const handleAcceptOrder = async () => {
+  const handleAcceptOrder = useCallback(async () => {
     if (!selectedOrderId || !selectedInventoryId) {
       toast.error(t('inventoryRequired'));
       return;
@@ -152,21 +144,63 @@ export default function OrdersPage() {
     setAcceptingOrderId(selectedOrderId);
     try {
       const updatedOrder = await acceptOrder(selectedOrderId, selectedInventoryId);
-      // Update the order in the list
-      setOrders(prev => prev.map(order => 
+      setOrders(prev => prev.map(order =>
         order.id === selectedOrderId ? updatedOrder : order
       ));
       setShowAcceptDialog(false);
       toast.success(t('orderAcceptedSuccess'));
     } catch (error) {
-      console.error('Failed to accept order:', error);
-      toast.error(t('orderAcceptedFailed'), {
-        description: error instanceof Error ? error.message : tCommon('tryAgain'),
-      });
+      const message = error instanceof Error ? error.message : tCommon('tryAgain');
+      toast.error(t('orderAcceptedFailed'), { description: message });
     } finally {
       setAcceptingOrderId(null);
     }
-  };
+  }, [selectedOrderId, selectedInventoryId, t, tCommon]);
+
+  // Memoize filtered orders to avoid recalculating on every render
+  // Must be before early returns to comply with React hooks rules
+  const filteredOrders = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    return orders.filter(order =>
+      order.order_number.toLowerCase().includes(query) ||
+      order.customer?.name?.toLowerCase().includes(query)
+    );
+  }, [orders, searchQuery]);
+
+  // Status mapping for grouping related statuses
+  const statusMap = useMemo(() => ({
+    'pending': ['pending', 'created'],
+    'accepted': ['accepted', 'confirmed'],
+    'pickup_assigned': ['assigned', 'pickup_assigned'],
+    'picked_up': ['picked_up'],
+    'in_transit': ['in_transit', 'in_transit_to_hub'],
+    'at_hub': ['arrived_at_hub', 'at_hub'],
+    'delivery_assigned': ['out_for_delivery_assignment'],
+    'out_for_delivery': ['out_for_delivery'],
+    'delivered': ['delivered'],
+    'failed_delivery': ['delivery_failed', 'delivery_attempt_failed'],
+  }), []);
+
+  // Memoize filterByStatus function
+  const filterByStatus = useCallback((status?: string) => {
+    if (!status) return filteredOrders;
+    const statuses = statusMap[status as keyof typeof statusMap] || [status];
+    return filteredOrders.filter(order => statuses.includes(order.status));
+  }, [filteredOrders, statusMap]);
+
+  // Memoize status counts to avoid recalculating on every render
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    Object.keys(statusMap).forEach(status => {
+      const statuses = statusMap[status as keyof typeof statusMap];
+      counts[status] = filteredOrders.filter(order => statuses.includes(order.status)).length;
+    });
+    return counts;
+  }, [filteredOrders, statusMap]);
+
+  const getStatusCount = useCallback((status: string): number => {
+    return statusCounts[status] || 0;
+  }, [statusCounts]);
 
   // Don't render page if permission check hasn't completed or user lacks permission
   if (hasPermission === null || hasPermission === false) {
@@ -184,117 +218,6 @@ export default function OrdersPage() {
       </div>
     );
   }
-
-  // Filter orders by search query
-  const filteredOrders = orders.filter(order => 
-    order.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    order.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const getStatusBadge = (status: string, statusLabel?: string) => {
-    const config: Record<string, { className: string }> = {
-      // Order Created - Amber/Orange
-      pending: { 
-        className: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30"
-      },
-      created: { 
-        className: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30"
-      },
-      // Order Confirmed - Blue
-      confirmed: { 
-        className: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30"
-      },
-      accepted: { 
-        className: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30"
-      },
-      // Order Rejected - Red
-      rejected: { 
-        className: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30"
-      },
-      // Pickup Assigned - Indigo
-      assigned: { 
-        className: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/30"
-      },
-      pickup_assigned: { 
-        className: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/30"
-      },
-      // Picked Up - Purple
-      picked_up: { 
-        className: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/30"
-      },
-      // In Transit to Hub - Cyan
-      in_transit: { 
-        className: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/30"
-      },
-      in_transit_to_hub: { 
-        className: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/30"
-      },
-      // Arrived at Hub - Teal
-      arrived_at_hub: { 
-        className: "bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/30"
-      },
-      at_hub: { 
-        className: "bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/30"
-      },
-      // Out for Delivery Assignment - Violet
-      out_for_delivery_assignment: { 
-        className: "bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/30"
-      },
-      // Out for Delivery - Pink
-      out_for_delivery: { 
-        className: "bg-pink-500/10 text-pink-700 dark:text-pink-400 border-pink-500/30"
-      },
-      // Delivered - Emerald/Green
-      delivered: { 
-        className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
-      },
-      // Delivery Attempt Failed - Orange
-      delivery_failed: { 
-        className: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30"
-      },
-      delivery_attempt_failed: { 
-        className: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30"
-      },
-    };
-
-    const { className } = config[status] || { 
-      className: "bg-muted text-muted-foreground border-border"
-    };
-    
-    // Use status_label from API if available, otherwise use status code
-    const label = statusLabel || status;
-    
-    return (
-      <Badge variant="outline" className={className}>
-        {label}
-      </Badge>
-    );
-  };
-
-  const filterByStatus = (status?: string) => {
-    if (!status) return filteredOrders;
-    
-    // Map status groups to individual statuses
-    const statusMap: Record<string, string[]> = {
-      'pending': ['pending', 'created'],
-      'accepted': ['accepted', 'confirmed'],
-      'pickup_assigned': ['assigned', 'pickup_assigned'],
-      'picked_up': ['picked_up'],
-      'in_transit': ['in_transit', 'in_transit_to_hub'],
-      'at_hub': ['arrived_at_hub', 'at_hub'],
-      'delivery_assigned': ['out_for_delivery_assignment'],
-      'out_for_delivery': ['out_for_delivery'],
-      'delivered': ['delivered'],
-      'failed_delivery': ['delivery_failed', 'delivery_attempt_failed'],
-    };
-    
-    const statuses = statusMap[status] || [status];
-    return filteredOrders.filter(order => statuses.includes(order.status));
-  };
-  
-  const getStatusCount = (status: string): number => {
-    return filterByStatus(status).length;
-  };
 
   const OrdersList = ({ ordersList }: { ordersList: Order[] }) => {
     if (ordersList.length === 0) {
@@ -333,7 +256,7 @@ export default function OrdersPage() {
                   <div className="space-y-3 flex-1 w-full">
                     <div className="flex items-center gap-3 flex-wrap">
                       <h3 className="font-semibold text-sm md:text-base">{order.order_number}</h3>
-                      {getStatusBadge(order.status, order.status_label)}
+                      <OrderStatusBadge status={order.status} statusLabel={order.status_label} />
                       {order.payment_method && (
                         <Badge variant="outline" className="text-xs">
                           {order.payment_method === 'cod' ? t('cashOnDelivery') : t('paid')}

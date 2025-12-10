@@ -30,8 +30,7 @@ export default function VendorsPage() {
       try {
         const fetchedVendors = await fetchVendors();
         setVendors(fetchedVendors);
-      } catch (error) {
-        console.error('Failed to load vendors:', error);
+      } catch {
         toast.error(t('errorLoadingVendors'));
       } finally {
         setIsLoadingVendors(false);

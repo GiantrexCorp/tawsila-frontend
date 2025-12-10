@@ -47,18 +47,11 @@ export default function MyVendorProfilePage() {
     const loadVendor = async () => {
       setIsLoading(true);
       try {
-        console.log('🔍 Fetching vendor from /my-vendor endpoint...');
         const fetchedVendor = await fetchCurrentVendor();
-        console.log('✅ Vendor loaded successfully:', fetchedVendor);
         setVendor(fetchedVendor);
       } catch (error: unknown) {
-        console.error('Failed to load vendor:', error);
-        const errorMessage = error && typeof error === 'object' && 'message' in error 
-          ? String(error.message) 
-          : 'Please contact your administrator.';
-        toast.error(t('errorLoadingVendor'), {
-          description: errorMessage,
-        });
+        const message = error instanceof Error ? error.message : 'Please contact your administrator.';
+        toast.error(t('errorLoadingVendor'), { description: message });
       } finally {
         setIsLoading(false);
       }

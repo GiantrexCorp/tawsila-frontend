@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useParams } from "next/navigation";
 import { useRouter } from "@/i18n/routing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { OrderStatusBadge, PaymentStatusBadge } from "@/components/ui/status-badge";
 import { 
   ArrowLeft, 
   Loader2, 
@@ -91,13 +92,10 @@ export default function OrderDetailPage() {
           fetchOrderAssignments(orderId)
         ]);
         setOrder(fetchedOrder);
-        console.log('Fetched assignments:', fetchedAssignments);
         setAssignments(fetchedAssignments);
       } catch (error) {
-        console.error('Failed to load order:', error);
-        toast.error(t('errorLoadingOrder'), {
-          description: error instanceof Error ? error.message : tCommon('tryAgain'),
-        });
+        const message = error instanceof Error ? error.message : tCommon('tryAgain');
+        toast.error(t('errorLoadingOrder'), { description: message });
         router.push('/dashboard/orders');
       } finally {
         setIsLoading(false);
@@ -109,7 +107,7 @@ export default function OrderDetailPage() {
     }
   }, [orderId, hasPermission, t, tCommon, router]);
 
-  const loadInventories = async () => {
+  const loadInventories = useCallback(async () => {
     setIsLoadingInventories(true);
     try {
       // Try to get current user's inventory first
@@ -125,25 +123,24 @@ export default function OrderDetailPage() {
           setSelectedInventoryId(allInventories[0].id);
         }
       }
-    } catch (error) {
-      console.error('Failed to load inventories:', error);
+    } catch {
       toast.error(t('errorLoadingInventories'));
     } finally {
       setIsLoadingInventories(false);
     }
-  };
+  }, [t]);
 
-  const handleAcceptClick = () => {
+  const handleAcceptClick = useCallback(() => {
     setShowAcceptDialog(true);
     loadInventories();
-  };
+  }, [loadInventories]);
 
-  const handleRejectClick = () => {
+  const handleRejectClick = useCallback(() => {
     setShowRejectDialog(true);
     setRejectionReason("");
-  };
+  }, []);
 
-  const handleRejectOrder = async () => {
+  const handleRejectOrder = useCallback(async () => {
     setIsRejecting(true);
     try {
       const updatedOrder = await rejectOrder(orderId, rejectionReason.trim() || undefined);
@@ -152,34 +149,26 @@ export default function OrderDetailPage() {
       setRejectionReason("");
       toast.success(t('orderRejectedSuccess'));
     } catch (error) {
-      console.error('Failed to reject order:', error);
-      const errorMessage = error && typeof error === 'object' && 'message' in error 
-        ? String(error.message) 
-        : error instanceof Error 
-          ? error.message 
-          : tCommon('tryAgain');
-      toast.error(t('orderRejectedFailed'), {
-        description: errorMessage,
-      });
+      const message = error instanceof Error ? error.message : tCommon('tryAgain');
+      toast.error(t('orderRejectedFailed'), { description: message });
     } finally {
       setIsRejecting(false);
     }
-  };
+  }, [orderId, rejectionReason, t, tCommon]);
 
-  const loadAgents = async () => {
+  const loadAgents = useCallback(async () => {
     setIsLoadingAgents(true);
     try {
       const fetchedAgents = await fetchActiveAgents();
       setAgents(fetchedAgents);
-    } catch (error) {
-      console.error('Failed to load agents:', error);
+    } catch {
       toast.error(t('errorLoadingAgents'));
     } finally {
       setIsLoadingAgents(false);
     }
-  };
+  }, [t]);
 
-  const handleAssignClick = () => {
+  const handleAssignClick = useCallback(() => {
     // Check if there are active assignments
     const hasActiveAssignment = assignments.some(assignment => assignment.is_active && !assignment.is_finished);
     if (hasActiveAssignment) {
@@ -190,9 +179,9 @@ export default function OrderDetailPage() {
     }
     setShowAssignDialog(true);
     loadAgents();
-  };
+  }, [assignments, t, loadAgents]);
 
-  const handleAssignPickupAgent = async () => {
+  const handleAssignPickupAgent = useCallback(async () => {
     if (!selectedAgentId) {
       toast.error(t('agentRequired'));
       return;
@@ -214,29 +203,22 @@ export default function OrderDetailPage() {
       setOrder(updatedOrder);
       setAssignments(updatedAssignments);
     } catch (error) {
-      console.error('Failed to assign pickup agent:', error);
-      
-      // Handle 403 Forbidden specifically
-      if (error && typeof error === 'object' && 'status' in error && error.status === 403) {
+      // Handle 403 Forbidden specifically (order already assigned)
+      const err = error as { status?: number };
+      if (err?.status === 403) {
         toast.error(t('agentAssignedFailed'), {
-          description: t('orderAlreadyAssignedError') || (error && typeof error === 'object' && 'message' in error ? String(error.message) : t('orderAlreadyAssignedDesc')),
+          description: t('orderAlreadyAssignedError') || t('orderAlreadyAssignedDesc'),
         });
       } else {
-        const errorMessage = error && typeof error === 'object' && 'message' in error 
-          ? String(error.message) 
-          : error instanceof Error 
-            ? error.message 
-            : tCommon('tryAgain');
-        toast.error(t('agentAssignedFailed'), {
-          description: errorMessage,
-        });
+        const message = error instanceof Error ? error.message : tCommon('tryAgain');
+        toast.error(t('agentAssignedFailed'), { description: message });
       }
     } finally {
       setIsAssigning(false);
     }
-  };
+  }, [orderId, selectedAgentId, assignmentNotes, t, tCommon]);
 
-  const handleAcceptOrder = async () => {
+  const handleAcceptOrder = useCallback(async () => {
     if (!selectedInventoryId) {
       toast.error(t('inventoryRequired'));
       return;
@@ -249,112 +231,20 @@ export default function OrderDetailPage() {
       setShowAcceptDialog(false);
       toast.success(t('orderAcceptedSuccess'));
     } catch (error) {
-      console.error('Failed to accept order:', error);
-      toast.error(t('orderAcceptedFailed'), {
-        description: error instanceof Error ? error.message : tCommon('tryAgain'),
-      });
+      const message = error instanceof Error ? error.message : tCommon('tryAgain');
+      toast.error(t('orderAcceptedFailed'), { description: message });
     } finally {
       setIsAccepting(false);
     }
-  };
+  }, [orderId, selectedInventoryId, t, tCommon]);
 
-  const copyToClipboard = (text: string, label: string) => {
+  const copyToClipboard = useCallback((text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(t('copied'), {
       description: label,
     });
-  };
+  }, [t]);
 
-  const getStatusBadge = (status: string, statusLabel?: string) => {
-    const config: Record<string, { className: string }> = {
-      // Order Created - Amber/Orange
-      pending: { 
-        className: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30"
-      },
-      created: { 
-        className: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30"
-      },
-      // Order Confirmed - Blue
-      confirmed: { 
-        className: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30"
-      },
-      accepted: { 
-        className: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30"
-      },
-      // Order Rejected - Red
-      rejected: { 
-        className: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30"
-      },
-      // Pickup Assigned - Indigo
-      assigned: { 
-        className: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/30"
-      },
-      pickup_assigned: { 
-        className: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/30"
-      },
-      // Picked Up - Purple
-      picked_up: { 
-        className: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/30"
-      },
-      // In Transit to Hub - Cyan
-      in_transit: { 
-        className: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/30"
-      },
-      in_transit_to_hub: { 
-        className: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/30"
-      },
-      // Arrived at Hub - Teal
-      arrived_at_hub: { 
-        className: "bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/30"
-      },
-      at_hub: { 
-        className: "bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/30"
-      },
-      // Out for Delivery Assignment - Violet
-      out_for_delivery_assignment: { 
-        className: "bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/30"
-      },
-      // Out for Delivery - Pink
-      out_for_delivery: { 
-        className: "bg-pink-500/10 text-pink-700 dark:text-pink-400 border-pink-500/30"
-      },
-      // Delivered - Emerald/Green
-      delivered: { 
-        className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
-      },
-      // Delivery Attempt Failed - Orange
-      delivery_failed: { 
-        className: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30"
-      },
-      delivery_attempt_failed: { 
-        className: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30"
-      },
-    };
-
-    const { className } = config[status] || { 
-      className: "bg-muted text-muted-foreground border-border"
-    };
-    
-    // Use status_label from API if available, otherwise use status code
-    const label = statusLabel || status;
-    
-    return (
-      <Badge variant="outline" className={className}>
-        {label}
-      </Badge>
-    );
-  };
-
-  const getPaymentStatusBadge = (status: string) => {
-    const config: Record<string, { variant: "default" | "secondary" | "destructive" | "outline" }> = {
-      pending: { variant: "secondary" },
-      paid: { variant: "outline" },
-      cod: { variant: "default" },
-    };
-
-    const { variant } = config[status] || { variant: "outline" };
-    return <Badge variant={variant}>{order?.payment_status_label || status}</Badge>;
-  };
 
   if (hasPermission === null || hasPermission === false || isLoading || !order) {
     return (
@@ -411,8 +301,8 @@ export default function OrderDetailPage() {
               {t('printLabel')}
             </Button>
           )}
-          {getStatusBadge(order.status, order.status_label)}
-          {getPaymentStatusBadge(order.payment_status)}
+          <OrderStatusBadge status={order.status} statusLabel={order.status_label} />
+          <PaymentStatusBadge status={order.payment_status} statusLabel={order.payment_status_label} />
         </div>
       </div>
 
@@ -479,13 +369,7 @@ export default function OrderDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {assignments.map((assignment) => {
-                console.log('Rendering assignment:', assignment);
-                console.log('  - assigned_to exists:', !!assignment.assigned_to);
-                console.log('  - assigned_to value:', assignment.assigned_to);
-                console.log('  - assigned_by exists:', !!assignment.assigned_by);
-                console.log('  - assigned_by value:', assignment.assigned_by);
-                return (
+              {assignments.map((assignment) => (
                   <div key={assignment.id} className="p-4 border rounded-lg space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
@@ -619,8 +503,7 @@ export default function OrderDetailPage() {
                     )}
                   </div>
                 </div>
-                );
-              })}
+              ))}
             </div>
           </CardContent>
         </Card>

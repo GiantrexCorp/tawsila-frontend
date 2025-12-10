@@ -170,15 +170,8 @@ export default function CreateOrderPage() {
       });
       setItems([{ product_name: '', quantity: 1, price: 0, unit_price: 0 }]);
     } catch (error: unknown) {
-      console.error('Failed to create order:', error);
-      
-      const errorMessage = (error && typeof error === 'object' && 'message' in error) 
-        ? String(error.message) 
-        : tCommon('tryAgain');
-      
-      toast.error(t('orderCreatedFailed'), {
-        description: errorMessage,
-      });
+      const message = error instanceof Error ? error.message : tCommon('tryAgain');
+      toast.error(t('orderCreatedFailed'), { description: message });
     } finally {
       setIsSubmitting(false);
     }

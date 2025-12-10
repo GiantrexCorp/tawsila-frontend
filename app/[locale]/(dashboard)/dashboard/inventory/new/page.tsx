@@ -160,13 +160,10 @@ export default function NewInventoryPage() {
         cleanedData.longitude = formData.longitude;
       }
 
-      console.log('Sending inventory data:', cleanedData);
       await createInventory(cleanedData);
       toast.success(t('inventoryCreatedSuccess'));
       router.push('/dashboard/inventory');
     } catch (error: unknown) {
-      console.error('Create inventory error:', error);
-      
       if (error && typeof error === 'object' && 'errors' in error) {
         const errorObj = error as { errors?: Record<string, string[]> };
         if (errorObj.errors) {

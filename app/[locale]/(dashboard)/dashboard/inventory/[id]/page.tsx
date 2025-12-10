@@ -43,8 +43,7 @@ export default function ViewInventoryPage() {
       try {
         const fetchedInventory = await fetchInventory(inventoryId);
         setInventory(fetchedInventory);
-      } catch (error) {
-        console.error('Failed to load inventory:', error);
+      } catch {
         toast.error(t('errorLoadingInventories'));
         router.push('/dashboard/inventory');
       } finally {
