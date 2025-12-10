@@ -4,13 +4,21 @@
 
 import { apiRequest } from '../api';
 
+export interface RolePermission {
+  id: number;
+  name: string;
+  guard_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Role {
   id: number;
   name: string;
   slug_en: string | null;
   slug_ar: string | null;
   guard_name: string;
-  permissions: string[]; // Array of permission names
+  permissions: RolePermission[]; // Array of permission objects
   users_count: number;
   created_at: string;
   updated_at: string;
@@ -20,16 +28,39 @@ export interface RolesResponse {
   data: Role[];
 }
 
+// Raw API response structure
+interface RolesApiResponse {
+  data: Role[];
+  links: {
+    first: string;
+    last: string;
+    prev: string | null;
+    next: string | null;
+  };
+  meta: {
+    current_page: number;
+    from: number;
+    last_page: number;
+    path: string;
+    per_page: number;
+    to: number;
+    total: number;
+  };
+}
+
 /**
  * Fetch all roles
  */
 export async function fetchRoles(): Promise<RolesResponse> {
-  const response = await apiRequest<Role[]>('/roles', {
+  const response = await apiRequest<RolesApiResponse>('/roles', {
     method: 'GET',
   });
 
+  // apiRequest returns the raw JSON response
+  const rawResponse = response as unknown as RolesApiResponse;
+
   return {
-    data: response.data || [],
+    data: rawResponse.data || [],
   };
 }
 

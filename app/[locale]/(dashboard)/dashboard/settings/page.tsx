@@ -129,11 +129,11 @@ export default function SettingsPage() {
 
   const handleOpenEditRoleDialog = (role: Role) => {
     setEditingRole(role);
-    // Convert permission names to IDs
+    // Extract permission IDs from permission objects
     const permissionIds = (role.permissions || [])
-      .map(permName => permissions.find(p => p.name === permName)?.id)
+      .map(perm => perm.id)
       .filter((id): id is number => id !== undefined);
-    
+
     setRoleFormData({
       name: role.name,
       slug_en: role.slug_en || '',

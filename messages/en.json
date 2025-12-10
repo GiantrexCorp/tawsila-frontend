@@ -262,6 +262,7 @@
     "noInventoriesAvailable": "No inventories available",
     "printLabel": "Print Label",
     "shippingLabel": "Shipping Label",
+    "label": "LABEL",
     "shipTo": "Ship To",
     "trackingUrl": "Tracking URL",
     "moreItems": "more items",
@@ -437,6 +438,8 @@
     "errorUpdatingVendor": "Failed to update vendor",
     "updateFailed": "Update Failed",
     "errorLoadingVendor": "Failed to load vendor",
+    "vendorIdNotFound": "Vendor ID Not Found",
+    "vendorIdNotFoundDesc": "Please contact your administrator. The backend needs to implement /vendors/me endpoint or include vendor_id in the login response.",
     "view": "View",
     "viewVendor": "View Vendor",
     "viewVendorDescription": "View complete vendor information and details",
@@ -468,7 +471,12 @@
     "thisWeek": "This Week",
     "deliveries": "deliveries",
     "minutes": "minutes",
-    "revenue": "Revenue"
+    "revenue": "Revenue",
+    "basedOnDeliveries": "Based on total deliveries completed",
+    "bestProductsThisMonth": "Best performing products this month",
+    "currentMonthStats": "Current month statistics",
+    "revenueBreakdown": "Revenue breakdown",
+    "unitsSold": "{count} units sold"
   },
   "settings": {
     "title": "Settings",
@@ -707,7 +715,23 @@
     "assignRoleFailed": "Failed to assign role",
     "assigning": "Assigning...",
     "permissions": "Permissions",
-    "noPermissions": "No permissions assigned"
+    "noPermissions": "No permissions assigned",
+    "contactInfo": "Contact Information",
+    "contactInfoDesc": "User contact details",
+    "accountDetails": "Account Details",
+    "activityInfo": "Activity Information",
+    "rolePermissions": "Role & Permissions",
+    "basicInformation": "Basic Information",
+    "basicInformationDesc": "Enter basic user information",
+    "accountStatus": "Account Status",
+    "accountStatusDesc": "Control user account access",
+    "backToUser": "Back to User",
+    "editingUser": "Editing {name}",
+    "nameEnglishPlaceholder": "Enter name in English",
+    "nameArabicPlaceholder": "Enter name in Arabic",
+    "emailPlaceholder": "Enter email address",
+    "mobilePlaceholder": "Enter mobile number",
+    "vendor": "Vendor"
   },
   "unauthorized": {
     "title": "Access Denied",
@@ -754,6 +778,13 @@
     "allRightsReserved": "All rights reserved",
     "details": "Details",
     "createdOn": "Created On",
-    "lastUpdated": "Last Updated"
+    "lastUpdated": "Last Updated",
+    "openInGoogleMaps": "Open in Google Maps",
+    "contactAdmin": "Please contact your administrator.",
+    "showSecretKey": "Show secret key",
+    "hideSecretKey": "Hide secret key",
+    "copySecretKey": "Copy secret key",
+    "invalidOrderId": "Invalid order ID",
+    "qty": "Qty"
   }
 }

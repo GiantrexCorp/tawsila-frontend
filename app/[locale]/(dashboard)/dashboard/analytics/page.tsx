@@ -123,7 +123,7 @@ export default function AnalyticsPage() {
             <CardHeader>
               <CardTitle>{t('topPerformingAgents')}</CardTitle>
               <CardDescription>
-                Based on total deliveries completed
+                {t('basedOnDeliveries')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -172,7 +172,7 @@ export default function AnalyticsPage() {
             <CardHeader>
               <CardTitle>{t('topSellingProducts')}</CardTitle>
               <CardDescription>
-                Best performing products this month
+                {t('bestProductsThisMonth')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -189,7 +189,7 @@ export default function AnalyticsPage() {
                       <div>
                         <p className="font-medium">{item.product.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {item.sold} units sold
+                          {t('unitsSold', { count: item.sold })}
                         </p>
                       </div>
                     </div>
@@ -211,7 +211,7 @@ export default function AnalyticsPage() {
               <CardHeader>
                 <CardTitle>{t('deliveryPerformance')}</CardTitle>
                 <CardDescription>
-                  Current month statistics
+                  {t('currentMonthStats')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -236,7 +236,7 @@ export default function AnalyticsPage() {
               <CardHeader>
                 <CardTitle>{t('revenueOverview')}</CardTitle>
                 <CardDescription>
-                  Revenue breakdown
+                  {t('revenueBreakdown')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">

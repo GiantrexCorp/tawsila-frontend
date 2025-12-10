@@ -11,9 +11,7 @@ import {
   Building2,
   BarChart3,
   Settings,
-  FileText,
   ChevronDown,
-  Truck,
   Users,
   LogOut,
   User,
@@ -196,22 +194,10 @@ export function AppSidebar() {
           allowedRoles: ['super-admin', 'admin', 'manager', 'inventory-manager'],
         },
         {
-          title: t('requests'),
-          href: "/dashboard/requests",
-          icon: FileText,
-          allowedRoles: ['super-admin', 'admin', 'manager', 'inventory-manager', 'order-preparer'],
-        },
-        {
           title: t('orders'),
           href: "/dashboard/orders",
           icon: ShoppingCart,
           allowedRoles: ['super-admin', 'inventory-manager'],
-        },
-        {
-          title: t('agents'),
-          href: "/dashboard/agents",
-          icon: Truck,
-          allowedRoles: ['super-admin', 'admin', 'manager', 'inventory-manager'],
         },
         {
           title: t('vendors'),

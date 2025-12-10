@@ -262,6 +262,7 @@
     "noInventoriesAvailable": "لا توجد مخزونات متاحة",
     "printLabel": "طباعة الملصق",
     "shippingLabel": "ملصق الشحن",
+    "label": "البطاقة",
     "shipTo": "الشحن إلى",
     "trackingUrl": "رابط التتبع",
     "moreItems": "عناصر إضافية",
@@ -437,6 +438,8 @@
     "errorUpdatingVendor": "فشل في تحديث المورد",
     "updateFailed": "فشل التحديث",
     "errorLoadingVendor": "فشل في تحميل المورد",
+    "vendorIdNotFound": "لم يتم العثور على معرف المورد",
+    "vendorIdNotFoundDesc": "يرجى الاتصال بالمسؤول. يحتاج الخادم إلى تنفيذ نقطة نهاية /vendors/me أو تضمين vendor_id في استجابة تسجيل الدخول.",
     "view": "عرض",
     "viewVendor": "عرض المورد",
     "viewVendorDescription": "عرض معلومات وتفاصيل المورد الكاملة",
@@ -468,7 +471,12 @@
     "thisWeek": "هذا الأسبوع",
     "deliveries": "توصيلات",
     "minutes": "دقيقة",
-    "revenue": "الإيرادات"
+    "revenue": "الإيرادات",
+    "basedOnDeliveries": "بناءً على إجمالي التوصيلات المكتملة",
+    "bestProductsThisMonth": "أفضل المنتجات أداءً هذا الشهر",
+    "currentMonthStats": "إحصائيات الشهر الحالي",
+    "revenueBreakdown": "تفصيل الإيرادات",
+    "unitsSold": "{count} وحدة مباعة"
   },
   "settings": {
     "title": "الإعدادات",
@@ -707,7 +715,23 @@
     "assignRoleFailed": "فشل تعيين الدور",
     "assigning": "جاري التعيين...",
     "permissions": "الصلاحيات",
-    "noPermissions": "لا توجد صلاحيات مخصصة"
+    "noPermissions": "لا توجد صلاحيات مخصصة",
+    "contactInfo": "معلومات الاتصال",
+    "contactInfoDesc": "تفاصيل اتصال المستخدم",
+    "accountDetails": "تفاصيل الحساب",
+    "activityInfo": "معلومات النشاط",
+    "rolePermissions": "الدور والصلاحيات",
+    "basicInformation": "المعلومات الأساسية",
+    "basicInformationDesc": "أدخل المعلومات الأساسية للمستخدم",
+    "accountStatus": "حالة الحساب",
+    "accountStatusDesc": "التحكم في وصول حساب المستخدم",
+    "backToUser": "العودة للمستخدم",
+    "editingUser": "تعديل {name}",
+    "nameEnglishPlaceholder": "أدخل الاسم بالإنجليزية",
+    "nameArabicPlaceholder": "أدخل الاسم بالعربية",
+    "emailPlaceholder": "أدخل البريد الإلكتروني",
+    "mobilePlaceholder": "أدخل رقم الجوال",
+    "vendor": "مورد"
   },
   "unauthorized": {
     "title": "تم رفض الوصول",
@@ -753,6 +777,13 @@
     "tryAgain": "يرجى المحاولة مرة أخرى",
     "details": "التفاصيل",
     "createdOn": "تم الإنشاء في",
-    "lastUpdated": "آخر تحديث"
+    "lastUpdated": "آخر تحديث",
+    "openInGoogleMaps": "فتح في خرائط جوجل",
+    "contactAdmin": "يرجى الاتصال بالمسؤول.",
+    "showSecretKey": "إظهار المفتاح السري",
+    "hideSecretKey": "إخفاء المفتاح السري",
+    "copySecretKey": "نسخ المفتاح السري",
+    "invalidOrderId": "معرف الطلب غير صالح",
+    "qty": "الكمية"
   }
 }

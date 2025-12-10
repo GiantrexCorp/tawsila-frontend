@@ -98,7 +98,7 @@ function buildFilterQuery(filters: UserFilters): string {
  * Fetch users with pagination and filters
  */
 export async function fetchUsers(
-  page: number = 1, 
+  page: number = 1,
   perPage: number = 50,
   filters: UserFilters = {}
 ): Promise<UsersResponse> {
@@ -107,11 +107,14 @@ export async function fetchUsers(
     method: 'GET',
   });
 
-  // The API returns the full paginated response directly
+  // apiRequest returns the raw JSON response which has data, links, meta at root level
+  // Cast response to the expected shape since apiRequest returns ApiResponse<T>
+  const rawResponse = response as unknown as UsersResponse;
+
   return {
-    data: response.data?.data || [],
-    links: response.data?.links || { first: '', last: '', prev: null, next: null },
-    meta: response.data?.meta || {
+    data: rawResponse.data || [],
+    links: rawResponse.links || { first: '', last: '', prev: null, next: null },
+    meta: rawResponse.meta || {
       current_page: 1,
       from: 0,
       last_page: 1,

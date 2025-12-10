@@ -46,6 +46,7 @@ import { QRCodeSVG } from "qrcode.react";
 export default function OrderDetailPage() {
   const t = useTranslations('orders');
   const tCommon = useTranslations('common');
+  const tApp = useTranslations('app');
   const locale = useLocale();
   const router = useRouter();
   const params = useParams();
@@ -79,7 +80,7 @@ export default function OrderDetailPage() {
     const loadOrder = async () => {
       if (!orderId || isNaN(orderId)) {
         toast.error(t('errorLoadingOrder'), {
-          description: 'Invalid order ID',
+          description: tCommon('invalidOrderId'),
         });
         router.push('/dashboard/orders');
         return;
@@ -1126,7 +1127,7 @@ export default function OrderDetailPage() {
               {/* Header with LABEL, ORDER NUMBER, QR Code, and Tawsila */}
               <div className="flex items-start justify-between border-b-2 border-gray-900 pb-3">
                 <div className="flex-1">
-                  <h2 className="text-2xl font-bold mb-2 uppercase tracking-wide text-gray-900" style={{ fontFamily: 'sans-serif' }}>LABEL</h2>
+                  <h2 className="text-2xl font-bold mb-2 uppercase tracking-wide text-gray-900" style={{ fontFamily: 'sans-serif' }}>{t('label')}</h2>
                   <div className="mt-2">
                     <p className="text-xs text-gray-600 uppercase mb-1">{t('orderNumber')}</p>
                     <div className="font-bold text-3xl font-mono tracking-wider text-gray-900 leading-tight">
@@ -1148,9 +1149,9 @@ export default function OrderDetailPage() {
                     </div>
                   )}
                   <div className="flex flex-col items-end text-right">
-                    <div className="text-gray-400 text-lg font-semibold opacity-60" style={{ fontFamily: 'sans-serif' }}>Tawsila</div>
+                    <div className="text-gray-400 text-lg font-semibold opacity-60" style={{ fontFamily: 'sans-serif' }}>{tApp('name')}</div>
                     <div className="text-gray-400 text-xs opacity-60 leading-tight" style={{ maxWidth: '140px', wordWrap: 'break-word', fontFamily: 'sans-serif' }}>
-                      Smart Inventory & Delivery Management
+                      {tApp('tagline')}
                     </div>
                   </div>
                 </div>
@@ -1192,7 +1193,7 @@ export default function OrderDetailPage() {
                     {items.slice(0, 5).map((item: OrderItem, index: number) => (
                       <div key={index} className="flex justify-between text-gray-700">
                         <span className="flex-1">{item.product_name || `${t('product')} ${index + 1}`}</span>
-                        <span className="font-semibold ml-2">Qty: {item.quantity}</span>
+                        <span className="font-semibold ml-2">{tCommon('qty')}: {item.quantity}</span>
                       </div>
                     ))}
                     {items.length > 5 && (
