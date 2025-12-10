@@ -97,13 +97,7 @@ export default function UsersPage() {
 
   // Check if current user is super admin
   const isSuperAdmin = () => {
-    const isSuper = currentUser?.roles?.includes('super-admin');
-    console.log('isSuperAdmin check:', { 
-      currentUser: currentUser?.name, 
-      roles: currentUser?.roles, 
-      isSuperAdmin: isSuper 
-    });
-    return isSuper;
+    return currentUser?.roles?.includes('super-admin') ?? false;
   };
 
   // Memoized handlers for Edit User Dialog
@@ -213,12 +207,9 @@ export default function UsersPage() {
   const loadRoles = useCallback(async () => {
     try {
       const response = await fetchRoles();
-      console.log('Loaded roles:', response.data);
-      console.log('First role permissions type:', typeof response.data[0]?.permissions);
-      console.log('First role permissions:', response.data[0]?.permissions);
       setAvailableRoles(response.data);
-    } catch (error: unknown) {
-      console.error("Failed to load roles:", error);
+    } catch {
+      // Silently fail - roles will show as raw names
     }
   }, []);
 
@@ -230,10 +221,8 @@ export default function UsersPage() {
       setTotalPages(response.meta.last_page);
       setTotal(response.meta.total);
     } catch (error: unknown) {
-      console.error("Failed to load users:", error);
-      toast.error(t('failedToLoad'), {
-        description: (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || tCommon('noData'),
-      });
+      const message = error instanceof Error ? error.message : tCommon('noData');
+      toast.error(t('failedToLoad'), { description: message });
     } finally {
       setIsLoading(false);
     }
@@ -311,35 +300,25 @@ export default function UsersPage() {
 
   const handleUpdateUser = async () => {
     if (!userToEdit) return;
-    
+
     const updateData = {
-      name: editFormData.name_en, // Main name field (required by backend)
+      name: editFormData.name_en,
       name_en: editFormData.name_en,
       name_ar: editFormData.name_ar,
       email: editFormData.email,
       mobile: editFormData.mobile,
       status: editFormData.status,
     };
-    
-    console.log('Sending update request:', updateData);
-    
+
     setIsUpdating(true);
     try {
-      const updatedUser = await updateUser(userToEdit.id, updateData);
-      
-      console.log('Updated user from API:', updatedUser);
-      
+      await updateUser(userToEdit.id, updateData);
       toast.success(t('updateSuccess'));
       setUserToEdit(null);
-      
-      // Reload the page data to ensure everything is in sync
       await loadUsers(currentPage, appliedFilters);
     } catch (error: unknown) {
-      console.error('Error updating user:', error);
-      const errorMessage = (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || t('updateFailed');
-      toast.error(t('updateFailed'), {
-        description: errorMessage,
-      });
+      const message = error instanceof Error ? error.message : t('updateFailed');
+      toast.error(t('updateFailed'), { description: message });
     } finally {
       setIsUpdating(false);
     }
@@ -355,28 +334,16 @@ export default function UsersPage() {
   const handleAssignRole = async () => {
     if (!userToAssignRole || !selectedRoleId) return;
 
-    console.log('Assigning role:', {
-      userId: userToAssignRole.id,
-      roleId: selectedRoleId,
-      userName: userToAssignRole.name,
-      selectedRole: availableRoles.find(r => r.id === selectedRoleId)
-    });
-
     setIsAssigningRole(true);
     try {
       await assignUserRole(userToAssignRole.id, selectedRoleId);
       toast.success(t('assignRoleSuccess'));
       setUserToAssignRole(null);
       setSelectedRoleId(null);
-      
-      // Reload users to reflect role changes
       await loadUsers(currentPage, appliedFilters);
     } catch (error: unknown) {
-      console.error('Error assigning role:', error);
-      console.error('Full error details:', JSON.stringify(error, null, 2));
-      toast.error(t('assignRoleFailed'), {
-        description: (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || tCommon('tryAgain'),
-      });
+      const message = error instanceof Error ? error.message : tCommon('tryAgain');
+      toast.error(t('assignRoleFailed'), { description: message });
     } finally {
       setIsAssigningRole(false);
     }
@@ -398,21 +365,10 @@ export default function UsersPage() {
   };
 
   const handleCreateUser = async () => {
-    // Debug: Log current form data
-    console.log('Current form data:', addFormData);
-
     // Validation
-    if (!addFormData.name_en || !addFormData.name_ar || !addFormData.email || 
+    if (!addFormData.name_en || !addFormData.name_ar || !addFormData.email ||
         !addFormData.mobile || !addFormData.password || !addFormData.roleId) {
       toast.error(t('fillAllFields'));
-      console.error('Validation failed - missing fields:', {
-        name_en: !!addFormData.name_en,
-        name_ar: !!addFormData.name_ar,
-        email: !!addFormData.email,
-        mobile: !!addFormData.mobile,
-        password: !!addFormData.password,
-        roleId: !!addFormData.roleId,
-      });
       return;
     }
 
@@ -421,7 +377,6 @@ export default function UsersPage() {
       return;
     }
 
-    // Create user first
     const createData = {
       name: addFormData.name_en,
       name_en: addFormData.name_en,
@@ -432,33 +387,20 @@ export default function UsersPage() {
       status: addFormData.status,
     };
 
-    console.log('Sending create request with data:', createData);
-    console.log('Stringified:', JSON.stringify(createData));
-
     setIsCreating(true);
     try {
       const newUser = await createUser(createData);
-      
-      // Assign role to the newly created user
+
       if (addFormData.roleId) {
-        console.log('Assigning role to new user:', {
-          userId: newUser.id,
-          roleId: addFormData.roleId,
-        });
         await assignUserRole(newUser.id, addFormData.roleId);
       }
-      
+
       toast.success(t('createSuccess'));
       setShowAddDialog(false);
-      
-      // Reload the page data
       await loadUsers(currentPage, appliedFilters);
     } catch (error: unknown) {
-      console.error('Error creating user:', error);
-      const errorMessage = (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || t('createFailed');
-      toast.error(t('createFailed'), {
-        description: errorMessage,
-      });
+      const message = error instanceof Error ? error.message : t('createFailed');
+      toast.error(t('createFailed'), { description: message });
     } finally {
       setIsCreating(false);
     }
@@ -521,19 +463,13 @@ export default function UsersPage() {
         toast.info(t('userWillBeLoggedOut', { name: getDisplayName(userToChangePassword) }));
       }
     } catch (error: unknown) {
-      console.error('Error changing password:', error);
-      
-      // Handle validation errors
+      // Handle validation errors from backend
       if (error && typeof error === 'object' && 'errors' in error) {
-        const errorMessages = Object.values((error as {errors: Record<string, string[]>}).errors).flat().join(', ');
-        toast.error(t('passwordChangeFailed'), {
-          description: errorMessages,
-        });
+        const errorMessages = Object.values((error as { errors: Record<string, string[]> }).errors).flat().join(', ');
+        toast.error(t('passwordChangeFailed'), { description: errorMessages });
       } else {
-        const errorMessage = (error && typeof error === 'object' && 'message' in error ? (error as {message: string}).message : null) || t('passwordChangeFailed');
-        toast.error(t('passwordChangeFailed'), {
-          description: errorMessage,
-        });
+        const message = error instanceof Error ? error.message : t('passwordChangeFailed');
+        toast.error(t('passwordChangeFailed'), { description: message });
       }
       setIsChangingPassword(false);
     }

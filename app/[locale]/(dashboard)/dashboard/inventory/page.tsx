@@ -50,8 +50,7 @@ export default function InventoryPage() {
       try {
         const fetchedInventories = await fetchInventories();
         setInventories(fetchedInventories);
-      } catch (error) {
-        console.error('Failed to load inventories:', error);
+      } catch {
         toast.error(t('errorLoadingInventories'));
       } finally {
         setIsLoading(false);
@@ -96,14 +95,8 @@ export default function InventoryPage() {
       setInventoryToDelete(null);
       toast.success(t('inventoryDeletedSuccess'));
     } catch (error) {
-      console.error('Failed to delete inventory:', error);
-      const errorMessage = error && typeof error === 'object' && 'message' in error 
-        ? String(error.message) 
-        : t('errorDeletingInventory');
-      toast.error(t('deleteFailed'), {
-        description: errorMessage,
-      });
-      // Don't remove from UI if deletion failed
+      const message = error instanceof Error ? error.message : t('errorDeletingInventory');
+      toast.error(t('deleteFailed'), { description: message });
     } finally {
       setIsDeleting(false);
     }

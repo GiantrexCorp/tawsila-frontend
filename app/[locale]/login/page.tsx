@@ -41,8 +41,6 @@ export default function LoginPage() {
 
   // Extracted error handling logic
   const handleLoginError = useCallback((error: unknown) => {
-    console.error("Login error:", error);
-    
     // Handle inactive account error
     if (error && typeof error === 'object' && 'message' in error && (error as {message: string}).message === 'ACCOUNT_INACTIVE') {
       toast.error(t('accountInactive'), {
@@ -120,11 +118,6 @@ export default function LoginPage() {
     await performLogin(formData.email, formData.password);
   };
 
-  // Reusable handler for test logins
-  const handleTestLogin = useCallback((email: string, password: string) => {
-    setFormData({ email, password });
-    performLogin(email, password);
-  }, [performLogin]);
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/20">
@@ -212,45 +205,6 @@ export default function LoginPage() {
               </Button>
             </form>
             
-            {/* Test Login Buttons */}
-            <div className="mt-4 pt-4 border-t space-y-2">
-              <Button 
-                type="button" 
-                variant="outline" 
-                className="w-full bg-purple-50 hover:bg-purple-100 dark:bg-purple-950 dark:hover:bg-purple-900 border-purple-300 dark:border-purple-800 text-purple-900 dark:text-purple-100"
-                onClick={() => handleTestLogin("moay@gmail.com", "password")}
-                disabled={isLoading}
-              >
-                👑 Super Admin Login
-              </Button>
-              <Button 
-                type="button" 
-                variant="outline" 
-                className="w-full bg-blue-50 hover:bg-blue-100 dark:bg-blue-950 dark:hover:bg-blue-900 border-blue-300 dark:border-blue-800 text-blue-900 dark:text-blue-100"
-                onClick={() => handleTestLogin("ahmedeid@gmail.com", "87654321")}
-                disabled={isLoading}
-              >
-                📦 Inventory Manager Login
-              </Button>
-              <Button 
-                type="button" 
-                variant="outline" 
-                className="w-full bg-green-50 hover:bg-green-100 dark:bg-green-950 dark:hover:bg-green-900 border-green-300 dark:border-green-800 text-green-900 dark:text-green-100"
-                onClick={() => handleTestLogin("uncleahmed@gmail.com", "password")}
-                disabled={isLoading}
-              >
-                🚚 Shipping Agent Login
-              </Button>
-              <Button 
-                type="button" 
-                variant="outline" 
-                className="w-full bg-orange-50 hover:bg-orange-100 dark:bg-orange-950 dark:hover:bg-orange-900 border-orange-300 dark:border-orange-800 text-orange-900 dark:text-orange-100"
-                onClick={() => handleTestLogin("metwaly@gmail.com", "password")}
-                disabled={isLoading}
-              >
-                📋 Order Preparer Login
-              </Button>
-            </div>
           </CardContent>
         </Card>
       </div>

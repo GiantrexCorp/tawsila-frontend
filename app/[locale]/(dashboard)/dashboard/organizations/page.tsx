@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "@/i18n/routing";
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -123,8 +124,18 @@ export default function OrganizationsPage() {
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Building2 className="h-6 w-6 text-primary" />
+                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden">
+                      {vendor.logo ? (
+                        <Image
+                          src={vendor.logo}
+                          alt={locale === 'ar' ? vendor.name_ar : vendor.name_en}
+                          width={48}
+                          height={48}
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <Building2 className="h-6 w-6 text-primary" />
+                      )}
                     </div>
                     <div>
                       <CardTitle className="text-lg">

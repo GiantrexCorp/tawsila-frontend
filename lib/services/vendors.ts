@@ -1,76 +1,149 @@
 /**
  * Vendors Service
+ *
+ * Handles all vendor-related API operations including CRUD operations,
+ * geographic data (governorates/cities), and vendor profile management.
  */
 
 import { apiRequest } from '../api';
 
+/**
+ * Governorate (province/state) entity
+ */
 export interface Governorate {
+  /** Unique governorate identifier */
   id: number;
+  /** English name */
   name_en: string;
+  /** Arabic name */
   name_ar: string;
 }
 
+/**
+ * City entity within a governorate
+ */
 export interface City {
+  /** Unique city identifier */
   id: number;
+  /** English name */
   name_en: string;
+  /** Arabic name */
   name_ar: string;
+  /** Parent governorate */
   governorate: Governorate;
 }
 
+/**
+ * Vendor/Organization entity
+ * Represents a business partner that can create and manage orders
+ */
 export interface Vendor {
+  /** Unique vendor identifier */
   id: number;
+  /** English business name */
   name_en: string;
+  /** Arabic business name */
   name_ar: string;
+  /** Business email address */
   email: string | null;
+  /** Business phone number */
   mobile: string;
+  /** Primary contact person name */
   contact_person: string;
+  /** English business description */
   description_en: string;
+  /** Arabic business description */
   description_ar: string;
+  /** Physical address */
   address: string;
+  /** Operating governorate */
   governorate: Governorate;
+  /** Operating city */
   city: City;
+  /** Location latitude coordinate */
   latitude: string;
+  /** Location longitude coordinate */
   longitude: string;
+  /** Commercial registration number */
   commercial_registration: string | null;
+  /** Tax identification number */
   tax_number: string | null;
+  /** Vendor account status */
   status: 'active' | 'inactive';
-  secret_key?: string; // Optional - may not be included in all responses
+  /** API secret key for authentication (only returned to authorized users) */
+  secret_key?: string;
+  /** Logo image URL */
   logo: string;
+  /** Cover/banner image URL */
   cover_image: string;
+  /** Account creation timestamp */
   created_at: string;
+  /** Last update timestamp */
   updated_at: string;
 }
 
+/**
+ * Request payload for creating a new vendor
+ */
 export interface CreateVendorRequest {
+  /** English business name */
   name_en: string;
+  /** Arabic business name */
   name_ar: string;
+  /** Business email (optional) */
   email?: string;
+  /** Business phone number */
   mobile: string;
+  /** Primary contact person name */
   contact_person: string;
+  /** English business description */
   description_en: string;
+  /** Arabic business description */
   description_ar: string;
+  /** Physical address */
   address: string;
+  /** Governorate ID */
   governorate_id: number;
+  /** City ID */
   city_id: number;
+  /** Location latitude */
   latitude: string;
+  /** Location longitude */
   longitude: string;
+  /** Commercial registration number (optional) */
   commercial_registration?: string;
+  /** Tax ID number (optional) */
   tax_number?: string;
+  /** Account status */
   status: 'active' | 'inactive';
+  /** API secret key for vendor authentication */
   secret_key: string;
+  /** Logo image file or URL */
   logo?: File | string;
+  /** Cover image file or URL */
   cover_image?: File | string;
 }
 
 /**
  * Fetch all vendors
+ * API returns: { data: [...vendors] } or { data: { data: [...vendors] } }
  */
 export async function fetchVendors(): Promise<Vendor[]> {
-  const response = await apiRequest<Vendor[]>('/vendors', {
+  const response = await apiRequest<Vendor[] | { data: Vendor[] }>('/vendors', {
     method: 'GET',
   });
 
-  return response.data || [];
+  // Handle both direct array and nested data structure
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+
+  // Handle nested { data: { data: [...] } } structure
+  if (response.data && typeof response.data === 'object' && 'data' in response.data) {
+    return (response.data as { data: Vendor[] }).data || [];
+  }
+
+  return [];
 }
 
 /**
@@ -91,9 +164,10 @@ export async function fetchCurrentVendor(): Promise<Vendor> {
 
 /**
  * Fetch a single vendor by ID
+ * API may return: { data: {...vendor} } or { data: { data: {...vendor} } }
  */
 export async function fetchVendor(id: number): Promise<Vendor> {
-  const response = await apiRequest<Vendor>(`/vendors/${id}`, {
+  const response = await apiRequest<Vendor | { data: Vendor }>(`/vendors/${id}`, {
     method: 'GET',
   });
 
@@ -101,7 +175,16 @@ export async function fetchVendor(id: number): Promise<Vendor> {
     throw new Error('Vendor not found');
   }
 
-  return response.data;
+  // Handle nested { data: { data: {...} } } structure
+  if (response.data && typeof response.data === 'object' && 'data' in response.data && !('id' in response.data)) {
+    const nestedData = (response.data as { data: Vendor }).data;
+    if (!nestedData) {
+      throw new Error('Vendor not found');
+    }
+    return nestedData;
+  }
+
+  return response.data as Vendor;
 }
 
 /**
@@ -250,24 +333,13 @@ export async function getCurrentUserVendorId(): Promise<number> {
 
   // Method 1: Try /my-vendor endpoint first (preferred method)
   try {
-    console.log('🔍 Trying /my-vendor endpoint...');
     const vendor = await fetchCurrentVendor();
-    console.log('✅ Found vendor_id from /my-vendor:', vendor.id);
     return vendor.id;
-  } catch (meError: unknown) {
-    const error = meError as { status?: number };
-    if (error.status === 404) {
-      console.log('⚠️ /my-vendor endpoint not available (404)');
-    } else if (error.status === 403) {
-      console.log('⚠️ /my-vendor endpoint forbidden (403)');
-    } else {
-      console.log('⚠️ /my-vendor endpoint error:', error);
-    }
+  } catch {
+    // /my-vendor endpoint not available, try fallback methods
   }
 
   // Method 2: Try to get vendor_id from user object (from login response)
-  console.log('🔍 Searching for vendor_id in user object:', currentUser);
-  console.log('📋 All user object keys:', Object.keys(currentUser));
 
   const vendorIdFromUser = currentUser.vendor_id || 
                            currentUser.organization_id || 
@@ -278,7 +350,6 @@ export async function getCurrentUserVendorId(): Promise<number> {
                            null;
 
   if (vendorIdFromUser) {
-    console.log('✅ Found vendor_id in user object:', vendorIdFromUser);
     return vendorIdFromUser;
   }
 
@@ -286,39 +357,23 @@ export async function getCurrentUserVendorId(): Promise<number> {
   // Note: This might fail with 403 if vendor users don't have permission to list vendors
   if (currentUser.email) {
     try {
-      console.log('🔄 Trying to find vendor by matching email:', currentUser.email);
       const vendors = await fetchVendors();
-      const matchingVendor = vendors.find(v => 
-        v.email === currentUser.email || 
+      const matchingVendor = vendors.find(v =>
+        v.email === currentUser.email ||
         v.email === currentUser.email?.toLowerCase() ||
         v.contact_person === currentUser.name_en ||
         v.contact_person === currentUser.name_ar
       );
-      
+
       if (matchingVendor) {
-        console.log('✅ Found vendor by matching email/name:', matchingVendor.id);
         return matchingVendor.id;
-      } else {
-        console.log('❌ No vendor found matching user email or name');
       }
-    } catch (vendorsError: unknown) {
-      const error = vendorsError as { status?: number };
-      if (error.status === 403) {
-        console.log('❌ Vendor users do not have permission to list vendors (403 Forbidden)');
-      } else {
-        console.log('❌ Could not fetch vendors list:', error);
-      }
+    } catch {
+      // Could not fetch vendors list - permission denied or other error
     }
   }
 
   // All methods failed
-  console.log('❌ vendor_id not found using any method');
-  console.log('📋 Full user object:', JSON.stringify(currentUser, null, 2));
-  console.log('💡 Backend should implement one of:');
-  console.log('   1. /vendors/me endpoint (GET) - returns current vendor profile');
-  console.log('   2. Include vendor_id in login response user object');
-  console.log('   3. Include vendor_id in /user endpoint response');
-
   throw new Error('Vendor ID not found. Please contact your administrator to configure vendor_id retrieval.');
 }
 

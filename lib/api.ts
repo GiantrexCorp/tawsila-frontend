@@ -208,28 +208,37 @@ export function getToken(): string | null {
   return localStorage.getItem('access_token');
 }
 
+/** Token cookie expiry in days */
+const TOKEN_EXPIRY_DAYS = 7;
+
 /**
  * Store authentication token
+ * Note: For production, consider moving cookie setting to server-side API routes
+ * to enable HttpOnly flag which provides better XSS protection.
  */
 export function setToken(token: string): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem('access_token', token);
-  
-  // Also store in cookie for middleware access
-  // Set cookie with 7 days expiry (adjust as needed)
+
+  // Store in cookie for middleware access
+  // Using Secure flag in production, SameSite=Strict for CSRF protection
   const expiryDate = new Date();
-  expiryDate.setDate(expiryDate.getDate() + 7);
-  document.cookie = `token=${token}; path=/; expires=${expiryDate.toUTCString()}; SameSite=Lax`;
+  expiryDate.setDate(expiryDate.getDate() + TOKEN_EXPIRY_DAYS);
+  const isSecure = window.location.protocol === 'https:';
+  const secureFlag = isSecure ? '; Secure' : '';
+  document.cookie = `token=${token}; path=/; expires=${expiryDate.toUTCString()}; SameSite=Strict${secureFlag}`;
 }
 
 /**
- * Remove authentication token
+ * Remove authentication token from both localStorage and cookie
  */
 export function removeToken(): void {
   if (typeof window === 'undefined') return;
   localStorage.removeItem('access_token');
-  
-  // Also remove from cookie
-  document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+
+  // Remove cookie with same flags used when setting
+  const isSecure = window.location.protocol === 'https:';
+  const secureFlag = isSecure ? '; Secure' : '';
+  document.cookie = `token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict${secureFlag}`;
 }
 

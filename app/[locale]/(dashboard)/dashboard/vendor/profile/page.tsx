@@ -26,7 +26,6 @@ import {
   type Vendor
 } from "@/lib/services/vendors";
 import { LocationPicker } from "@/components/ui/location-picker";
-import { getCurrentUser } from "@/lib/auth";
 import { fetchVendor, fetchCurrentVendor, getCurrentUserVendorId } from "@/lib/services/vendors";
 
 export default function VendorProfilePage() {
@@ -47,30 +46,19 @@ export default function VendorProfilePage() {
       try {
         // Try /vendors/me endpoint first (preferred method)
         try {
-          console.log('🔍 Trying /vendors/me endpoint...');
           const fetchedVendor = await fetchCurrentVendor();
-          console.log('✅ Vendor loaded from /vendors/me:', fetchedVendor);
           setVendor(fetchedVendor);
           setIsLoading(false);
           return;
-        } catch (meError: unknown) {
-          const error = meError as { status?: number };
-          if (error.status === 404) {
-            console.log('⚠️ /vendors/me not available, falling back to vendor_id lookup');
-          } else {
-            console.log('⚠️ /vendors/me error, falling back:', meError);
-          }
+        } catch {
+          // /vendors/me not available, fall back to vendor_id lookup
         }
 
         // Fallback: Get vendor ID and fetch by ID
-        const currentUser = getCurrentUser();
-        console.log('🔍 Full user object:', JSON.stringify(currentUser, null, 2));
-        
         let vendorId: number;
         try {
           vendorId = await getCurrentUserVendorId();
-        } catch (vendorIdError) {
-          console.error('❌ Could not get vendor_id:', vendorIdError);
+        } catch {
           toast.error('Vendor ID Not Found', {
             description: 'Please contact your administrator. The backend needs to implement /vendors/me endpoint or include vendor_id in the login response.',
             duration: 10000,
@@ -78,18 +66,12 @@ export default function VendorProfilePage() {
           setIsLoading(false);
           return;
         }
-        
-        console.log('✅ Using vendor_id:', vendorId);
-        
-        // Fetch vendor using the vendor ID
+
         const fetchedVendor = await fetchVendor(vendorId);
-        console.log('✅ Vendor loaded successfully:', fetchedVendor);
         setVendor(fetchedVendor);
       } catch (error) {
-        console.error('Failed to load vendor:', error);
-        toast.error(t('errorLoadingVendor'), {
-          description: error instanceof Error ? error.message : 'Please contact your administrator.',
-        });
+        const message = error instanceof Error ? error.message : 'Please contact your administrator.';
+        toast.error(t('errorLoadingVendor'), { description: message });
       } finally {
         setIsLoading(false);
       }

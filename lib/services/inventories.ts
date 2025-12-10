@@ -1,52 +1,104 @@
 /**
  * Inventories Service
+ *
+ * Handles inventory/warehouse location management including CRUD operations,
+ * geographic data associations, and inventory status management.
  */
 
 import { apiRequest } from '../api';
 
+/**
+ * Governorate (province/state) entity
+ * Note: Also defined in vendors.ts - consider using shared types
+ */
 export interface Governorate {
+  /** Unique governorate identifier */
   id: number;
+  /** English name */
   name_en: string;
+  /** Arabic name */
   name_ar: string;
 }
 
+/**
+ * City entity within a governorate
+ * Note: Also defined in vendors.ts - consider using shared types
+ */
 export interface City {
+  /** Unique city identifier */
   id: number;
+  /** English name */
   name_en: string;
+  /** Arabic name */
   name_ar: string;
+  /** Parent governorate */
   governorate: Governorate;
 }
 
+/**
+ * Inventory/Warehouse location entity
+ * Represents a physical location where orders can be processed and stored
+ */
 export interface Inventory {
+  /** Unique inventory identifier */
   id: number;
+  /** Legacy name field */
   name?: string;
+  /** English location name */
   name_en?: string;
+  /** Arabic location name */
   name_ar?: string;
+  /** Unique inventory code */
   code?: string;
+  /** Contact phone number */
   phone?: string;
+  /** Physical address */
   address?: string;
+  /** Complete formatted address */
   full_address?: string;
+  /** Associated governorate ID */
   governorate_id?: number;
+  /** Associated city ID */
   city_id?: number;
+  /** Location latitude coordinate */
   latitude?: number | string;
+  /** Location longitude coordinate */
   longitude?: number | string;
+  /** Inventory status string */
   status?: string;
+  /** Whether inventory is active */
   is_active?: boolean;
+  /** Creation timestamp */
   created_at?: string;
+  /** Last update timestamp */
   updated_at?: string;
+  /** Associated governorate details */
   governorate?: Governorate;
+  /** Associated city details */
   city?: City;
 }
 
+/**
+ * Request payload for creating a new inventory location
+ */
 export interface CreateInventoryRequest {
+  /** English location name */
   name_en: string;
+  /** Arabic location name */
   name_ar: string;
+  /** Contact phone number */
   phone: string;
+  /** Physical address */
   address: string;
+  /** Governorate ID */
   governorate_id: number;
+  /** City ID */
   city_id: number;
+  /** Location latitude (optional) */
   latitude?: number;
+  /** Location longitude (optional) */
   longitude?: number;
+  /** Initial status */
   status?: string;
 }
 
@@ -147,26 +199,25 @@ export async function updateInventory(id: number, inventoryData: UpdateInventory
  * Delete an inventory
  * API returns: { "deleted": true, "message": "Inventory deleted successfully." }
  */
+interface DeleteResponse {
+  deleted?: boolean;
+  message?: string;
+}
+
 export async function deleteInventory(id: number): Promise<void> {
-  const response = await apiRequest<{ deleted?: boolean; message?: string } & Record<string, unknown>>(`/inventories/${id}`, {
+  const response = await apiRequest<DeleteResponse>(`/inventories/${id}`, {
     method: 'DELETE',
-    skipRedirectOn403: true, // Don't redirect on 403, show error message instead
+    skipRedirectOn403: true,
   });
 
-  // The API response structure is: { deleted: true, message: "..." }
-  // apiRequest returns the parsed JSON directly (not wrapped in ApiResponse)
-  // Access the data directly from the response
-  const responseData = response as unknown as { deleted?: boolean; message?: string };
-  
-  // Strictly verify that deletion was successful
+  // Verify that deletion was successful
+  const responseData = response.data || (response as unknown as DeleteResponse);
+
   if (responseData.deleted !== true) {
-    // If deleted is false or missing, throw an error
     throw new Error(
-      responseData.message || 
+      responseData.message ||
       (responseData.deleted === false ? 'Deletion was not successful' : 'Invalid response from server')
     );
   }
-  
-  // Only reach here if deleted === true
 }
 
