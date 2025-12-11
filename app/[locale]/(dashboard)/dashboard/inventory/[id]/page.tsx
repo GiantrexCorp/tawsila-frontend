@@ -150,6 +150,8 @@ export default function ViewInventoryPage() {
     if (localizedSlug) return localizedSlug;
 
     // Fallback: format role name (e.g., "inventory-manager" -> "Inventory Manager")
+    // Safety check for undefined/null name
+    if (!role.name) return '';
     return role.name.split('-').map(word =>
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');

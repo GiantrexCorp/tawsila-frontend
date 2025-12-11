@@ -208,6 +208,8 @@ export default function UsersPage() {
   const getRoleSelectDisplay = useCallback((role: { name: string; slug_en: string | null; slug_ar: string | null }) => {
     const slug = locale === 'ar' ? role.slug_ar : role.slug_en;
     if (slug) return slug;
+    // Safety check for undefined/null name
+    if (!role.name) return '';
     return role.name.split('-').map(word =>
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
