@@ -8,14 +8,12 @@ import {
   ShoppingCart,
   ArrowUp,
   ArrowDown,
-  FileText,
   AlertTriangle,
   Loader2,
 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { orders, productRequests, agents, products } from "@/lib/mock-data";
+import { orders, agents, products } from "@/lib/mock-data";
 import { Link } from "@/i18n/routing";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { getCurrentUser, User } from "@/lib/auth";
@@ -24,7 +22,6 @@ import { VendorDashboard } from "@/components/dashboard/vendor-dashboard";
 export default function DashboardPage() {
   const t = useTranslations('dashboard');
   const tOrders = useTranslations('orders');
-  const tRequests = useTranslations('requests');
   const tCommon = useTranslations('common');
   const locale = useLocale();
 
@@ -66,20 +63,11 @@ export default function DashboardPage() {
   }
 
   // Calculate real metrics
-  const pendingRequests = productRequests.filter(r => r.status === 'pending').length;
   const pendingDeliveries = orders.filter(o => ['pending', 'confirmed', 'picked_up', 'in_transit'].includes(o.status)).length;
   const activeAgentsCount = agents.filter(a => a.status === 'active').length;
   const lowStockItems = products.filter(p => p.quantity < p.minStock || p.quantity === 0).length;
 
   const metrics = [
-    {
-      title: t('pendingRequests'),
-      value: pendingRequests.toString(),
-      change: "+2",
-      trend: "up" as const,
-      icon: FileText,
-      color: "text-blue-600",
-    },
     {
       title: t('pendingDeliveries'),
       value: pendingDeliveries.toString(),
@@ -106,11 +94,6 @@ export default function DashboardPage() {
     },
   ];
 
-  // Recent product requests
-  const recentRequests = [...productRequests]
-    .sort((a, b) => b.requestedAt.getTime() - a.requestedAt.getTime())
-    .slice(0, 5);
-
   // Active deliveries
   const activeDeliveries = orders.filter(o => 
     ['in_transit', 'picked_up', 'confirmed'].includes(o.status)
@@ -123,13 +106,9 @@ export default function DashboardPage() {
       confirmed: "outline",
       delivered: "outline",
       picked_up: "default",
-      approved: "outline",
-      rejected: "destructive",
-      partially_accepted: "default",
     };
 
-    const isOrderStatus = ['in_transit', 'pending', 'confirmed', 'delivered', 'picked_up'].includes(status);
-    const label = isOrderStatus ? tOrders(status as 'pending' | 'confirmed' | 'picked_up' | 'in_transit' | 'delivered') : tRequests(status as 'pending' | 'approved' | 'rejected' | 'partially_accepted');
+    const label = tOrders(status as 'pending' | 'confirmed' | 'picked_up' | 'in_transit' | 'delivered');
     return <Badge variant={variants[status] || "default"}>{label}</Badge>;
   };
 
@@ -175,52 +154,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Main Content */}
-      <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
-        {/* Pending Product Requests */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <CardTitle className="text-lg md:text-xl">{t('pendingProductRequests')}</CardTitle>
-                <CardDescription className="text-xs md:text-sm">
-                  {t('requestsNeedingReview')}
-                </CardDescription>
-              </div>
-              <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
-                <Link href="/dashboard/requests">{t('viewAll')}</Link>
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentRequests.slice(0, 4).map((request) => (
-                <div
-                  key={request.id}
-                  className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
-                >
-                  <div className="space-y-1 flex-1">
-                    <p className="text-sm font-medium">{request.id}</p>
-                    <p className="text-xs text-muted-foreground truncate">{request.organizationName}</p>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {getStatusBadge(request.status)}
-                      <span className="text-xs text-muted-foreground">
-                        {request.products.length} {tOrders('items')}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-end shrink-0">
-                    <p className="text-xs text-muted-foreground whitespace-nowrap">
-                      {request.requestedAt.toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
+      <div className="grid gap-4 md:gap-6">
         {/* Active Deliveries */}
-        <Card className="lg:col-span-1">
+        <Card>
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
@@ -313,58 +249,40 @@ export default function DashboardPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="all" className="w-full">
-            <TabsList>
-              <TabsTrigger value="all">{t('all')}</TabsTrigger>
-              <TabsTrigger value="requests">{tRequests('title')}</TabsTrigger>
-              <TabsTrigger value="deliveries">{t('deliveries')}</TabsTrigger>
-            </TabsList>
-            <TabsContent value="all" className="space-y-4 mt-4">
-              <div className="flex gap-4">
-                <div className="flex flex-col items-center">
-                  <div className="h-2 w-2 rounded-full bg-blue-600" />
-                  <div className="h-full w-px bg-border" />
-                </div>
-                <div className="flex-1 pb-4">
-                  <p className="text-sm font-medium">{t('newRequestReceived')}</p>
-                  <p className="text-xs text-muted-foreground">Gadget Store - REQ-005</p>
-                  <p className="text-xs text-muted-foreground mt-1">2 {t('hoursAgo')}</p>
-                </div>
+          <div className="space-y-4">
+            <div className="flex gap-4">
+              <div className="flex flex-col items-center">
+                <div className="h-2 w-2 rounded-full bg-green-600" />
+                <div className="h-full w-px bg-border" />
               </div>
-              <div className="flex gap-4">
-                <div className="flex flex-col items-center">
-                  <div className="h-2 w-2 rounded-full bg-green-600" />
-                  <div className="h-full w-px bg-border" />
-                </div>
-                <div className="flex-1 pb-4">
-                  <p className="text-sm font-medium">{t('orderDelivered')}</p>
-                  <p className="text-xs text-muted-foreground">Sarah Ibrahim - ORD-2024-004</p>
-                  <p className="text-xs text-muted-foreground mt-1">1 {t('dayAgo')}</p>
-                </div>
+              <div className="flex-1 pb-4">
+                <p className="text-sm font-medium">{t('orderDelivered')}</p>
+                <p className="text-xs text-muted-foreground">Sarah Ibrahim - ORD-2024-004</p>
+                <p className="text-xs text-muted-foreground mt-1">1 {t('dayAgo')}</p>
               </div>
-              <div className="flex gap-4">
-                <div className="flex flex-col items-center">
-                  <div className="h-2 w-2 rounded-full bg-orange-600" />
-                  <div className="h-full w-px bg-border" />
-                </div>
-                <div className="flex-1 pb-4">
-                  <p className="text-sm font-medium">{t('lowStockAlert')}</p>
-                  <p className="text-xs text-muted-foreground">USB-C Cable 2m - 0 {t('unitsRemaining')}</p>
-                  <p className="text-xs text-muted-foreground mt-1">2 {t('daysAgo')}</p>
-                </div>
+            </div>
+            <div className="flex gap-4">
+              <div className="flex flex-col items-center">
+                <div className="h-2 w-2 rounded-full bg-orange-600" />
+                <div className="h-full w-px bg-border" />
               </div>
-              <div className="flex gap-4">
-                <div className="flex flex-col items-center">
-                  <div className="h-2 w-2 rounded-full bg-purple-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">{t('requestApproved')}</p>
-                  <p className="text-xs text-muted-foreground">Electronics Hub - REQ-002</p>
-                  <p className="text-xs text-muted-foreground mt-1">3 {t('daysAgo')}</p>
-                </div>
+              <div className="flex-1 pb-4">
+                <p className="text-sm font-medium">{t('lowStockAlert')}</p>
+                <p className="text-xs text-muted-foreground">USB-C Cable 2m - 0 {t('unitsRemaining')}</p>
+                <p className="text-xs text-muted-foreground mt-1">2 {t('daysAgo')}</p>
               </div>
-            </TabsContent>
-          </Tabs>
+            </div>
+            <div className="flex gap-4">
+              <div className="flex flex-col items-center">
+                <div className="h-2 w-2 rounded-full bg-blue-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">{t('orderPickedUp')}</p>
+                <p className="text-xs text-muted-foreground">Ahmed Hassan - ORD-2024-003</p>
+                <p className="text-xs text-muted-foreground mt-1">3 {t('daysAgo')}</p>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

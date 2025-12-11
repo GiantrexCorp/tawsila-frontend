@@ -51,9 +51,9 @@
     "deliveries": "Deliveries",
     "newRequestReceived": "New product request received",
     "orderDelivered": "Order delivered successfully",
+    "orderPickedUp": "Order picked up",
     "lowStockAlert": "Low stock alert",
     "unitsRemaining": "units remaining",
-    "requestApproved": "Product request approved",
     "hoursAgo": "hours ago",
     "dayAgo": "day ago",
     "daysAgo": "days ago"

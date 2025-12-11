@@ -51,9 +51,9 @@
     "deliveries": "التوصيلات",
     "newRequestReceived": "وصل طلب منتج جديد",
     "orderDelivered": "تم توصيل الطلب بنجاح",
+    "orderPickedUp": "تم استلام الطلب",
     "lowStockAlert": "تنبيه مخزون قليل",
     "unitsRemaining": "وحدة متبقية",
-    "requestApproved": "تمت الموافقة على طلب المنتج",
     "hoursAgo": "من ساعات",
     "dayAgo": "من يوم",
     "daysAgo": "من أيام"

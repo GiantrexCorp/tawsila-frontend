@@ -1,5 +1,4 @@
 export type OrderStatus = 'pending' | 'confirmed' | 'picked_up' | 'in_transit' | 'delivered';
-export type RequestStatus = 'pending' | 'approved' | 'rejected' | 'partially_accepted';
 
 export interface Product {
   id: string;
@@ -28,23 +27,6 @@ export interface Order {
   createdAt: Date;
   estimatedDelivery?: Date;
   otp?: string;
-}
-
-export interface ProductRequest {
-  id: string;
-  organizationId: string;
-  organizationName: string;
-  products: { 
-    productId: string; 
-    productName: string;
-    productNameAr: string;
-    quantity: number;
-    price: number;
-  }[];
-  status: RequestStatus;
-  requestedAt: Date;
-  reviewedAt?: Date;
-  notes?: string;
 }
 
 export interface DeliveryAgent {
