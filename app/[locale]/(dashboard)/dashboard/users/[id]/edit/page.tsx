@@ -27,11 +27,17 @@ import {
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { PERMISSIONS } from "@/hooks/use-permissions";
 import { fetchUser, updateUser, User as UserType } from "@/lib/services/users";
+import {
+  validateEgyptianMobile,
+  validateEmail,
+  validateRequired,
+} from "@/lib/validations";
 import { toast } from "sonner";
 
 export default function EditUserPage() {
   const t = useTranslations('users');
   const tCommon = useTranslations('common');
+  const tValidation = useTranslations('validation');
   const locale = useLocale();
   const router = useRouter();
   const params = useParams();
@@ -88,8 +94,27 @@ export default function EditUserPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name_en || !formData.name_ar || !formData.email || !formData.mobile) {
-      toast.error(t('fillAllFields'));
+    // Validate required fields
+    if (!validateRequired(formData.name_en).isValid) {
+      toast.error(tValidation('fieldRequired'), { description: t('nameEnRequired') });
+      return;
+    }
+    if (!validateRequired(formData.name_ar).isValid) {
+      toast.error(tValidation('fieldRequired'), { description: t('nameArRequired') });
+      return;
+    }
+
+    // Validate email
+    const emailValidation = validateEmail(formData.email);
+    if (!emailValidation.isValid) {
+      toast.error(tValidation(emailValidation.message || 'emailInvalidFormat'));
+      return;
+    }
+
+    // Validate mobile (Egyptian format)
+    const mobileValidation = validateEgyptianMobile(formData.mobile);
+    if (!mobileValidation.isValid) {
+      toast.error(tValidation(mobileValidation.message || 'mobileInvalid'));
       return;
     }
 

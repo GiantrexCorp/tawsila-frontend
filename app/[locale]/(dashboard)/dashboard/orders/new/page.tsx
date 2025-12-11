@@ -10,12 +10,14 @@ import { Loader2, Package, CreditCard, FileText, ShoppingCart, Plus, Trash2, Tru
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { PERMISSIONS } from "@/hooks/use-permissions";
+import { validateEgyptianMobile, validateRequired } from "@/lib/validations";
 import { createOrder, type OrderItem, type CreateOrderRequest } from "@/lib/services/orders";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function CreateOrderPage() {
   const t = useTranslations('orderCreate');
   const tCommon = useTranslations('common');
+  const tValidation = useTranslations('validation');
 
   const hasPermission = usePagePermission({ requiredPermissions: [PERMISSIONS.CREATE_ORDER] });
 
@@ -81,17 +83,21 @@ export default function CreateOrderPage() {
 
     try {
       // Validate customer fields
-      if (!formData.customer.name?.trim()) {
+      if (!validateRequired(formData.customer.name || '').isValid) {
         toast.error(t('customerNameRequired'));
         setIsSubmitting(false);
         return;
       }
-      if (!formData.customer.mobile?.trim()) {
-        toast.error(t('customerMobileRequired'));
+
+      // Validate customer mobile (Egyptian format)
+      const mobileValidation = validateEgyptianMobile(formData.customer.mobile || '');
+      if (!mobileValidation.isValid) {
+        toast.error(tValidation(mobileValidation.message || 'mobileInvalid'));
         setIsSubmitting(false);
         return;
       }
-      if (!formData.customer.address?.trim()) {
+
+      if (!validateRequired(formData.customer.address || '').isValid) {
         toast.error(t('customerAddressRequired'));
         setIsSubmitting(false);
         return;

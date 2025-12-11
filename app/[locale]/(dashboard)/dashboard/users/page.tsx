@@ -22,6 +22,13 @@ import {
 } from "lucide-react";
 import { User, UserFilters, getRoleDisplayName } from "@/lib/services/users";
 import {
+  validateEgyptianMobile,
+  validateEmail,
+  validateRequired,
+  validatePassword,
+  validatePasswordConfirmation,
+} from "@/lib/validations";
+import {
   useUsers,
   useCreateUser,
   useChangeUserPassword,
@@ -55,6 +62,7 @@ import {
 export default function UsersPage() {
   const t = useTranslations('users');
   const tCommon = useTranslations('common');
+  const tValidation = useTranslations('validation');
   const locale = useLocale();
   const router = useRouter();
 
@@ -206,14 +214,47 @@ export default function UsersPage() {
   }, [locale]);
 
   const handleCreateUser = useCallback(async () => {
-    if (!addFormData.name_en || !addFormData.name_ar || !addFormData.email ||
-        !addFormData.mobile || !addFormData.password || !addFormData.roleId) {
-      toast.error(t('fillAllFields'));
+    // Validate required fields
+    if (!validateRequired(addFormData.name_en).isValid) {
+      toast.error(tValidation('fieldRequired'), { description: t('nameEnRequired') });
+      return;
+    }
+    if (!validateRequired(addFormData.name_ar).isValid) {
+      toast.error(tValidation('fieldRequired'), { description: t('nameArRequired') });
       return;
     }
 
-    if (addFormData.password !== addFormData.confirmPassword) {
-      toast.error(t('passwordMismatch'));
+    // Validate email
+    const emailValidation = validateEmail(addFormData.email);
+    if (!emailValidation.isValid) {
+      toast.error(tValidation(emailValidation.message || 'emailInvalidFormat'));
+      return;
+    }
+
+    // Validate mobile (Egyptian format)
+    const mobileValidation = validateEgyptianMobile(addFormData.mobile);
+    if (!mobileValidation.isValid) {
+      toast.error(tValidation(mobileValidation.message || 'mobileInvalid'));
+      return;
+    }
+
+    // Validate password
+    const passwordValidation = validatePassword(addFormData.password);
+    if (!passwordValidation.isValid) {
+      toast.error(tValidation(passwordValidation.message || 'passwordRequired'));
+      return;
+    }
+
+    // Validate password confirmation
+    const confirmValidation = validatePasswordConfirmation(addFormData.password, addFormData.confirmPassword);
+    if (!confirmValidation.isValid) {
+      toast.error(tValidation(confirmValidation.message || 'passwordsDoNotMatch'));
+      return;
+    }
+
+    // Validate role selection
+    if (!addFormData.roleId) {
+      toast.error(tValidation('selectionRequired'));
       return;
     }
 
@@ -250,23 +291,22 @@ export default function UsersPage() {
       const message = error instanceof Error ? error.message : t('createFailed');
       toast.error(t('createFailed'), { description: message });
     }
-  }, [addFormData, t, createUserMutation, assignRoleMutation]);
+  }, [addFormData, t, tValidation, createUserMutation, assignRoleMutation]);
 
   const handleChangePassword = useCallback(async () => {
     if (!userToChangePassword) return;
 
-    if (!passwordFormData.password) {
-      toast.error(t('passwordRequired'));
+    // Validate password
+    const passwordValidation = validatePassword(passwordFormData.password);
+    if (!passwordValidation.isValid) {
+      toast.error(tValidation(passwordValidation.message || 'passwordRequired'));
       return;
     }
 
-    if (passwordFormData.password !== passwordFormData.confirmPassword) {
-      toast.error(t('passwordMismatch'));
-      return;
-    }
-
-    if (passwordFormData.password.length < 6) {
-      toast.error(t('passwordTooShort'));
+    // Validate password confirmation
+    const confirmValidation = validatePasswordConfirmation(passwordFormData.password, passwordFormData.confirmPassword);
+    if (!confirmValidation.isValid) {
+      toast.error(tValidation(confirmValidation.message || 'passwordsDoNotMatch'));
       return;
     }
 
@@ -301,7 +341,7 @@ export default function UsersPage() {
         toast.error(t('passwordChangeFailed'), { description: message });
       }
     }
-  }, [userToChangePassword, passwordFormData, currentUser?.id, t, router, getDisplayName, changePasswordMutation]);
+  }, [userToChangePassword, passwordFormData, currentUser?.id, t, tValidation, router, getDisplayName, changePasswordMutation]);
 
   const handleAssignRole = useCallback(async () => {
     if (!userToAssignRole || !selectedRoleId) return;

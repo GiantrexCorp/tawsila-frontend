@@ -760,7 +760,9 @@
     "nameArabicPlaceholder": "Enter name in Arabic",
     "emailPlaceholder": "Enter email address",
     "mobilePlaceholder": "Enter mobile number",
-    "vendor": "Vendor"
+    "vendor": "Vendor",
+    "nameEnRequired": "English name is required",
+    "nameArRequired": "Arabic name is required"
   },
   "unauthorized": {
     "title": "Access Denied",
@@ -816,5 +818,33 @@
     "copySecretKey": "Copy secret key",
     "invalidOrderId": "Invalid order ID",
     "qty": "Qty"
+  },
+  "validation": {
+    "mobileRequired": "Mobile number is required",
+    "mobileMustBe11Digits": "Mobile number must be exactly 11 digits",
+    "mobileMustStartWith01": "Mobile number must start with 01",
+    "mobileInvalidPrefix": "Invalid mobile prefix. Must start with 010, 011, 012, or 015",
+    "mobileMustBeDigitsOnly": "Mobile number must contain only digits",
+    "mobileInvalid": "Please enter a valid Egyptian mobile number (e.g., 01XXXXXXXXX)",
+    "emailRequired": "Email address is required",
+    "emailInvalidFormat": "Please enter a valid email address",
+    "fieldRequired": "This field is required",
+    "minLengthNotMet": "Value is too short",
+    "maxLengthExceeded": "Value is too long",
+    "passwordRequired": "Password is required",
+    "passwordMinLength": "Password must be at least 6 characters",
+    "confirmPasswordRequired": "Please confirm your password",
+    "passwordsDoNotMatch": "Passwords do not match",
+    "mustBeNumber": "Please enter a valid number",
+    "mustBePositive": "Value must be greater than 0",
+    "mustBeNonNegative": "Value cannot be negative",
+    "invalidCoordinates": "Please enter valid coordinates",
+    "latitudeOutOfRange": "Latitude must be between -90 and 90",
+    "longitudeOutOfRange": "Longitude must be between -180 and 180",
+    "selectionRequired": "Please select an option",
+    "fileTooLarge": "File size exceeds the maximum limit",
+    "invalidFileType": "Invalid file type",
+    "mustContainArabic": "This field must contain Arabic text",
+    "mustBeEnglishOnly": "This field must contain English text only"
   }
 }

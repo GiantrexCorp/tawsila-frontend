@@ -19,12 +19,18 @@ import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { PERMISSIONS } from "@/hooks/use-permissions";
 import { createInventory, type CreateInventoryRequest } from "@/lib/services/inventories";
+import {
+  validateEgyptianMobile,
+  validateRequired,
+  validateSelect,
+} from "@/lib/validations";
 import { fetchGovernorates, fetchCities, type Governorate, type City } from "@/lib/services/vendors";
 import { LocationPicker } from "@/components/ui/location-picker";
 
 export default function NewInventoryPage() {
   const t = useTranslations('inventory');
   const tCommon = useTranslations('common');
+  const tValidation = useTranslations('validation');
   const locale = useLocale();
   const router = useRouter();
   
@@ -107,22 +113,34 @@ export default function NewInventoryPage() {
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.name_en.trim()) {
+    // Validate name (English)
+    if (!validateRequired(formData.name_en).isValid) {
       newErrors.name_en = t('nameEnRequired');
     }
-    if (!formData.name_ar.trim()) {
+
+    // Validate name (Arabic)
+    if (!validateRequired(formData.name_ar).isValid) {
       newErrors.name_ar = t('nameArRequired');
     }
-    if (!formData.phone.trim()) {
-      newErrors.phone = t('phoneRequired');
+
+    // Validate phone (Egyptian mobile)
+    const phoneValidation = validateEgyptianMobile(formData.phone);
+    if (!phoneValidation.isValid) {
+      newErrors.phone = tValidation(phoneValidation.message || 'mobileInvalid');
     }
-    if (!formData.address.trim()) {
+
+    // Validate address
+    if (!validateRequired(formData.address).isValid) {
       newErrors.address = t('addressRequired');
     }
-    if (!formData.governorate_id || formData.governorate_id === 0) {
+
+    // Validate governorate selection
+    if (!validateSelect(formData.governorate_id).isValid) {
       newErrors.governorate_id = t('governorateRequired');
     }
-    if (!formData.city_id || formData.city_id === 0) {
+
+    // Validate city selection
+    if (!validateSelect(formData.city_id).isValid) {
       newErrors.city_id = t('cityRequired');
     }
 

@@ -12,6 +12,7 @@ import { Mail, Phone, Clock, Calendar, Shield, Loader2, User as UserIcon } from 
 import { getCurrentUser, logout } from "@/lib/auth";
 import { changeOwnPassword, User, getRoleDisplayName } from "@/lib/services/users";
 import { toast } from "sonner";
+import { validatePassword, validatePasswordConfirmation } from "@/lib/validations";
 import { useRouter } from "@/i18n/routing";
 import {
   Dialog,
@@ -26,6 +27,7 @@ export default function ProfilePage() {
   const t = useTranslations('profile');
   const tCommon = useTranslations('common');
   const tUsers = useTranslations('users');
+  const tValidation = useTranslations('validation');
   const locale = useLocale();
   const router = useRouter();
   
@@ -67,19 +69,20 @@ export default function ProfilePage() {
   const handleChangePassword = async () => {
     if (!user) return;
 
-    // Validation
-    if (!passwordFormData.password) {
-      toast.error(tUsers('passwordRequired'));
+    // Validate password
+    const passwordValidation = validatePassword(passwordFormData.password);
+    if (!passwordValidation.isValid) {
+      toast.error(tValidation(passwordValidation.message || 'passwordMinLength'));
       return;
     }
 
-    if (passwordFormData.password !== passwordFormData.confirmPassword) {
-      toast.error(tUsers('passwordMismatch'));
-      return;
-    }
-
-    if (passwordFormData.password.length < 6) {
-      toast.error(tUsers('passwordTooShort'));
+    // Validate password confirmation
+    const confirmValidation = validatePasswordConfirmation(
+      passwordFormData.password,
+      passwordFormData.confirmPassword
+    );
+    if (!confirmValidation.isValid) {
+      toast.error(tValidation(confirmValidation.message || 'passwordsDoNotMatch'));
       return;
     }
 

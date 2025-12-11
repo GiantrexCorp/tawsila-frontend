@@ -22,10 +22,18 @@ import { PERMISSIONS } from "@/hooks/use-permissions";
 import { createVendor, fetchGovernorates, fetchCities, type Governorate, type City, type CreateVendorRequest } from "@/lib/services/vendors";
 import { Separator } from "@/components/ui/separator";
 import { LocationPicker } from "@/components/ui/location-picker";
+import {
+  validateEgyptianMobile,
+  validateEmail,
+  validateRequired,
+  validateSelect,
+  validateCoordinates,
+} from "@/lib/validations";
 
 export default function NewVendorPage() {
   const t = useTranslations('organizations');
   const tCommon = useTranslations('common');
+  const tValidation = useTranslations('validation');
   const router = useRouter();
   
   // Check if user has permission
@@ -181,25 +189,67 @@ export default function NewVendorPage() {
     setIsSubmitting(true);
     setErrors({});
 
-    // Validate required location fields
     const validationErrors: Record<string, string> = {};
-    
-    if (!formData.governorate_id || formData.governorate_id === 0) {
+
+    // Validate required text fields
+    if (!validateRequired(formData.name_en).isValid) {
+      validationErrors.name_en = tValidation('fieldRequired');
+    }
+    if (!validateRequired(formData.name_ar).isValid) {
+      validationErrors.name_ar = tValidation('fieldRequired');
+    }
+    if (!validateRequired(formData.contact_person).isValid) {
+      validationErrors.contact_person = tValidation('fieldRequired');
+    }
+    if (!validateRequired(formData.description_en).isValid) {
+      validationErrors.description_en = tValidation('fieldRequired');
+    }
+    if (!validateRequired(formData.description_ar).isValid) {
+      validationErrors.description_ar = tValidation('fieldRequired');
+    }
+    if (!validateRequired(formData.address).isValid) {
+      validationErrors.address = tValidation('fieldRequired');
+    }
+    if (!validateRequired(formData.secret_key).isValid) {
+      validationErrors.secret_key = tValidation('fieldRequired');
+    }
+
+    // Validate mobile (Egyptian format)
+    const mobileValidation = validateEgyptianMobile(formData.mobile);
+    if (!mobileValidation.isValid) {
+      validationErrors.mobile = tValidation(mobileValidation.message || 'mobileInvalid');
+    }
+
+    // Validate email if provided (optional but must be valid format)
+    if (formData.email && formData.email.trim()) {
+      const emailValidation = validateEmail(formData.email);
+      if (!emailValidation.isValid) {
+        validationErrors.email = tValidation(emailValidation.message || 'emailInvalidFormat');
+      }
+    }
+
+    // Validate select fields
+    if (!validateSelect(formData.governorate_id).isValid) {
       validationErrors.governorate_id = t('selectGovernorate');
     }
-    
-    if (!formData.city_id || formData.city_id === 0) {
+    if (!validateSelect(formData.city_id).isValid) {
       validationErrors.city_id = t('selectCity');
     }
 
+    // Validate coordinates
     if (!formData.latitude || !formData.longitude) {
-      validationErrors.latitude = 'Please select a location on the map';
+      validationErrors.latitude = t('selectLocationOnMap');
+    } else {
+      const coordsValidation = validateCoordinates(formData.latitude, formData.longitude);
+      if (!coordsValidation.isValid) {
+        validationErrors.latitude = tValidation(coordsValidation.message || 'invalidCoordinates');
+      }
     }
 
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       toast.error(tCommon('error'), {
-        description: 'Please fill in all required fields',
+        description: t('pleaseFillRequiredFields'),
       });
       setIsSubmitting(false);
       return;

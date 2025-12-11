@@ -760,7 +760,9 @@
     "nameArabicPlaceholder": "أدخل الاسم بالعربية",
     "emailPlaceholder": "أدخل البريد الإلكتروني",
     "mobilePlaceholder": "أدخل رقم الجوال",
-    "vendor": "مورد"
+    "vendor": "مورد",
+    "nameEnRequired": "الاسم بالإنجليزية مطلوب",
+    "nameArRequired": "الاسم بالعربية مطلوب"
   },
   "unauthorized": {
     "title": "تم رفض الوصول",
@@ -815,5 +817,33 @@
     "copySecretKey": "نسخ المفتاح السري",
     "invalidOrderId": "معرف الطلب غير صالح",
     "qty": "الكمية"
+  },
+  "validation": {
+    "mobileRequired": "رقم الجوال مطلوب",
+    "mobileMustBe11Digits": "رقم الجوال يجب أن يكون 11 رقماً بالضبط",
+    "mobileMustStartWith01": "رقم الجوال يجب أن يبدأ بـ 01",
+    "mobileInvalidPrefix": "بادئة الجوال غير صالحة. يجب أن تبدأ بـ 010 أو 011 أو 012 أو 015",
+    "mobileMustBeDigitsOnly": "رقم الجوال يجب أن يحتوي على أرقام فقط",
+    "mobileInvalid": "يرجى إدخال رقم جوال مصري صالح (مثال: 01XXXXXXXXX)",
+    "emailRequired": "البريد الإلكتروني مطلوب",
+    "emailInvalidFormat": "يرجى إدخال بريد إلكتروني صالح",
+    "fieldRequired": "هذا الحقل مطلوب",
+    "minLengthNotMet": "القيمة قصيرة جداً",
+    "maxLengthExceeded": "القيمة طويلة جداً",
+    "passwordRequired": "كلمة المرور مطلوبة",
+    "passwordMinLength": "كلمة المرور يجب أن تكون 6 أحرف على الأقل",
+    "confirmPasswordRequired": "يرجى تأكيد كلمة المرور",
+    "passwordsDoNotMatch": "كلمات المرور غير متطابقة",
+    "mustBeNumber": "يرجى إدخال رقم صالح",
+    "mustBePositive": "القيمة يجب أن تكون أكبر من 0",
+    "mustBeNonNegative": "القيمة لا يمكن أن تكون سالبة",
+    "invalidCoordinates": "يرجى إدخال إحداثيات صالحة",
+    "latitudeOutOfRange": "خط العرض يجب أن يكون بين -90 و 90",
+    "longitudeOutOfRange": "خط الطول يجب أن يكون بين -180 و 180",
+    "selectionRequired": "يرجى اختيار خيار",
+    "fileTooLarge": "حجم الملف يتجاوز الحد الأقصى",
+    "invalidFileType": "نوع الملف غير صالح",
+    "mustContainArabic": "هذا الحقل يجب أن يحتوي على نص عربي",
+    "mustBeEnglishOnly": "هذا الحقل يجب أن يحتوي على نص إنجليزي فقط"
   }
 }
