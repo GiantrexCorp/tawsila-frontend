@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +9,7 @@ import { Search, Eye, Loader2, CheckCircle, Plus, XCircle } from "lucide-react";
 import { OrderStatusBadge } from "@/components/ui/status-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePagePermission } from "@/hooks/use-page-permission";
+import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
 import { fetchOrders, acceptOrder, rejectOrder, type Order, type Customer } from "@/lib/services/orders";
 import { fetchInventories, fetchCurrentInventory, type Inventory } from "@/lib/services/inventories";
 import { toast } from "sonner";
@@ -44,12 +44,28 @@ export default function OrdersPage() {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const currentUser = getCurrentUser();
-  const isVendor = currentUser?.roles?.includes('vendor');
-  const isShippingAgent = currentUser?.roles?.includes('shipping-agent');
-  
+  const isShippingAgent = currentUser?.roles?.some(r => r.name === 'shipping-agent');
+
   // Check if user has permission to access orders page
-  // Orders management is for super-admin, inventory-manager, vendors (view-only), and shipping-agents (assigned orders only)
-  const hasPermission = usePagePermission(['super-admin', 'inventory-manager', 'vendor', 'shipping-agent']);
+  // Allow access if user has ANY order-related permission
+  const hasPermission = usePagePermission({
+    requiredPermissions: [
+      PERMISSIONS.LIST_ORDERS,
+      PERMISSIONS.CREATE_ORDER,
+      PERMISSIONS.ACCEPT_ORDER,
+      PERMISSIONS.SCAN_ORDER_INVENTORY,
+      PERMISSIONS.SCAN_ORDER_DELIVERY,
+      PERMISSIONS.ASSIGN_PICKUP_AGENT,
+      PERMISSIONS.ASSIGN_DELIVERY_AGENT,
+      PERMISSIONS.PICKUP_ORDER_FROM_VENDOR,
+      PERMISSIONS.PICKUP_ORDER_FROM_INVENTORY,
+      PERMISSIONS.VERIFY_ORDER_OTP,
+    ]
+  });
+
+  // Permission checks for specific actions
+  const { hasPermission: canCreateOrder } = useHasPermission(PERMISSIONS.CREATE_ORDER);
+  const { hasPermission: canAcceptOrder } = useHasPermission(PERMISSIONS.ACCEPT_ORDER);
 
   // Fetch orders on mount
   useEffect(() => {
@@ -232,7 +248,7 @@ export default function OrdersPage() {
           <p className="text-sm text-muted-foreground mb-4">
             {isShippingAgent ? t('noAssignedOrdersDesc') : t('noOrdersDesc')}
           </p>
-          {isVendor && (
+          {canCreateOrder && (
             <Button onClick={() => router.push('/dashboard/orders/new')} className="gap-2">
               <Plus className="h-4 w-4" />
               {t('createOrder')}
@@ -243,104 +259,113 @@ export default function OrdersPage() {
     }
 
     return (
-      <div className="space-y-4">
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {ordersList.map((order) => {
           const customer: Customer = order.customer || { name: '', mobile: '', address: '' };
-          const canAccept = order.status === 'pending' && !isVendor;
-          const canReject = order.status === 'pending' && !isVendor;
-          
+          const canAccept = order.status === 'pending' && canAcceptOrder;
+          const canReject = order.status === 'pending' && canAcceptOrder;
+
           return (
-            <Card key={order.id}>
-              <CardContent className="p-6">
-                <div className="flex flex-col md:flex-row items-start justify-between gap-4">
-                  <div className="space-y-3 flex-1 w-full">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <h3 className="font-semibold text-sm md:text-base">{order.order_number}</h3>
-                      <OrderStatusBadge status={order.status} statusLabel={order.status_label} />
+            <div
+              key={order.id}
+              onClick={() => router.push(`/dashboard/orders/${order.id}`)}
+              className="group relative cursor-pointer"
+            >
+              {/* Card Container */}
+              <div className="relative h-full rounded-2xl bg-card border border-border/40 overflow-hidden transition-all duration-300 ease-out group-hover:border-primary/30 group-hover:shadow-xl group-hover:shadow-primary/5 group-hover:-translate-y-1">
+
+                {/* Gradient Overlay on hover */}
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                {/* Status Badge - Floating */}
+                <div className="absolute top-3 end-3 z-10">
+                  <OrderStatusBadge status={order.status} statusLabel={order.status_label} />
+                </div>
+
+                {/* Main Content */}
+                <div className="p-5 pb-4">
+                  <div className="flex items-start gap-4">
+                    {/* Order Icon */}
+                    <div className="relative flex-shrink-0">
+                      <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-muted to-muted/50 ring-1 ring-border/50 transition-transform duration-300 group-hover:scale-105 flex items-center justify-center">
+                        <span className="text-xl font-bold text-primary">#</span>
+                      </div>
+                    </div>
+
+                    {/* Order Number & Payment */}
+                    <div className="flex-1 min-w-0 pt-0.5">
+                      <h3 className="font-semibold text-base text-foreground truncate group-hover:text-primary transition-colors duration-300">
+                        {order.order_number}
+                      </h3>
                       {order.payment_method && (
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-[10px] px-2 py-0.5 h-5 mt-1.5">
                           {order.payment_method === 'cod' ? t('cashOnDelivery') : t('paid')}
                         </Badge>
                       )}
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      {customer.name && (
-                        <div>
-                          <p className="text-muted-foreground">{t('customer')}</p>
-                          <p className="font-medium">{customer.name}</p>
-                          {customer.mobile && (
-                            <p className="text-xs text-muted-foreground">{customer.mobile}</p>
-                          )}
-                        </div>
-                      )}
-                      {(customer.full_address || customer.address) && (
-                        <div>
-                          <p className="text-muted-foreground">{t('deliveryAddress')}</p>
-                          <p className="font-medium text-sm">{customer.full_address || customer.address}</p>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-4 text-sm flex-wrap">
-                      <div>
-                        <span className="text-muted-foreground">{t('total')}: </span>
-                        <span className="font-semibold">{tCommon('egpSymbol')} {order.total_amount.toFixed(2)}</span>
-                      </div>
-                      {order.subtotal > 0 && (
-                        <div>
-                          <span className="text-muted-foreground">{t('subtotal')}: </span>
-                          <span className="font-medium">{tCommon('egpSymbol')} {order.subtotal.toFixed(2)}</span>
-                        </div>
-                      )}
-                      <div>
-                        <span className="text-muted-foreground">{t('shippingCost')}: </span>
-                        <span className="font-medium">{tCommon('egpSymbol')} {order.shipping_cost.toFixed(2)}</span>
-                      </div>
-                    </div>
-                    {order.vendor_notes && (
-                      <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-                        <span className="font-medium">{t('vendorNotes')}: </span>
-                        {order.vendor_notes}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    {canAccept && (
-                      <Button 
-                        variant="default" 
-                        size="sm"
-                        onClick={() => handleAcceptClick(order.id)}
-                        disabled={acceptingOrderId === order.id}
-                        className="gap-2"
-                      >
-                        <CheckCircle className="h-4 w-4" />
-                        {t('acceptOrder')}
-                      </Button>
-                    )}
-                    {canReject && (
-                      <Button 
-                        variant="destructive" 
-                        size="sm"
-                        onClick={() => handleRejectClick(order.id)}
-                        disabled={rejectingOrderId === order.id}
-                        className="gap-2"
-                      >
-                        <XCircle className="h-4 w-4" />
-                        {t('rejectOrder')}
-                      </Button>
-                    )}
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => router.push(`/dashboard/orders/${order.id}`)}
-                      className="gap-2"
-                    >
-                      <Eye className="h-4 w-4" />
-                      {t('viewDetails')}
-                    </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+
+                {/* Customer Info */}
+                {customer.name && (
+                  <div className="px-5 pb-3">
+                    <p className="text-sm font-medium truncate">{customer.name}</p>
+                    {customer.mobile && (
+                      <p className="text-xs text-muted-foreground mt-0.5" dir="ltr">{customer.mobile}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Amount */}
+                <div className="px-5 pb-4">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-muted/50 text-sm font-semibold text-foreground">
+                    {tCommon('egpSymbol')} {order.total_amount.toFixed(2)}
+                  </div>
+                </div>
+
+                {/* Bottom Action Bar */}
+                <div className="px-5 pb-4 pt-2 border-t border-border/40">
+                  <div className="flex items-center justify-between">
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      {canAccept && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleAcceptClick(order.id)}
+                          disabled={acceptingOrderId === order.id}
+                          className="h-7 text-xs px-2"
+                        >
+                          <CheckCircle className="h-3.5 w-3.5 me-1" />
+                          {t('accept')}
+                        </Button>
+                      )}
+                      {canReject && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleRejectClick(order.id)}
+                          disabled={rejectingOrderId === order.id}
+                          className="h-7 text-xs px-2"
+                        >
+                          <XCircle className="h-3.5 w-3.5 me-1" />
+                          {t('reject')}
+                        </Button>
+                      )}
+                      {!canAccept && !canReject && (
+                        <span className="text-[11px] text-muted-foreground/60 font-medium">
+                          {t('viewDetails')}
+                        </span>
+                      )}
+                    </div>
+                    {/* Arrow Icon */}
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center transition-all duration-300 group-hover:bg-primary group-hover:scale-110">
+                      <Eye className="h-4 w-4 text-primary group-hover:text-primary-foreground transition-colors duration-300" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           );
         })}
       </div>
@@ -358,7 +383,7 @@ export default function OrdersPage() {
             {isShippingAgent ? t('myAssignedOrdersDesc') : t('subtitle')}
           </p>
         </div>
-        {isVendor && (
+        {canCreateOrder && (
           <Button
             onClick={() => router.push('/dashboard/orders/new')}
             className="w-full sm:w-auto gap-2"
@@ -371,12 +396,12 @@ export default function OrdersPage() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder={t('searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
+          className="ps-9"
         />
       </div>
 

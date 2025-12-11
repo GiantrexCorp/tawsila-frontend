@@ -106,12 +106,8 @@ export default function SetPasswordPage() {
         description: t('welcomeMessage', { name: userName }),
       });
 
-      // Redirect based on role
-      if (response.data.roles?.includes('shipping-agent')) {
-        router.push('/dashboard/orders');
-      } else {
-        router.push('/dashboard');
-      }
+      // Always redirect to dashboard - permissions control what users can access
+      router.push('/dashboard');
     } catch (error: unknown) {
       console.error("Set password error:", error);
 

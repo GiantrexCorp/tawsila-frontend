@@ -5,14 +5,14 @@ import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail, Phone, Clock, Calendar, Shield, Loader2, User as UserIcon } from "lucide-react";
 import { getCurrentUser, logout } from "@/lib/auth";
-import { changeOwnPassword, User } from "@/lib/services/users";
-import { fetchRoles, Role } from "@/lib/services/roles";
+import { changeOwnPassword, User, getRoleDisplayName } from "@/lib/services/users";
 import { toast } from "sonner";
+import { validatePassword, validatePasswordConfirmation } from "@/lib/validations";
 import { useRouter } from "@/i18n/routing";
 import {
   Dialog,
@@ -27,13 +27,13 @@ export default function ProfilePage() {
   const t = useTranslations('profile');
   const tCommon = useTranslations('common');
   const tUsers = useTranslations('users');
+  const tValidation = useTranslations('validation');
   const locale = useLocale();
   const router = useRouter();
   
   const [user, setUser] = useState<User | null>(null);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
 
   const [passwordFormData, setPasswordFormData] = useState({
     password: '',
@@ -45,47 +45,16 @@ export default function ProfilePage() {
     if (currentUser) {
       setUser(currentUser);
     }
-    loadRoles();
   }, []);
-
-  const loadRoles = async () => {
-    try {
-      const response = await fetchRoles();
-      setAvailableRoles(response.data);
-    } catch (error) {
-      console.error("Failed to load roles:", error);
-    }
-  };
 
   const getDisplayName = () => {
     if (!user) return '';
     return locale === 'ar' ? user.name_ar : user.name_en;
   };
 
-  const getUserInitials = () => {
-    const name = getDisplayName();
-    return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-  };
-
-  const getRoleDisplay = (roles: string[]) => {
-    if (!roles || roles.length === 0) return tUsers('noRole');
-    const roleName = roles[0];
-    
-    // Find role in available roles to get slug
-    const roleData = availableRoles.find(r => r.name === roleName);
-    
-    // Use slug based on locale, fallback to formatted role name
-    if (roleData) {
-      const slug = locale === 'ar' ? roleData.slug_ar : roleData.slug_en;
-      if (slug) {
-        return slug;
-      }
-    }
-    
-    // Fallback: format role name
-    return roleName.split('-').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
+  const getRoleDisplay = () => {
+    if (!user?.roles || user.roles.length === 0) return tUsers('noRole');
+    return getRoleDisplayName(user.roles[0], locale);
   };
 
   // Memoized handlers for password change
@@ -100,19 +69,20 @@ export default function ProfilePage() {
   const handleChangePassword = async () => {
     if (!user) return;
 
-    // Validation
-    if (!passwordFormData.password) {
-      toast.error(tUsers('passwordRequired'));
+    // Validate password
+    const passwordValidation = validatePassword(passwordFormData.password);
+    if (!passwordValidation.isValid) {
+      toast.error(tValidation(passwordValidation.message || 'passwordMinLength'));
       return;
     }
 
-    if (passwordFormData.password !== passwordFormData.confirmPassword) {
-      toast.error(tUsers('passwordMismatch'));
-      return;
-    }
-
-    if (passwordFormData.password.length < 6) {
-      toast.error(tUsers('passwordTooShort'));
+    // Validate password confirmation
+    const confirmValidation = validatePasswordConfirmation(
+      passwordFormData.password,
+      passwordFormData.confirmPassword
+    );
+    if (!confirmValidation.isValid) {
+      toast.error(tValidation(confirmValidation.message || 'passwordsDoNotMatch'));
       return;
     }
 
@@ -177,16 +147,17 @@ export default function ProfilePage() {
         <Card className="md:col-span-1">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <Avatar className="h-24 w-24">
-                <AvatarFallback className="bg-primary/10 text-primary font-semibold text-2xl">
-                  {getUserInitials()}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                userId={user.id}
+                name={getDisplayName()}
+                role={user.roles?.[0]?.name}
+                size="xl"
+              />
             </div>
             <CardTitle>{getDisplayName()}</CardTitle>
             <CardDescription className="flex items-center justify-center gap-2 mt-2">
               <Shield className="h-4 w-4" />
-              {getRoleDisplay(user.roles)}
+              {getRoleDisplay()}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

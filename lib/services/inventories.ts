@@ -221,3 +221,55 @@ export async function deleteInventory(id: number): Promise<void> {
   }
 }
 
+import { UserRoleObject } from './users';
+
+/**
+ * User type for inventory assignment (from /inventories/{id}/users endpoint)
+ * Note: API may return 'role' or 'roles' depending on the endpoint
+ */
+export interface InventoryUser {
+  id: number;
+  name?: string;
+  name_en: string;
+  name_ar: string;
+  email: string;
+  mobile: string;
+  type?: string;
+  role?: UserRoleObject[];
+  roles?: UserRoleObject[];  // Some endpoints return 'roles' instead of 'role'
+  assigned_at?: string;
+}
+
+/**
+ * Fetch users assigned to an inventory
+ */
+export async function fetchInventoryUsers(inventoryId: number): Promise<InventoryUser[]> {
+  const response = await apiRequest<InventoryUser[]>(`/inventories/${inventoryId}/users`, {
+    method: 'GET',
+  });
+
+  return response.data || [];
+}
+
+/**
+ * Sync (assign) users to an inventory
+ * This replaces all current user assignments with the provided user IDs
+ */
+export async function syncInventoryUsers(inventoryId: number, userIds: number[]): Promise<void> {
+  await apiRequest(`/inventories/${inventoryId}/sync-users`, {
+    method: 'POST',
+    body: JSON.stringify({ user_ids: userIds }),
+  });
+}
+
+/**
+ * Fetch all users available for assignment (type=user filter)
+ */
+export async function fetchUsersForAssignment(): Promise<InventoryUser[]> {
+  const response = await apiRequest<InventoryUser[]>('/get-users?filter[type]=user', {
+    method: 'GET',
+  });
+
+  return response.data || [];
+}
+

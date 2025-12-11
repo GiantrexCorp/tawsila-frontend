@@ -1,42 +1,52 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useRouter } from '@/i18n/routing';
-import { getCurrentUser } from '@/lib/auth';
+import { useUserPermissions } from './use-permissions';
+
+interface PagePermissionOptions {
+  requiredPermissions?: string[];
+  requireAll?: boolean; // If true, requires ALL permissions. If false (default), requires ANY permission
+}
 
 /**
  * Hook to check if user has permission to access a page
- * Redirects to 403 if user doesn't have required role
- * 
- * @param allowedRoles - Array of roles that can access the page
- * @returns hasPermission - null (checking), true (allowed), false (denied and redirecting)
+ * Uses live permissions from API (cached with React Query)
+ * Redirects to 403 if user doesn't have required permissions
+ *
+ * @param options - Configuration object with required permissions
+ * @returns hasPermission - null (loading), true (allowed), false (denied and redirecting)
  */
-export function usePagePermission(allowedRoles: string[]): boolean | null {
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+export function usePagePermission(options: PagePermissionOptions): boolean | null {
   const router = useRouter();
+  const { permissions: userPermissions, isLoading } = useUserPermissions();
 
-  useEffect(() => {
-    const currentUser = getCurrentUser();
-    
-    // If no roles are specified, allow access
-    if (!allowedRoles || allowedRoles.length === 0) {
-      setHasPermission(true);
-      return;
+  const { requiredPermissions = [], requireAll = false } = options;
+
+  // Calculate permission access
+  const hasPermissionAccess = useMemo(() => {
+    // If no permissions are specified, allow access
+    if (requiredPermissions.length === 0) {
+      return true;
     }
 
-    // Check if user has any of the allowed roles
-    const userHasPermission = currentUser?.roles?.some(role => 
-      allowedRoles.includes(role)
-    ) || false;
-
-    if (!userHasPermission) {
-      // User doesn't have permission, redirect to 403
-      router.push('/403');
-      setHasPermission(false);
+    if (requireAll) {
+      return requiredPermissions.every(p => userPermissions.includes(p));
     } else {
-      setHasPermission(true);
+      return requiredPermissions.some(p => userPermissions.includes(p));
     }
-  }, [allowedRoles, router]);
+  }, [requiredPermissions, requireAll, userPermissions]);
 
-  return hasPermission;
+  // Handle redirect when access is denied
+  useEffect(() => {
+    // Only redirect when we've finished loading and don't have access
+    if (!isLoading && !hasPermissionAccess) {
+      router.push('/403');
+    }
+  }, [isLoading, hasPermissionAccess, router]);
+
+  // Return null while loading
+  if (isLoading) {
+    return null;
+  }
+
+  return hasPermissionAccess;
 }
-
-

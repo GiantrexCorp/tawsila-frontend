@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
+import { PERMISSIONS } from "@/hooks/use-permissions";
 import {
   fetchVendor,
   updateVendor,
@@ -30,16 +31,24 @@ import {
 } from "@/lib/services/vendors";
 import { Separator } from "@/components/ui/separator";
 import { LocationPicker } from "@/components/ui/location-picker";
+import {
+  validateEgyptianMobile,
+  validateEmail,
+  validateRequired,
+  validateSelect,
+  validateCoordinates,
+} from "@/lib/validations";
 
 export default function EditVendorPage() {
   const t = useTranslations('organizations');
   const tCommon = useTranslations('common');
+  const tValidation = useTranslations('validation');
   const router = useRouter();
   const params = useParams();
   const vendorId = parseInt(params.id as string);
   
   // Check if user has permission
-  const hasPermission = usePagePermission(['super-admin', 'admin', 'manager', 'inventory-manager']);
+  const hasPermission = usePagePermission({ requiredPermissions: [PERMISSIONS.UPDATE_VENDOR] });
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -236,25 +245,64 @@ export default function EditVendorPage() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Validate required location fields
     const validationErrors: Record<string, string> = {};
-    
-    if (!formData.governorate_id || formData.governorate_id === 0) {
+
+    // Validate required text fields
+    if (!validateRequired(formData.name_en).isValid) {
+      validationErrors.name_en = tValidation('fieldRequired');
+    }
+    if (!validateRequired(formData.name_ar).isValid) {
+      validationErrors.name_ar = tValidation('fieldRequired');
+    }
+    if (!validateRequired(formData.contact_person).isValid) {
+      validationErrors.contact_person = tValidation('fieldRequired');
+    }
+    if (!validateRequired(formData.description_en).isValid) {
+      validationErrors.description_en = tValidation('fieldRequired');
+    }
+    if (!validateRequired(formData.description_ar).isValid) {
+      validationErrors.description_ar = tValidation('fieldRequired');
+    }
+    if (!validateRequired(formData.address).isValid) {
+      validationErrors.address = tValidation('fieldRequired');
+    }
+
+    // Validate mobile (Egyptian format)
+    const mobileValidation = validateEgyptianMobile(formData.mobile);
+    if (!mobileValidation.isValid) {
+      validationErrors.mobile = tValidation(mobileValidation.message || 'mobileInvalid');
+    }
+
+    // Validate email if provided (optional but must be valid format)
+    if (formData.email && formData.email.trim()) {
+      const emailValidation = validateEmail(formData.email);
+      if (!emailValidation.isValid) {
+        validationErrors.email = tValidation(emailValidation.message || 'emailInvalidFormat');
+      }
+    }
+
+    // Validate select fields
+    if (!validateSelect(formData.governorate_id).isValid) {
       validationErrors.governorate_id = t('selectGovernorate');
     }
-    
-    if (!formData.city_id || formData.city_id === 0) {
+    if (!validateSelect(formData.city_id).isValid) {
       validationErrors.city_id = t('selectCity');
     }
 
+    // Validate coordinates
     if (!formData.latitude || !formData.longitude) {
-      validationErrors.latitude = 'Please select a location on the map';
+      validationErrors.latitude = t('selectLocationOnMap');
+    } else {
+      const coordsValidation = validateCoordinates(formData.latitude, formData.longitude);
+      if (!coordsValidation.isValid) {
+        validationErrors.latitude = tValidation(coordsValidation.message || 'invalidCoordinates');
+      }
     }
 
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       toast.error(tCommon('error'), {
-        description: 'Please fill in all required fields',
+        description: t('pleaseFillRequiredFields'),
       });
       setIsSubmitting(false);
       return;
@@ -401,7 +449,7 @@ export default function EditVendorPage() {
                         onClick={() => logoInputRef.current?.click()}
                         disabled={isSubmitting}
                       >
-                        <Upload className="h-4 w-4 mr-2" />
+                        <Upload className="h-4 w-4 me-2" />
                         {t('chooseFile')}
                       </Button>
                     )}
@@ -465,7 +513,7 @@ export default function EditVendorPage() {
                         onClick={() => coverInputRef.current?.click()}
                         disabled={isSubmitting}
                       >
-                        <Upload className="h-4 w-4 mr-2" />
+                        <Upload className="h-4 w-4 me-2" />
                         {t('chooseFile')}
                       </Button>
                     )}
@@ -827,12 +875,12 @@ export default function EditVendorPage() {
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                   {tCommon('saving')}
                 </>
               ) : (
                 <>
-                  <Building2 className="mr-2 h-4 w-4" />
+                  <Building2 className="me-2 h-4 w-4" />
                   {t('updateVendor') || 'Update Vendor'}
                 </>
               )}

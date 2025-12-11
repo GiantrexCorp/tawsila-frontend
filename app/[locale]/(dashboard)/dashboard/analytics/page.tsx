@@ -11,8 +11,8 @@ export default function AnalyticsPage() {
   const t = useTranslations('analyticsPage');
   const tCommon = useTranslations('common');
   
-  // Check if user has permission to access analytics page
-  const hasPermission = usePagePermission(['super-admin', 'admin', 'manager', 'inventory-manager']);
+  // Check if user has permission to access analytics page (any authenticated user)
+  const hasPermission = usePagePermission({ requiredPermissions: [] });
 
   // Don't render page if permission check hasn't completed or user lacks permission
   if (hasPermission === null || hasPermission === false) {
@@ -123,7 +123,7 @@ export default function AnalyticsPage() {
             <CardHeader>
               <CardTitle>{t('topPerformingAgents')}</CardTitle>
               <CardDescription>
-                Based on total deliveries completed
+                {t('basedOnDeliveries')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -155,7 +155,7 @@ export default function AnalyticsPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-end">
                       <p className="text-lg font-bold">{agent.totalDeliveries}</p>
                       <p className="text-xs text-muted-foreground">{t('deliveries')}</p>
                     </div>
@@ -172,7 +172,7 @@ export default function AnalyticsPage() {
             <CardHeader>
               <CardTitle>{t('topSellingProducts')}</CardTitle>
               <CardDescription>
-                Best performing products this month
+                {t('bestProductsThisMonth')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -189,11 +189,11 @@ export default function AnalyticsPage() {
                       <div>
                         <p className="font-medium">{item.product.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {item.sold} units sold
+                          {t('unitsSold', { count: item.sold })}
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-end">
                       <p className="text-lg font-bold">{item.revenue.toLocaleString()}</p>
                       <p className="text-xs text-muted-foreground">{tCommon('egp')}</p>
                     </div>
@@ -211,7 +211,7 @@ export default function AnalyticsPage() {
               <CardHeader>
                 <CardTitle>{t('deliveryPerformance')}</CardTitle>
                 <CardDescription>
-                  Current month statistics
+                  {t('currentMonthStats')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -236,7 +236,7 @@ export default function AnalyticsPage() {
               <CardHeader>
                 <CardTitle>{t('revenueOverview')}</CardTitle>
                 <CardDescription>
-                  Revenue breakdown
+                  {t('revenueBreakdown')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">

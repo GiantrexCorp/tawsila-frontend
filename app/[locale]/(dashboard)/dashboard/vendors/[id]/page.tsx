@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
+import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
 import {
   fetchVendor,
   type Vendor
@@ -40,7 +41,8 @@ export default function ViewVendorPage() {
   const params = useParams();
   const vendorId = parseInt(params.id as string);
 
-  const hasPermission = usePagePermission(['super-admin', 'admin', 'manager', 'inventory-manager']);
+  const hasPermission = usePagePermission({ requiredPermissions: [PERMISSIONS.SHOW_VENDOR] });
+  const { hasPermission: canUpdateVendor } = useHasPermission(PERMISSIONS.UPDATE_VENDOR);
 
   const [isLoading, setIsLoading] = useState(true);
   const [vendor, setVendor] = useState<Vendor | null>(null);
@@ -142,15 +144,17 @@ export default function ViewVendorPage() {
                   <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{displayName}</h1>
                   <p className="text-muted-foreground mt-1 max-w-xl">{displayDescription}</p>
                 </div>
-                <div className="flex gap-2 shrink-0">
-                <Button
-                  onClick={() => router.push(`/dashboard/vendors/${vendor.id}/edit`)}
-                    className="gap-2"
-                >
-                  <Edit className="h-4 w-4" />
-                  {tCommon('edit')}
-                </Button>
-                </div>
+                {canUpdateVendor && (
+                  <div className="flex gap-2 shrink-0">
+                    <Button
+                      onClick={() => router.push(`/dashboard/vendors/${vendor.id}/edit`)}
+                      className="gap-2"
+                    >
+                      <Edit className="h-4 w-4" />
+                      {tCommon('edit')}
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Quick Info Pills */}
@@ -246,7 +250,7 @@ export default function ViewVendorPage() {
               className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
             >
               <ExternalLink className="h-3 w-3" />
-              Open in Google Maps
+              {tCommon('openInGoogleMaps')}
             </a>
           )}
         </div>
@@ -272,7 +276,7 @@ export default function ViewVendorPage() {
                   size="icon"
                   className="h-8 w-8 shrink-0"
                   onClick={() => setShowSecretKey(!showSecretKey)}
-                  title={showSecretKey ? 'Hide secret key' : 'Show secret key'}
+                  title={showSecretKey ? tCommon('hideSecretKey') : tCommon('showSecretKey')}
                 >
                   {showSecretKey ? (
                     <EyeOff className="h-3.5 w-3.5" />
@@ -286,7 +290,7 @@ export default function ViewVendorPage() {
                   className="h-8 w-8 shrink-0"
                   onClick={() => vendor.secret_key && copySecretKey(vendor.secret_key)}
                   disabled={!vendor.secret_key}
-                  title="Copy secret key"
+                  title={tCommon('copySecretKey')}
                 >
                   <Copy className="h-3.5 w-3.5" />
                 </Button>

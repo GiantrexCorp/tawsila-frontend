@@ -35,7 +35,7 @@ export default function VendorProfilePage() {
   const locale = useLocale();
   const router = useRouter();
 
-  const hasPermission = usePagePermission(['vendor']);
+  const hasPermission = usePagePermission({ requiredPermissions: [] });
 
   const [isLoading, setIsLoading] = useState(true);
   const [vendor, setVendor] = useState<Vendor | null>(null);
@@ -59,8 +59,8 @@ export default function VendorProfilePage() {
         try {
           vendorId = await getCurrentUserVendorId();
         } catch {
-          toast.error('Vendor ID Not Found', {
-            description: 'Please contact your administrator. The backend needs to implement /vendors/me endpoint or include vendor_id in the login response.',
+          toast.error(t('vendorIdNotFound'), {
+            description: t('vendorIdNotFoundDesc'),
             duration: 10000,
           });
           setIsLoading(false);
@@ -70,7 +70,7 @@ export default function VendorProfilePage() {
         const fetchedVendor = await fetchVendor(vendorId);
         setVendor(fetchedVendor);
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Please contact your administrator.';
+        const message = error instanceof Error ? error.message : tCommon('contactAdmin');
         toast.error(t('errorLoadingVendor'), { description: message });
       } finally {
         setIsLoading(false);
@@ -252,7 +252,7 @@ export default function VendorProfilePage() {
               className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
             >
               <ExternalLink className="h-3 w-3" />
-              Open in Google Maps
+              {tCommon('openInGoogleMaps')}
             </a>
           )}
         </div>

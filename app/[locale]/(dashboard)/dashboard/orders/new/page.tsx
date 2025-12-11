@@ -9,17 +9,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, Package, CreditCard, FileText, ShoppingCart, Plus, Trash2, Truck, User, CheckCircle2, X } from "lucide-react";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
+import { PERMISSIONS } from "@/hooks/use-permissions";
+import { validateEgyptianMobile, validateRequired } from "@/lib/validations";
 import { createOrder, type OrderItem, type CreateOrderRequest } from "@/lib/services/orders";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getCurrentUser } from "@/lib/auth";
 
 export default function CreateOrderPage() {
   const t = useTranslations('orderCreate');
   const tCommon = useTranslations('common');
-  const currentUser = getCurrentUser();
-  const isSuperAdmin = currentUser?.roles?.includes('super-admin');
+  const tValidation = useTranslations('validation');
 
-  const hasPermission = usePagePermission(['super-admin', 'vendor']);
+  const hasPermission = usePagePermission({ requiredPermissions: [PERMISSIONS.CREATE_ORDER] });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastCreatedOrder, setLastCreatedOrder] = useState<{ order_number: string } | null>(null);
@@ -83,17 +83,21 @@ export default function CreateOrderPage() {
 
     try {
       // Validate customer fields
-      if (!formData.customer.name?.trim()) {
+      if (!validateRequired(formData.customer.name || '').isValid) {
         toast.error(t('customerNameRequired'));
         setIsSubmitting(false);
         return;
       }
-      if (!formData.customer.mobile?.trim()) {
-        toast.error(t('customerMobileRequired'));
+
+      // Validate customer mobile (Egyptian format)
+      const mobileValidation = validateEgyptianMobile(formData.customer.mobile || '');
+      if (!mobileValidation.isValid) {
+        toast.error(tValidation(mobileValidation.message || 'mobileInvalid'));
         setIsSubmitting(false);
         return;
       }
-      if (!formData.customer.address?.trim()) {
+
+      if (!validateRequired(formData.customer.address || '').isValid) {
         toast.error(t('customerAddressRequired'));
         setIsSubmitting(false);
         return;
@@ -136,10 +140,7 @@ export default function CreateOrderPage() {
         shipping_cost: formData.shipping_cost || 0,
       };
 
-      // Remove internal_notes if not super-admin
-      if (!isSuperAdmin) {
-        delete orderData.internal_notes;
-      }
+      // Internal notes are now allowed for anyone who can create orders
 
       // Don't include vendor_id - backend will automatically associate with vendor user's vendor
       const createdOrder = await createOrder(orderData);
@@ -378,7 +379,7 @@ export default function CreateOrderPage() {
                       {t('pricePerUnit')} ({tCommon('egpSymbol')})
                     </Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{tCommon('egpSymbol')}</span>
+                      <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{tCommon('egpSymbol')}</span>
                       <Input
                         id={`price_${index}`}
                         type="number"
@@ -391,13 +392,13 @@ export default function CreateOrderPage() {
                           handleItemChange(index, 'price', val);
                           handleItemChange(index, 'unit_price', val);
                         }}
-                        className="pl-10"
+                        className="ps-10"
                         required
                       />
                     </div>
                   </div>
                   <div className="col-span-12 md:col-span-2 flex items-end gap-2">
-                    <div className="flex-1 text-right">
+                    <div className="flex-1 text-end">
                       <p className="text-xs text-muted-foreground">{t('itemTotal')}</p>
                       <p className="font-semibold">
                         {tCommon('egpSymbol')} {(item.quantity * (item.price || item.unit_price || 0)).toFixed(2)}
@@ -472,7 +473,7 @@ export default function CreateOrderPage() {
               <div className="space-y-2">
                 <Label htmlFor="shipping_cost">{t('shippingCost')}</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{tCommon('egpSymbol')}</span>
+                  <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{tCommon('egpSymbol')}</span>
                   <Input
                     id="shipping_cost"
                     type="number"
@@ -480,7 +481,7 @@ export default function CreateOrderPage() {
                     step="0.01"
                     value={formData.shipping_cost}
                     readOnly
-                    className="pl-10 bg-muted"
+                    className="ps-10 bg-muted"
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">{t('shippingCostFixed')}</p>
@@ -542,19 +543,17 @@ export default function CreateOrderPage() {
               />
               <p className="text-xs text-muted-foreground">{t('vendorNotesHelp')}</p>
             </div>
-            {isSuperAdmin && (
-              <div className="space-y-2">
-                <Label htmlFor="internal_notes">{t('internalNotes')}</Label>
-                <textarea
-                  id="internal_notes"
-                  className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder={t('internalNotesPlaceholder')}
-                  value={formData.internal_notes}
-                  onChange={(e) => handleInputChange('internal_notes', e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">{t('internalNotesHelp')}</p>
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="internal_notes">{t('internalNotes')}</Label>
+              <textarea
+                id="internal_notes"
+                className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder={t('internalNotesPlaceholder')}
+                value={formData.internal_notes}
+                onChange={(e) => handleInputChange('internal_notes', e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">{t('internalNotesHelp')}</p>
+            </div>
           </CardContent>
         </Card>
 

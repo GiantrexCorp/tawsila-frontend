@@ -25,6 +25,7 @@ import {
   UserPlus
 } from "lucide-react";
 import { usePagePermission } from "@/hooks/use-page-permission";
+import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
 import { fetchOrder, acceptOrder, rejectOrder, assignPickupAgent, fetchOrderAssignments, type Order, type OrderItem, type Customer, type Assignment } from "@/lib/services/orders";
 import { fetchInventories, fetchCurrentInventory, type Inventory } from "@/lib/services/inventories";
 import { fetchActiveAgents, type Agent } from "@/lib/services/agents";
@@ -46,16 +47,34 @@ import { QRCodeSVG } from "qrcode.react";
 export default function OrderDetailPage() {
   const t = useTranslations('orders');
   const tCommon = useTranslations('common');
+  const tApp = useTranslations('app');
   const locale = useLocale();
   const router = useRouter();
   const params = useParams();
   const orderId = parseInt(params.id as string);
   const currentUser = getCurrentUser();
-  const isVendor = currentUser?.roles?.includes('vendor');
-  const canAssignAgent = !isVendor && (currentUser?.roles?.includes('super-admin') || currentUser?.roles?.includes('inventory-manager'));
+  const isVendor = currentUser?.roles?.some(r => r.name === 'vendor');
 
   // Check if user has permission to access order detail page
-  const hasPermission = usePagePermission(['super-admin', 'inventory-manager', 'vendor']);
+  // Allow access if user has ANY order-related permission
+  const hasPermission = usePagePermission({
+    requiredPermissions: [
+      PERMISSIONS.LIST_ORDERS,
+      PERMISSIONS.CREATE_ORDER,
+      PERMISSIONS.ACCEPT_ORDER,
+      PERMISSIONS.SCAN_ORDER_INVENTORY,
+      PERMISSIONS.SCAN_ORDER_DELIVERY,
+      PERMISSIONS.ASSIGN_PICKUP_AGENT,
+      PERMISSIONS.ASSIGN_DELIVERY_AGENT,
+      PERMISSIONS.PICKUP_ORDER_FROM_VENDOR,
+      PERMISSIONS.PICKUP_ORDER_FROM_INVENTORY,
+      PERMISSIONS.VERIFY_ORDER_OTP,
+    ]
+  });
+
+  // Permission checks for specific actions
+  const { hasPermission: canAcceptOrderPerm } = useHasPermission(PERMISSIONS.ACCEPT_ORDER);
+  const { hasPermission: canAssignPickupAgentPerm } = useHasPermission(PERMISSIONS.ASSIGN_PICKUP_AGENT);
 
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,7 +98,7 @@ export default function OrderDetailPage() {
     const loadOrder = async () => {
       if (!orderId || isNaN(orderId)) {
         toast.error(t('errorLoadingOrder'), {
-          description: 'Invalid order ID',
+          description: tCommon('invalidOrderId'),
         });
         router.push('/dashboard/orders');
         return;
@@ -262,9 +281,9 @@ export default function OrderDetailPage() {
   const customer: Customer = orderWithRelations.customer || { name: '', mobile: '', address: '' };
   const items = orderWithRelations.items || [];
   const vendor: { id?: number; name_en?: string; name_ar?: string; name?: string; [key: string]: unknown } = orderWithRelations.vendor || {};
-  const canAccept = order.status === 'pending' && !isVendor;
+  const canAccept = order.status === 'pending' && canAcceptOrderPerm;
   // Can assign pickup agent only if order is accepted or confirmed
-  const canAssignPickupAgent = canAssignAgent && (order.status === 'accepted' || order.status === 'confirmed');
+  const canAssignPickupAgent = canAssignPickupAgentPerm && (order.status === 'accepted' || order.status === 'confirmed');
 
   return (
     <div className="space-y-6 pb-8">
@@ -389,7 +408,7 @@ export default function OrderDetailPage() {
                           <UserPlus className="h-4 w-4 text-muted-foreground" />
                           <p className="text-xs font-medium text-muted-foreground">{t('assignedTo')}</p>
                         </div>
-                        <div className="pl-6 space-y-1">
+                        <div className="ps-6 space-y-1">
                           <p className="font-medium">
                             {locale === 'ar' && assignment.assigned_to.name_ar
                               ? assignment.assigned_to.name_ar
@@ -429,7 +448,7 @@ export default function OrderDetailPage() {
                           <UserPlus className="h-4 w-4 text-muted-foreground" />
                           <p className="text-xs font-medium text-muted-foreground">{t('assignedTo')}</p>
                         </div>
-                        <div className="pl-6">
+                        <div className="ps-6">
                           <p className="text-sm text-muted-foreground italic">{t('notAssigned')}</p>
                         </div>
                       </div>
@@ -442,7 +461,7 @@ export default function OrderDetailPage() {
                           <User className="h-4 w-4 text-muted-foreground" />
                           <p className="text-xs font-medium text-muted-foreground">{t('assignedBy')}</p>
                         </div>
-                        <div className="pl-6 space-y-1">
+                        <div className="ps-6 space-y-1">
                           <p className="font-medium">
                             {locale === 'ar' && assignment.assigned_by.name_ar
                               ? assignment.assigned_by.name_ar
@@ -462,7 +481,7 @@ export default function OrderDetailPage() {
                           <User className="h-4 w-4 text-muted-foreground" />
                           <p className="text-xs font-medium text-muted-foreground">{t('assignedBy')}</p>
                         </div>
-                        <div className="pl-6">
+                        <div className="ps-6">
                           <p className="text-sm text-muted-foreground italic">{t('notAssigned')}</p>
                         </div>
                       </div>
@@ -730,7 +749,7 @@ export default function OrderDetailPage() {
                       </div>
                     </div>
                     {item.unit_price && (
-                      <div className="text-right">
+                      <div className="text-end">
                         <p className="text-xs text-muted-foreground">{t('itemTotal')}</p>
                         <p className="font-semibold">{tCommon('egpSymbol')} {(item.quantity * item.unit_price).toFixed(2)}</p>
                       </div>
@@ -1122,11 +1141,11 @@ export default function OrderDetailPage() {
             {/* Vertical line on the left */}
             <div className="absolute left-0 top-0 bottom-0 w-1 bg-gray-900"></div>
             
-            <div className="p-6 pl-8 space-y-4">
+            <div className="p-6 ps-8 space-y-4">
               {/* Header with LABEL, ORDER NUMBER, QR Code, and Tawsila */}
               <div className="flex items-start justify-between border-b-2 border-gray-900 pb-3">
                 <div className="flex-1">
-                  <h2 className="text-2xl font-bold mb-2 uppercase tracking-wide text-gray-900" style={{ fontFamily: 'sans-serif' }}>LABEL</h2>
+                  <h2 className="text-2xl font-bold mb-2 uppercase tracking-wide text-gray-900" style={{ fontFamily: 'sans-serif' }}>{t('label')}</h2>
                   <div className="mt-2">
                     <p className="text-xs text-gray-600 uppercase mb-1">{t('orderNumber')}</p>
                     <div className="font-bold text-3xl font-mono tracking-wider text-gray-900 leading-tight">
@@ -1136,7 +1155,7 @@ export default function OrderDetailPage() {
                     </div>
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-3 ml-4">
+                <div className="flex flex-col items-end gap-3 ms-4">
                   {order.qr_code && (
                     <div className="flex-shrink-0">
                       <QRCodeSVG
@@ -1147,10 +1166,10 @@ export default function OrderDetailPage() {
                       />
                     </div>
                   )}
-                  <div className="flex flex-col items-end text-right">
-                    <div className="text-gray-400 text-lg font-semibold opacity-60" style={{ fontFamily: 'sans-serif' }}>Tawsila</div>
+                  <div className="flex flex-col items-end text-end">
+                    <div className="text-gray-400 text-lg font-semibold opacity-60" style={{ fontFamily: 'sans-serif' }}>{tApp('name')}</div>
                     <div className="text-gray-400 text-xs opacity-60 leading-tight" style={{ maxWidth: '140px', wordWrap: 'break-word', fontFamily: 'sans-serif' }}>
-                      Smart Inventory & Delivery Management
+                      {tApp('tagline')}
                     </div>
                   </div>
                 </div>
@@ -1192,7 +1211,7 @@ export default function OrderDetailPage() {
                     {items.slice(0, 5).map((item: OrderItem, index: number) => (
                       <div key={index} className="flex justify-between text-gray-700">
                         <span className="flex-1">{item.product_name || `${t('product')} ${index + 1}`}</span>
-                        <span className="font-semibold ml-2">Qty: {item.quantity}</span>
+                        <span className="font-semibold ms-2">{tCommon('qty')}: {item.quantity}</span>
                       </div>
                     ))}
                     {items.length > 5 && (

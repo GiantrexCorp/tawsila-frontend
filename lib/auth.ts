@@ -3,10 +3,11 @@
  */
 
 import { apiRequest, setToken, removeToken, getToken } from './api';
+import { UserRoleObject } from './services/users';
 
 export interface User {
   id: number;
-  name: string;
+  name?: string;
   name_en: string;
   name_ar: string;
   email: string;
@@ -15,8 +16,8 @@ export interface User {
   last_active: string | null;
   created_at: string;
   updated_at: string;
-  roles: string[];
-  permissions?: string[];
+  roles: UserRoleObject[];
+  roles_permissions: string[]; // Permissions from all assigned roles
   // For vendor users, the backend should include vendor_id in the login response
   vendor_id?: number;
   organization_id?: number; // Alternative field name some backends use
@@ -198,3 +199,19 @@ export function isAuthenticated(): boolean {
  * Export getToken for public use
  */
 export { getToken } from './api';
+
+/**
+ * Helper to check if current user has a specific role
+ */
+export function currentUserHasRole(roleName: string): boolean {
+  const user = getCurrentUser();
+  return user?.roles?.some(r => r.name === roleName) ?? false;
+}
+
+/**
+ * Helper to get current user's role name
+ */
+export function getCurrentUserRoleName(): string | undefined {
+  const user = getCurrentUser();
+  return user?.roles?.[0]?.name;
+}

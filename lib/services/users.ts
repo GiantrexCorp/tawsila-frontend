@@ -8,13 +8,23 @@
 import { apiRequest } from '../api';
 
 /**
+ * Role object returned from API
+ */
+export interface UserRoleObject {
+  id: number;
+  name: string;
+  slug_en: string | null;
+  slug_ar: string | null;
+}
+
+/**
  * User entity representing a system user
  */
 export interface User {
   /** Unique user identifier */
   id: number;
   /** Legacy name field (for backwards compatibility) */
-  name: string;
+  name?: string;
   /** English display name */
   name_en: string;
   /** Arabic display name */
@@ -31,10 +41,39 @@ export interface User {
   created_at: string;
   /** Last update timestamp */
   updated_at: string;
-  /** Assigned role names (e.g., ['super-admin', 'inventory-manager']) */
-  roles: string[];
+  /** Assigned roles with localized slugs */
+  roles: UserRoleObject[];
   /** Aggregated permissions from assigned roles */
-  permissions?: string[];
+  roles_permissions?: string[];
+}
+
+/**
+ * Helper to get role name for checking (e.g., 'shipping-agent')
+ */
+export function getUserRoleName(user: User | null | undefined): string | undefined {
+  return user?.roles?.[0]?.name;
+}
+
+/**
+ * Helper to check if user has a specific role
+ */
+export function userHasRole(user: User | null | undefined, roleName: string): boolean {
+  return user?.roles?.some(r => r.name === roleName) ?? false;
+}
+
+/**
+ * Helper to get localized role display name
+ */
+export function getRoleDisplayName(role: UserRoleObject | undefined, locale: string): string {
+  if (!role) return '';
+
+  const localizedSlug = locale === 'ar' ? role.slug_ar : role.slug_en;
+  if (localizedSlug) return localizedSlug;
+
+  // Fallback: format role name
+  return role.name.split('-').map(word =>
+    word.charAt(0).toUpperCase() + word.slice(1)
+  ).join(' ');
 }
 
 export interface PaginationLinks {
@@ -98,7 +137,7 @@ function buildFilterQuery(filters: UserFilters): string {
  * Fetch users with pagination and filters
  */
 export async function fetchUsers(
-  page: number = 1, 
+  page: number = 1,
   perPage: number = 50,
   filters: UserFilters = {}
 ): Promise<UsersResponse> {
@@ -107,11 +146,14 @@ export async function fetchUsers(
     method: 'GET',
   });
 
-  // The API returns the full paginated response directly
+  // apiRequest returns the raw JSON response which has data, links, meta at root level
+  // Cast response to the expected shape since apiRequest returns ApiResponse<T>
+  const rawResponse = response as unknown as UsersResponse;
+
   return {
-    data: response.data?.data || [],
-    links: response.data?.links || { first: '', last: '', prev: null, next: null },
-    meta: response.data?.meta || {
+    data: rawResponse.data || [],
+    links: rawResponse.links || { first: '', last: '', prev: null, next: null },
+    meta: rawResponse.meta || {
       current_page: 1,
       from: 0,
       last_page: 1,
@@ -245,5 +287,37 @@ export async function assignUserRole(
   });
 
   return response;
+}
+
+/**
+ * Current user profile with permissions
+ */
+export interface CurrentUserProfile {
+  id: number;
+  name_en: string;
+  name_ar: string;
+  mobile: string;
+  email: string;
+  status: 'active' | 'inactive';
+  last_active: string | null;
+  created_at: string;
+  updated_at: string;
+  roles: string[];
+  roles_permissions: string[];
+}
+
+/**
+ * Fetch current user profile (includes live permissions)
+ */
+export async function fetchCurrentUserProfile(): Promise<CurrentUserProfile> {
+  const response = await apiRequest<CurrentUserProfile>('/profile', {
+    method: 'GET',
+  });
+
+  if (!response.data) {
+    throw new Error('Failed to fetch profile');
+  }
+
+  return response.data;
 }
 

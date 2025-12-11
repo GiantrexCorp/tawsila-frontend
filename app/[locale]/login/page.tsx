@@ -92,19 +92,13 @@ export default function LoginPage() {
       // Normal login flow (status_code 200)
       if (response.data) {
         const userName = response.data.name_en || response.data.name_ar || response.data.email;
-        
+
         toast.success(t('loginSuccess'), {
           description: t('welcomeBack', { name: userName }),
         });
 
-        // Redirect based on role
-        if (response.data.roles?.includes('shipping-agent')) {
-          router.push('/dashboard/orders');
-        } else if (response.data.roles?.includes('vendor')) {
-          router.push('/dashboard/vendor/profile');
-        } else {
-          router.push('/dashboard');
-        }
+        // Always redirect to dashboard - permissions control what users can access
+        router.push('/dashboard');
       }
     } catch (error: unknown) {
       handleLoginError(error);
@@ -163,12 +157,7 @@ export default function LoginPage() {
                 )}
               </div>
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">{t('password')}</Label>
-                  <Link href="#" className="text-sm text-primary hover:underline">
-                    {t('forgotPassword')}
-                  </Link>
-                </div>
+                <Label htmlFor="password">{t('password')}</Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -178,12 +167,12 @@ export default function LoginPage() {
                     onChange={handleInputChange}
                     disabled={isLoading}
                     required
-                    className={errors.password ? "border-red-500 pr-10" : "pr-10"}
+                    className={errors.password ? "border-red-500 pe-10" : "pe-10"}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                     disabled={isLoading}
                   >
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -196,7 +185,7 @@ export default function LoginPage() {
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="me-2 h-4 w-4 animate-spin" />
                     {t('signingIn')}
                   </>
                 ) : (
