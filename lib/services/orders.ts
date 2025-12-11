@@ -55,6 +55,10 @@ export interface Order {
   updated_at: string;
   /** Associated customer information */
   customer?: Customer;
+  /** Whether current user can accept this order */
+  can_accept?: boolean;
+  /** Whether current user can reject this order */
+  can_reject?: boolean;
 }
 
 /**

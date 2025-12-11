@@ -65,7 +65,6 @@ export default function OrdersPage() {
 
   // Permission checks for specific actions
   const { hasPermission: canCreateOrder } = useHasPermission(PERMISSIONS.CREATE_ORDER);
-  const { hasPermission: canAcceptOrder } = useHasPermission(PERMISSIONS.ACCEPT_ORDER);
 
   // Fetch orders on mount
   useEffect(() => {
@@ -262,8 +261,8 @@ export default function OrdersPage() {
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {ordersList.map((order) => {
           const customer: Customer = order.customer || { name: '', mobile: '', address: '' };
-          const canAccept = order.status === 'pending' && canAcceptOrder;
-          const canReject = order.status === 'pending' && canAcceptOrder;
+          const canAccept = order.can_accept === true;
+          const canReject = order.can_reject === true;
 
           return (
             <div
