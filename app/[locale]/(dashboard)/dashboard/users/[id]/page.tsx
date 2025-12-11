@@ -67,12 +67,14 @@ export default function ViewUserPage() {
   const [user, setUser] = useState<User | null>(null);
   const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
 
-  // Check if user is a shipping agent and fetch their inventories
+  // Check if user is a shipping agent or inventory manager and fetch their inventories
   const isShippingAgent = user ? userHasRole(user, 'shipping-agent') : false;
+  const isInventoryManager = user ? userHasRole(user, 'inventory-manager') : false;
+  const shouldShowInventories = isShippingAgent || isInventoryManager;
   const { data: userInventories = [], isLoading: isLoadingInventories } = useQuery<Inventory[]>({
     queryKey: ['user-inventories', userId],
     queryFn: () => fetchUserInventories(userId),
-    enabled: isShippingAgent && !!userId,
+    enabled: shouldShowInventories && !!userId,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
@@ -436,8 +438,8 @@ export default function ViewUserPage() {
           </CardContent>
         </Card>
 
-        {/* Assigned Inventories Card - Only for Shipping Agents */}
-        {isShippingAgent && (
+        {/* Assigned Inventories Card - Only for Shipping Agents and Inventory Managers */}
+        {shouldShowInventories && (
           <Card className="hover:border-border transition-colors md:col-span-2 lg:col-span-3">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">

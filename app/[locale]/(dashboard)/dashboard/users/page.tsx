@@ -64,12 +64,14 @@ function UserCard({
   getLocalizedRoleDisplay,
 }: UserCardProps) {
   const isDeliveryAgent = userHasRole(user, 'shipping-agent');
+  const isInventoryManager = userHasRole(user, 'inventory-manager');
+  const shouldShowInventories = isDeliveryAgent || isInventoryManager;
   
-  // Fetch inventories for delivery agents
+  // Fetch inventories for delivery agents and inventory managers
   const { data: userInventories = [] } = useQuery<Inventory[]>({
     queryKey: ['user-inventories', user.id],
     queryFn: () => fetchUserInventories(user.id),
-    enabled: isDeliveryAgent,
+    enabled: shouldShowInventories,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
@@ -145,8 +147,8 @@ function UserCard({
             <span dir="ltr">{user.mobile}</span>
           </div>
           
-          {/* Inventories for Delivery Agents */}
-          {isDeliveryAgent && userInventories.length > 0 && (
+          {/* Inventories for Delivery Agents and Inventory Managers */}
+          {shouldShowInventories && userInventories.length > 0 && (
             <div className="flex items-start gap-2.5 text-sm text-muted-foreground pt-1">
               <Warehouse className="h-4 w-4 shrink-0 text-muted-foreground/60 mt-0.5" />
               <div className="flex-1 min-w-0">
@@ -170,7 +172,7 @@ function UserCard({
               </div>
             </div>
           )}
-          {isDeliveryAgent && userInventories.length === 0 && (
+          {shouldShowInventories && userInventories.length === 0 && (
             <div className="flex items-center gap-2.5 text-xs text-muted-foreground/70 pt-1">
               <Warehouse className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
               <span>{t('noAssignedInventories')}</span>
