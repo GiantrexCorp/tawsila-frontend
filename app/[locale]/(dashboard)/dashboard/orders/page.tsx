@@ -44,7 +44,7 @@ export default function OrdersPage() {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const currentUser = getCurrentUser();
-  const isShippingAgent = currentUser?.roles?.includes('shipping-agent');
+  const isShippingAgent = currentUser?.roles?.some(r => r.name === 'shipping-agent');
 
   // Check if user has permission to access orders page
   // Allow access if user has ANY order-related permission

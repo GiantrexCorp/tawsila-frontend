@@ -5,25 +5,48 @@ import { useTranslations, useLocale } from "next-intl";
 import { useParams } from "next/navigation";
 import { useRouter } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import {
   ArrowLeft,
   Loader2,
   Warehouse,
   Phone,
+  Mail,
   MapPin,
   Edit,
   Calendar,
   ExternalLink,
   Hash,
+  Users,
+  UserPlus,
+  Save,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
 import {
   fetchInventory,
-  type Inventory
+  type Inventory,
+  type InventoryUser,
 } from "@/lib/services/inventories";
+import {
+  useInventoryUsers,
+  useUsersForAssignment,
+  useSyncInventoryUsers,
+} from "@/hooks/queries";
 import { LocationPicker } from "@/components/ui/location-picker";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 export default function ViewInventoryPage() {
   const t = useTranslations('inventory');
@@ -35,9 +58,20 @@ export default function ViewInventoryPage() {
 
   const hasPermission = usePagePermission({ requiredPermissions: [PERMISSIONS.SHOW_INVENTORY] });
   const { hasPermission: canUpdateInventory } = useHasPermission(PERMISSIONS.UPDATE_INVENTORY);
+  const { hasPermission: canAssignUsers } = useHasPermission(PERMISSIONS.ASSIGN_INVENTORY_USERS);
 
   const [isLoading, setIsLoading] = useState(true);
   const [inventory, setInventory] = useState<Inventory | null>(null);
+
+  // Assign users dialog state
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+
+  // React Query hooks for inventory users
+  const { data: assignedUsers = [], isLoading: isLoadingAssignedUsers } = useInventoryUsers(inventoryId);
+  const { data: availableUsers = [], isLoading: isLoadingAvailableUsers } = useUsersForAssignment();
+  const syncUsersMutation = useSyncInventoryUsers();
 
   useEffect(() => {
     const loadInventory = async () => {
@@ -57,6 +91,69 @@ export default function ViewInventoryPage() {
       loadInventory();
     }
   }, [inventoryId, t, router, hasPermission]);
+
+  // Open assign dialog and pre-select currently assigned users
+  const handleOpenAssignDialog = () => {
+    setSelectedUserIds(assignedUsers.map(u => u.id));
+    setUserSearchQuery("");
+    setShowAssignDialog(true);
+  };
+
+  // Toggle user selection
+  const handleToggleUser = (userId: number) => {
+    setSelectedUserIds(prev =>
+      prev.includes(userId)
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
+  // Save user assignments
+  const handleSaveAssignments = async () => {
+    try {
+      await syncUsersMutation.mutateAsync({
+        inventoryId,
+        userIds: selectedUserIds,
+      });
+      toast.success(t('usersAssignedSuccess'));
+      setShowAssignDialog(false);
+    } catch {
+      toast.error(t('usersAssignedError'));
+    }
+  };
+
+  // Filter available users by search query
+  const filteredUsers = availableUsers.filter(user => {
+    if (!userSearchQuery) return true;
+    const query = userSearchQuery.toLowerCase();
+    return (
+      user.name_en.toLowerCase().includes(query) ||
+      user.name_ar.toLowerCase().includes(query) ||
+      user.email.toLowerCase().includes(query) ||
+      user.mobile.includes(query)
+    );
+  });
+
+  // Get user display name based on locale
+  const getUserDisplayName = (user: InventoryUser) => {
+    return locale === 'ar' ? user.name_ar : user.name_en;
+  };
+
+  // Get role display name based on locale
+  // API may return 'role' or 'roles' depending on the endpoint
+  const getRoleDisplayName = (user: InventoryUser) => {
+    const role = user.role?.[0] || user.roles?.[0];
+    if (!role) return t('noRole');
+
+    // Use localized slug if available, otherwise format the role name
+    const localizedSlug = locale === 'ar' ? role.slug_ar : role.slug_en;
+    if (localizedSlug) return localizedSlug;
+
+    // Fallback: format role name (e.g., "inventory-manager" -> "Inventory Manager")
+    return role.name.split('-').map(word =>
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  };
 
   if (hasPermission === null || hasPermission === false || isLoading || !inventory) {
     return (
@@ -280,6 +377,191 @@ export default function ViewInventoryPage() {
         )}
 
       </div>
+
+      {/* Assigned Users Section */}
+      <div className="rounded-2xl border border-border/50 bg-card p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+              <Users className="h-4 w-4 text-indigo-500" />
+            </div>
+            <div>
+              <h3 className="font-semibold">{t('assignedUsers')}</h3>
+              <p className="text-xs text-muted-foreground">
+                {t('assignedUsersCount', { count: assignedUsers.length })}
+              </p>
+            </div>
+          </div>
+          {canAssignUsers && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleOpenAssignDialog}
+              className="gap-2"
+            >
+              <UserPlus className="h-4 w-4" />
+              {t('manageUsers')}
+            </Button>
+          )}
+        </div>
+
+        {isLoadingAssignedUsers ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : assignedUsers.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Users className="h-10 w-10 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">{t('noAssignedUsers')}</p>
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {assignedUsers.map((user) => (
+              <div
+                key={user.id}
+                className="flex flex-col p-4 rounded-xl border bg-card hover:shadow-md transition-shadow"
+              >
+                {/* Header: Avatar + Name + Role */}
+                <div className="flex items-center gap-3 mb-3">
+                  <UserAvatar
+                    userId={user.id}
+                    name={getUserDisplayName(user)}
+                    role={user.role?.[0]?.name || user.roles?.[0]?.name}
+                    size="md"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{getUserDisplayName(user)}</p>
+                    <Badge variant="secondary" className="text-[10px] mt-1">
+                      {getRoleDisplayName(user)}
+                    </Badge>
+                  </div>
+                </div>
+                {/* Contact Info */}
+                <div className="space-y-1.5 text-xs text-muted-foreground border-t pt-3">
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{user.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-3.5 w-3.5 shrink-0" />
+                    <span dir="ltr">{user.mobile}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Assign Users Dialog */}
+      <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>{t('assignUsersTitle')}</DialogTitle>
+            <DialogDescription>
+              {t('assignUsersDescription')}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Search Input */}
+            <Input
+              placeholder={t('searchUsers')}
+              value={userSearchQuery}
+              onChange={(e) => setUserSearchQuery(e.target.value)}
+            />
+
+            {/* Selected count */}
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">
+                {t('selectedUsers', { count: selectedUserIds.length })}
+              </span>
+              {selectedUserIds.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedUserIds([])}
+                  className="h-auto py-1 px-2 text-xs"
+                >
+                  <X className="h-3 w-3 me-1" />
+                  {tCommon('clearAll')}
+                </Button>
+              )}
+            </div>
+
+            {/* Users List */}
+            <div className="max-h-[300px] overflow-y-auto space-y-2 border rounded-lg p-2">
+              {isLoadingAvailableUsers ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : filteredUsers.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p className="text-sm">{t('noUsersFound')}</p>
+                </div>
+              ) : (
+                filteredUsers.map((user) => {
+                  const isSelected = selectedUserIds.includes(user.id);
+                  return (
+                    <div
+                      key={user.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                        isSelected ? 'bg-primary/10 border border-primary/30' : 'hover:bg-muted'
+                      }`}
+                      onClick={() => handleToggleUser(user.id)}
+                    >
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => handleToggleUser(user.id)}
+                      />
+                      <UserAvatar
+                        userId={user.id}
+                        name={getUserDisplayName(user)}
+                        role={user.role?.[0]?.name || user.roles?.[0]?.name}
+                        size="sm"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{getUserDisplayName(user)}</p>
+                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                      </div>
+                      <Badge variant="outline" className="text-[10px] shrink-0">
+                        {getRoleDisplayName(user)}
+                      </Badge>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowAssignDialog(false)}
+              disabled={syncUsersMutation.isPending}
+            >
+              {tCommon('cancel')}
+            </Button>
+            <Button
+              onClick={handleSaveAssignments}
+              disabled={syncUsersMutation.isPending}
+              className="gap-2"
+            >
+              {syncUsersMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {tCommon('saving')}
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  {tCommon('save')}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Timeline / Dates */}
       {(inventory.created_at || inventory.updated_at) && (

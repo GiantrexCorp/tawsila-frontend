@@ -13,12 +13,12 @@ import {
   ChevronDown,
   Users,
   LogOut,
-  User,
+  User as UserIcon,
   Shield,
   LucideIcon,
 } from "lucide-react";
-import { getCurrentUser, logout } from "@/lib/auth";
-import { fetchRoles, Role } from "@/lib/services/roles";
+import { getCurrentUser, logout, User } from "@/lib/auth";
+import { getRoleDisplayName } from "@/lib/services/users";
 import { toast } from "sonner";
 import {
   Sidebar,
@@ -61,14 +61,7 @@ export function AppSidebar() {
   const router = useRouter();
   const locale = useLocale();
   const t = useTranslations('nav');
-  const [user, setUser] = React.useState<{
-    id: number;
-    name: string;
-    name_en: string;
-    name_ar: string;
-    roles: string[];
-  } | null>(null);
-  const [availableRoles, setAvailableRoles] = React.useState<Role[]>([]);
+  const [user, setUser] = React.useState<User | null>(null);
 
   // Get user permissions from API (cached)
   const { permissions: userPermissions, isLoading: isLoadingPermissions } = useUserPermissions();
@@ -76,25 +69,9 @@ export function AppSidebar() {
   React.useEffect(() => {
     const currentUser = getCurrentUser();
     if (currentUser) {
-      setUser({
-        id: currentUser.id,
-        name: currentUser.name,
-        name_en: currentUser.name_en,
-        name_ar: currentUser.name_ar,
-        roles: currentUser.roles,
-      });
+      setUser(currentUser);
     }
-    loadRoles();
   }, []);
-
-  const loadRoles = async () => {
-    try {
-      const response = await fetchRoles();
-      setAvailableRoles(response.data);
-    } catch (error) {
-      console.error("Failed to load roles:", error);
-    }
-  };
 
   // Get the appropriate name based on locale
   const getDisplayName = () => {
@@ -117,25 +94,9 @@ export function AppSidebar() {
     }
   };
 
-  const getRoleDisplay = (roles: string[]) => {
-    if (!roles || roles.length === 0) return t('user');
-    const roleName = roles[0];
-
-    // Find role in available roles to get slug
-    const roleData = availableRoles.find(r => r.name === roleName);
-
-    // Use slug based on locale, fallback to formatted role name
-    if (roleData) {
-      const slug = locale === 'ar' ? roleData.slug_ar : roleData.slug_en;
-      if (slug) {
-        return slug;
-      }
-    }
-
-    // Fallback: format role name
-    return roleName.split('-').map(word =>
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
+  const getRoleDisplay = () => {
+    if (!user?.roles || user.roles.length === 0) return t('user');
+    return getRoleDisplayName(user.roles[0], locale);
   };
 
   // Check if user has any of the required permissions
@@ -151,7 +112,7 @@ export function AppSidebar() {
   };
 
   // Check if user is a vendor (has vendor role) - only used to show vendor profile link
-  const isVendor = user?.roles?.includes('vendor');
+  const isVendor = user?.roles?.some(r => r.name === 'vendor');
 
   // Build navigation purely based on permissions
   // Each module is shown if user has ANY permission related to that module
@@ -299,13 +260,13 @@ export function AppSidebar() {
               <UserAvatar
                 userId={user?.id || 0}
                 name={getDisplayName()}
-                role={user?.roles?.[0]}
+                role={user?.roles?.[0]?.name}
                 size="sm"
               />
               <div className="flex-1 text-start text-sm">
                 <p className="font-medium">{getDisplayName()}</p>
                 <p className="text-xs text-muted-foreground">
-                  {user ? getRoleDisplay(user.roles) : t('loading')}
+                  {user ? getRoleDisplay() : t('loading')}
                 </p>
               </div>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -316,7 +277,7 @@ export function AppSidebar() {
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link href="/dashboard/profile">
-                <User className="me-2 h-4 w-4" />
+                <UserIcon className="me-2 h-4 w-4" />
                 {t('profile')}
               </Link>
             </DropdownMenuItem>

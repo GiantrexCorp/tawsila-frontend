@@ -81,6 +81,13 @@ export {
   useInvalidateInventory,
 } from './use-inventory';
 
+// Inventory Users
+export {
+  useInventoryUsers,
+  useUsersForAssignment,
+  useSyncInventoryUsers,
+} from './use-inventory-users';
+
 // Roles
 export {
   useRoles,

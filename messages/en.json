@@ -136,7 +136,18 @@
     "code": "Code",
     "inventoryCode": "Inventory Code",
     "openInGoogleMaps": "Open in Google Maps",
-    "viewDetails": "View Details"
+    "viewDetails": "View Details",
+    "assignedUsers": "Assigned Users",
+    "assignedUsersCount": "{count, plural, =0 {No users assigned} =1 {1 user assigned} other {# users assigned}}",
+    "manageUsers": "Manage Users",
+    "noAssignedUsers": "No users assigned to this inventory",
+    "assignUsersTitle": "Assign Users to Inventory",
+    "assignUsersDescription": "Select users who should have access to this inventory location.",
+    "searchUsers": "Search users by name, email or mobile...",
+    "selectedUsers": "{count, plural, =0 {No users selected} =1 {1 user selected} other {# users selected}}",
+    "noUsersFound": "No users found",
+    "usersAssignedSuccess": "Users assigned successfully",
+    "usersAssignedError": "Failed to assign users"
   },
   "orders": {
     "title": "Order Management",
@@ -771,6 +782,7 @@
   },
   "common": {
     "save": "Save",
+    "saving": "Saving...",
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",

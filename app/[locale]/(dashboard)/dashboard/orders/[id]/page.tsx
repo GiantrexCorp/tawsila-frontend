@@ -53,7 +53,7 @@ export default function OrderDetailPage() {
   const params = useParams();
   const orderId = parseInt(params.id as string);
   const currentUser = getCurrentUser();
-  const isVendor = currentUser?.roles?.includes('vendor');
+  const isVendor = currentUser?.roles?.some(r => r.name === 'vendor');
 
   // Check if user has permission to access order detail page
   // Allow access if user has ANY order-related permission

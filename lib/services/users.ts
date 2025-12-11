@@ -8,13 +8,23 @@
 import { apiRequest } from '../api';
 
 /**
+ * Role object returned from API
+ */
+export interface UserRoleObject {
+  id: number;
+  name: string;
+  slug_en: string | null;
+  slug_ar: string | null;
+}
+
+/**
  * User entity representing a system user
  */
 export interface User {
   /** Unique user identifier */
   id: number;
   /** Legacy name field (for backwards compatibility) */
-  name: string;
+  name?: string;
   /** English display name */
   name_en: string;
   /** Arabic display name */
@@ -31,10 +41,39 @@ export interface User {
   created_at: string;
   /** Last update timestamp */
   updated_at: string;
-  /** Assigned role names (e.g., ['super-admin', 'inventory-manager']) */
-  roles: string[];
+  /** Assigned roles with localized slugs */
+  roles: UserRoleObject[];
   /** Aggregated permissions from assigned roles */
-  permissions?: string[];
+  roles_permissions?: string[];
+}
+
+/**
+ * Helper to get role name for checking (e.g., 'shipping-agent')
+ */
+export function getUserRoleName(user: User | null | undefined): string | undefined {
+  return user?.roles?.[0]?.name;
+}
+
+/**
+ * Helper to check if user has a specific role
+ */
+export function userHasRole(user: User | null | undefined, roleName: string): boolean {
+  return user?.roles?.some(r => r.name === roleName) ?? false;
+}
+
+/**
+ * Helper to get localized role display name
+ */
+export function getRoleDisplayName(role: UserRoleObject | undefined, locale: string): string {
+  if (!role) return '';
+
+  const localizedSlug = locale === 'ar' ? role.slug_ar : role.slug_en;
+  if (localizedSlug) return localizedSlug;
+
+  // Fallback: format role name
+  return role.name.split('-').map(word =>
+    word.charAt(0).toUpperCase() + word.slice(1)
+  ).join(' ');
 }
 
 export interface PaginationLinks {

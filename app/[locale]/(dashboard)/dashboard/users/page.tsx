@@ -20,8 +20,7 @@ import {
   Users,
   RefreshCw
 } from "lucide-react";
-import { User, UserFilters } from "@/lib/services/users";
-import { Role } from "@/lib/services/roles";
+import { User, UserFilters, getRoleDisplayName } from "@/lib/services/users";
 import {
   useUsers,
   useCreateUser,
@@ -192,30 +191,19 @@ export default function UsersPage() {
     setCurrentPage(1);
   }, [filters, appliedFilters]);
 
-  const getRoleDisplayName = useCallback((roleName: string, roleData?: Role) => {
-    if (roleData) {
-      const slug = locale === 'ar' ? roleData.slug_ar : roleData.slug_en;
-      if (slug) return slug;
-    }
+  const getLocalizedRoleDisplay = useCallback((user: User) => {
+    if (!user.roles || user.roles.length === 0) return t('noRole');
+    return getRoleDisplayName(user.roles[0], locale);
+  }, [locale, t]);
 
-    const roleTranslationMap: Record<string, string> = {
-      'super-admin': 'superAdmin',
-      'admin': 'admin',
-      'manager': 'manager',
-      'viewer': 'viewer',
-      'inventory-manager': 'inventoryManager',
-      'order-preparer': 'orderPreparer',
-      'shipping-agent': 'shippingAgent',
-      'vendor': 'vendor',
-    };
-
-    const translationKey = roleTranslationMap[roleName];
-    if (translationKey) return t(translationKey);
-
-    return roleName.split('-').map(word =>
+  // Helper to get role display name from Role object (for select dropdowns)
+  const getRoleSelectDisplay = useCallback((role: { name: string; slug_en: string | null; slug_ar: string | null }) => {
+    const slug = locale === 'ar' ? role.slug_ar : role.slug_en;
+    if (slug) return slug;
+    return role.name.split('-').map(word =>
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
-  }, [locale, t]);
+  }, [locale]);
 
   const handleCreateUser = useCallback(async () => {
     if (!addFormData.name_en || !addFormData.name_ar || !addFormData.email ||
@@ -440,7 +428,6 @@ export default function UsersPage() {
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {users.map((user) => {
               const displayName = getDisplayName(user);
-              const userRole = availableRoles.find(r => r.name === user.roles?.[0]);
 
               return (
                 <div
@@ -462,7 +449,7 @@ export default function UsersPage() {
                           <UserAvatar
                             userId={user.id}
                             name={displayName}
-                            role={user.roles?.[0]}
+                            role={user.roles?.[0]?.name}
                             size="lg"
                             className="ring-2 ring-border/50 transition-transform duration-300 group-hover:scale-105"
                           />
@@ -492,7 +479,7 @@ export default function UsersPage() {
                             {user.roles && user.roles.length > 0 ? (
                               <Badge variant="secondary" className="text-[10px] px-2 py-0.5 h-5 font-medium">
                                 <Shield className="h-3 w-3 me-1" />
-                                {getRoleDisplayName(user.roles[0], userRole)}
+                                {getLocalizedRoleDisplay(user)}
                               </Badge>
                             ) : (
                               <Badge variant="outline" className="text-[10px] px-2 py-0.5 h-5">
@@ -687,7 +674,7 @@ export default function UsersPage() {
                   <SelectContent>
                     {availableRoles.map(role => (
                       <SelectItem key={role.id} value={role.id.toString()}>
-                        {getRoleDisplayName(role.name, role)}
+                        {getRoleSelectDisplay(role)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -803,7 +790,7 @@ export default function UsersPage() {
                 <SelectContent>
                   {availableRoles.map(role => (
                     <SelectItem key={role.id} value={role.id.toString()}>
-                      {getRoleDisplayName(role.name, role)}
+                      {getRoleSelectDisplay(role)}
                     </SelectItem>
                   ))}
                 </SelectContent>

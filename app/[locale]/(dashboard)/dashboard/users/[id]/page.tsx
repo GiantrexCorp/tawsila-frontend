@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
-import { fetchUser, changeUserPassword, assignUserRole, User } from "@/lib/services/users";
+import { fetchUser, changeUserPassword, assignUserRole, User, getRoleDisplayName } from "@/lib/services/users";
 import { fetchRoles, Role } from "@/lib/services/roles";
 import { toast } from "sonner";
 import { getCurrentUser, logout } from "@/lib/auth";
@@ -98,7 +98,7 @@ export default function ViewUserPage() {
 
         // Set initial role selection
         if (fetchedUser.roles && fetchedUser.roles.length > 0) {
-          const currentRole = rolesResponse.data.find(r => r.name === fetchedUser.roles[0]);
+          const currentRole = rolesResponse.data.find(r => r.name === fetchedUser.roles[0]?.name);
           if (currentRole) {
             setSelectedRoleId(currentRole.id);
           }
@@ -121,27 +121,16 @@ export default function ViewUserPage() {
     return locale === 'ar' ? u.name_ar : u.name_en;
   };
 
-  const getRoleDisplayName = (roleName: string, roleData?: Role) => {
-    if (roleData) {
-      const slug = locale === 'ar' ? roleData.slug_ar : roleData.slug_en;
-      if (slug) return slug;
-    }
+  const getLocalizedRoleDisplay = (u: User) => {
+    if (!u.roles || u.roles.length === 0) return t('noRole');
+    return getRoleDisplayName(u.roles[0], locale);
+  };
 
-    const roleTranslationMap: Record<string, string> = {
-      'super-admin': 'superAdmin',
-      'admin': 'admin',
-      'manager': 'manager',
-      'viewer': 'viewer',
-      'inventory-manager': 'inventoryManager',
-      'order-preparer': 'orderPreparer',
-      'shipping-agent': 'shippingAgent',
-      'vendor': 'vendor',
-    };
-
-    const translationKey = roleTranslationMap[roleName];
-    if (translationKey) return t(translationKey);
-
-    return roleName.split('-').map(word =>
+  // Helper to get role display name from Role object (for select dropdowns)
+  const getRoleSelectDisplay = (role: Role) => {
+    const slug = locale === 'ar' ? role.slug_ar : role.slug_en;
+    if (slug) return slug;
+    return role.name.split('-').map(word =>
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
   };
@@ -230,7 +219,6 @@ export default function ViewUserPage() {
   }
 
   const displayName = getDisplayName(user);
-  const userRole = availableRoles.find(r => r.name === user.roles?.[0]);
 
   return (
     <div className="space-y-6 pb-8">
@@ -260,7 +248,7 @@ export default function ViewUserPage() {
               <UserAvatar
                 userId={user.id}
                 name={displayName}
-                role={user.roles?.[0]}
+                role={user.roles?.[0]?.name}
                 size="xl"
                 className="ring-4 ring-background shadow-xl"
               />
@@ -337,7 +325,7 @@ export default function ViewUserPage() {
                 {user.roles && user.roles.length > 0 && (
                   <Badge variant="secondary" className="gap-1.5">
                     <Shield className="h-3 w-3" />
-                    {getRoleDisplayName(user.roles[0], userRole)}
+                    {getLocalizedRoleDisplay(user)}
                   </Badge>
                 )}
 
@@ -520,7 +508,7 @@ export default function ViewUserPage() {
                 <SelectContent>
                   {availableRoles.map(role => (
                     <SelectItem key={role.id} value={role.id.toString()}>
-                      {getRoleDisplayName(role.name, role)}
+                      {getRoleSelectDisplay(role)}
                     </SelectItem>
                   ))}
                 </SelectContent>

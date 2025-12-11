@@ -3,6 +3,7 @@
  */
 
 import { apiRequest } from '../api';
+import { UserRoleObject } from './users';
 
 export interface Agent {
   id: number;
@@ -15,7 +16,7 @@ export interface Agent {
   status?: 'active' | 'inactive';
   rating?: number;
   total_deliveries?: number;
-  roles?: string[];
+  roles?: UserRoleObject[];
   [key: string]: unknown;
 }
 
@@ -39,14 +40,13 @@ export async function fetchActiveAgents(): Promise<Agent[]> {
   });
 
   const allUsers = response.data || [];
-  
+
   // Filter to only shipping agents
-  const shippingAgents = allUsers.filter((user: Agent & { roles?: string[] }) => {
+  const shippingAgents = allUsers.filter((user: Agent) => {
     // Check if user has shipping-agent role
     if (user.roles && Array.isArray(user.roles)) {
-      return user.roles.includes('shipping-agent');
+      return user.roles.some(r => r.name === 'shipping-agent');
     }
-    // Fallback: check if role is in any other field
     return false;
   });
 
