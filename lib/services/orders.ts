@@ -59,6 +59,8 @@ export interface Order {
   can_accept?: boolean;
   /** Whether current user can reject this order */
   can_reject?: boolean;
+  /** Whether current user can assign a pickup agent to this order */
+  can_assign_pickup_agent?: boolean;
 }
 
 /**

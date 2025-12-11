@@ -25,7 +25,7 @@ import {
   UserPlus
 } from "lucide-react";
 import { usePagePermission } from "@/hooks/use-page-permission";
-import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
+import { PERMISSIONS } from "@/hooks/use-permissions";
 import { fetchOrder, acceptOrder, rejectOrder, assignPickupAgent, fetchOrderAssignments, type Order, type OrderItem, type Customer, type Assignment } from "@/lib/services/orders";
 import { fetchInventories, fetchCurrentInventory, type Inventory } from "@/lib/services/inventories";
 import { fetchActiveAgents, type Agent } from "@/lib/services/agents";
@@ -72,9 +72,6 @@ export default function OrderDetailPage() {
     ]
   });
 
-  // Permission checks for specific actions
-  const { hasPermission: canAcceptOrderPerm } = useHasPermission(PERMISSIONS.ACCEPT_ORDER);
-  const { hasPermission: canAssignPickupAgentPerm } = useHasPermission(PERMISSIONS.ASSIGN_PICKUP_AGENT);
 
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -281,9 +278,9 @@ export default function OrderDetailPage() {
   const customer: Customer = orderWithRelations.customer || { name: '', mobile: '', address: '' };
   const items = orderWithRelations.items || [];
   const vendor: { id?: number; name_en?: string; name_ar?: string; name?: string; [key: string]: unknown } = orderWithRelations.vendor || {};
-  const canAccept = order.status === 'pending' && canAcceptOrderPerm;
-  // Can assign pickup agent only if order is accepted or confirmed
-  const canAssignPickupAgent = canAssignPickupAgentPerm && (order.status === 'accepted' || order.status === 'confirmed');
+  const canAccept = order.can_accept === true;
+  const canReject = order.can_reject === true;
+  const canAssignPickupAgent = order.can_assign_pickup_agent === true;
 
   return (
     <div className="space-y-6 pb-8">
@@ -326,7 +323,7 @@ export default function OrderDetailPage() {
       </div>
 
       {/* Action Buttons */}
-      {(canAccept || canAssignPickupAgent) && (
+      {(canAccept || canReject || canAssignPickupAgent) && (
         <Card>
           <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -336,25 +333,25 @@ export default function OrderDetailPage() {
               </div>
               <div className="flex gap-2 w-full sm:w-auto flex-wrap">
                 {canAccept && (
-                  <>
-                    <Button
-                      onClick={handleAcceptClick}
-                      disabled={isAccepting}
-                      className="gap-2 flex-1 sm:flex-initial"
-                    >
-                      <CheckCircle className="h-4 w-4" />
-                      {t('acceptOrder')}
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={handleRejectClick}
-                      disabled={isRejecting}
-                      className="gap-2 flex-1 sm:flex-initial"
-                    >
-                      <XCircle className="h-4 w-4" />
-                      {t('rejectOrder')}
-                    </Button>
-                  </>
+                  <Button
+                    onClick={handleAcceptClick}
+                    disabled={isAccepting}
+                    className="gap-2 flex-1 sm:flex-initial"
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    {t('acceptOrder')}
+                  </Button>
+                )}
+                {canReject && (
+                  <Button
+                    variant="destructive"
+                    onClick={handleRejectClick}
+                    disabled={isRejecting}
+                    className="gap-2 flex-1 sm:flex-initial"
+                  >
+                    <XCircle className="h-4 w-4" />
+                    {t('rejectOrder')}
+                  </Button>
                 )}
                 {canAssignPickupAgent && (
                   <Button
@@ -364,8 +361,8 @@ export default function OrderDetailPage() {
                     className="gap-2 flex-1 sm:flex-initial"
                   >
                     <Truck className="h-4 w-4" />
-                    {assignments.some(a => a.is_active && !a.is_finished) 
-                      ? t('reassignPickupAgent') 
+                    {assignments.some(a => a.is_active && !a.is_finished)
+                      ? t('reassignPickupAgent')
                       : t('assignPickupAgent')}
                   </Button>
                 )}
