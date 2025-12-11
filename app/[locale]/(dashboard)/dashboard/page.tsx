@@ -1,6 +1,7 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useState, useEffect } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Truck,
@@ -17,23 +18,51 @@ import { Button } from "@/components/ui/button";
 import { orders, productRequests, agents, products } from "@/lib/mock-data";
 import { Link } from "@/i18n/routing";
 import { usePagePermission } from "@/hooks/use-page-permission";
+import { getCurrentUser, User } from "@/lib/auth";
+import { VendorDashboard } from "@/components/dashboard/vendor-dashboard";
 
 export default function DashboardPage() {
   const t = useTranslations('dashboard');
   const tOrders = useTranslations('orders');
   const tRequests = useTranslations('requests');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
+
+  const [user, setUser] = useState<User | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   // Dashboard is accessible to all authenticated users (no permission required)
   const hasPermission = usePagePermission({ requiredPermissions: [] });
 
+  useEffect(() => {
+    setIsHydrated(true);
+    const currentUser = getCurrentUser();
+    if (currentUser) {
+      setUser(currentUser);
+    }
+  }, []);
+
+  // Check if user is a vendor
+  const isVendor = isHydrated && user?.roles?.some(r => r.name === 'vendor');
+
+  // Get display name for vendor dashboard
+  const getDisplayName = () => {
+    if (!user) return '';
+    return locale === 'ar' ? user.name_ar : user.name_en;
+  };
+
   // Show loading while checking permissions
-  if (hasPermission === null) {
+  if (hasPermission === null || !isHydrated) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
+  }
+
+  // Show vendor-specific dashboard for vendor users
+  if (isVendor) {
+    return <VendorDashboard userName={getDisplayName()} />;
   }
 
   // Calculate real metrics
