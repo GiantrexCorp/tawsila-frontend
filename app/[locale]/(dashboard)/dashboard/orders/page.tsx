@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -243,104 +242,113 @@ export default function OrdersPage() {
     }
 
     return (
-      <div className="space-y-4">
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {ordersList.map((order) => {
           const customer: Customer = order.customer || { name: '', mobile: '', address: '' };
           const canAccept = order.status === 'pending' && !isVendor;
           const canReject = order.status === 'pending' && !isVendor;
-          
+
           return (
-            <Card key={order.id}>
-              <CardContent className="p-6">
-                <div className="flex flex-col md:flex-row items-start justify-between gap-4">
-                  <div className="space-y-3 flex-1 w-full">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <h3 className="font-semibold text-sm md:text-base">{order.order_number}</h3>
-                      <OrderStatusBadge status={order.status} statusLabel={order.status_label} />
+            <div
+              key={order.id}
+              onClick={() => router.push(`/dashboard/orders/${order.id}`)}
+              className="group relative cursor-pointer"
+            >
+              {/* Card Container */}
+              <div className="relative h-full rounded-2xl bg-card border border-border/40 overflow-hidden transition-all duration-300 ease-out group-hover:border-primary/30 group-hover:shadow-xl group-hover:shadow-primary/5 group-hover:-translate-y-1">
+
+                {/* Gradient Overlay on hover */}
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                {/* Status Badge - Floating */}
+                <div className="absolute top-3 end-3 z-10">
+                  <OrderStatusBadge status={order.status} statusLabel={order.status_label} />
+                </div>
+
+                {/* Main Content */}
+                <div className="p-5 pb-4">
+                  <div className="flex items-start gap-4">
+                    {/* Order Icon */}
+                    <div className="relative flex-shrink-0">
+                      <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-muted to-muted/50 ring-1 ring-border/50 transition-transform duration-300 group-hover:scale-105 flex items-center justify-center">
+                        <span className="text-xl font-bold text-primary">#</span>
+                      </div>
+                    </div>
+
+                    {/* Order Number & Payment */}
+                    <div className="flex-1 min-w-0 pt-0.5">
+                      <h3 className="font-semibold text-base text-foreground truncate group-hover:text-primary transition-colors duration-300">
+                        {order.order_number}
+                      </h3>
                       {order.payment_method && (
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-[10px] px-2 py-0.5 h-5 mt-1.5">
                           {order.payment_method === 'cod' ? t('cashOnDelivery') : t('paid')}
                         </Badge>
                       )}
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      {customer.name && (
-                        <div>
-                          <p className="text-muted-foreground">{t('customer')}</p>
-                          <p className="font-medium">{customer.name}</p>
-                          {customer.mobile && (
-                            <p className="text-xs text-muted-foreground">{customer.mobile}</p>
-                          )}
-                        </div>
-                      )}
-                      {(customer.full_address || customer.address) && (
-                        <div>
-                          <p className="text-muted-foreground">{t('deliveryAddress')}</p>
-                          <p className="font-medium text-sm">{customer.full_address || customer.address}</p>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-4 text-sm flex-wrap">
-                      <div>
-                        <span className="text-muted-foreground">{t('total')}: </span>
-                        <span className="font-semibold">{tCommon('egpSymbol')} {order.total_amount.toFixed(2)}</span>
-                      </div>
-                      {order.subtotal > 0 && (
-                        <div>
-                          <span className="text-muted-foreground">{t('subtotal')}: </span>
-                          <span className="font-medium">{tCommon('egpSymbol')} {order.subtotal.toFixed(2)}</span>
-                        </div>
-                      )}
-                      <div>
-                        <span className="text-muted-foreground">{t('shippingCost')}: </span>
-                        <span className="font-medium">{tCommon('egpSymbol')} {order.shipping_cost.toFixed(2)}</span>
-                      </div>
-                    </div>
-                    {order.vendor_notes && (
-                      <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-                        <span className="font-medium">{t('vendorNotes')}: </span>
-                        {order.vendor_notes}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    {canAccept && (
-                      <Button 
-                        variant="default" 
-                        size="sm"
-                        onClick={() => handleAcceptClick(order.id)}
-                        disabled={acceptingOrderId === order.id}
-                        className="gap-2"
-                      >
-                        <CheckCircle className="h-4 w-4" />
-                        {t('acceptOrder')}
-                      </Button>
-                    )}
-                    {canReject && (
-                      <Button 
-                        variant="destructive" 
-                        size="sm"
-                        onClick={() => handleRejectClick(order.id)}
-                        disabled={rejectingOrderId === order.id}
-                        className="gap-2"
-                      >
-                        <XCircle className="h-4 w-4" />
-                        {t('rejectOrder')}
-                      </Button>
-                    )}
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => router.push(`/dashboard/orders/${order.id}`)}
-                      className="gap-2"
-                    >
-                      <Eye className="h-4 w-4" />
-                      {t('viewDetails')}
-                    </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+
+                {/* Customer Info */}
+                {customer.name && (
+                  <div className="px-5 pb-3">
+                    <p className="text-sm font-medium truncate">{customer.name}</p>
+                    {customer.mobile && (
+                      <p className="text-xs text-muted-foreground mt-0.5" dir="ltr">{customer.mobile}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Amount */}
+                <div className="px-5 pb-4">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-muted/50 text-sm font-semibold text-foreground">
+                    {tCommon('egpSymbol')} {order.total_amount.toFixed(2)}
+                  </div>
+                </div>
+
+                {/* Bottom Action Bar */}
+                <div className="px-5 pb-4 pt-2 border-t border-border/40">
+                  <div className="flex items-center justify-between">
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      {canAccept && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleAcceptClick(order.id)}
+                          disabled={acceptingOrderId === order.id}
+                          className="h-7 text-xs px-2"
+                        >
+                          <CheckCircle className="h-3.5 w-3.5 me-1" />
+                          {t('accept')}
+                        </Button>
+                      )}
+                      {canReject && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleRejectClick(order.id)}
+                          disabled={rejectingOrderId === order.id}
+                          className="h-7 text-xs px-2"
+                        >
+                          <XCircle className="h-3.5 w-3.5 me-1" />
+                          {t('reject')}
+                        </Button>
+                      )}
+                      {!canAccept && !canReject && (
+                        <span className="text-[11px] text-muted-foreground/60 font-medium">
+                          {t('viewDetails')}
+                        </span>
+                      )}
+                    </div>
+                    {/* Arrow Icon */}
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center transition-all duration-300 group-hover:bg-primary group-hover:scale-110">
+                      <Eye className="h-4 w-4 text-primary group-hover:text-primary-foreground transition-colors duration-300" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           );
         })}
       </div>

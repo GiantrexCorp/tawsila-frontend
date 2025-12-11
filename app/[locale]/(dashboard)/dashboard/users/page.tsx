@@ -9,8 +9,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Mail,
   Phone,
-  Clock,
-  MoreVertical,
   UserPlus,
   ChevronLeft,
   ChevronRight,
@@ -19,8 +17,6 @@ import {
   Calendar,
   Shield,
   Edit,
-  Key,
-  UserCog,
   Users,
   RefreshCw
 } from "lucide-react";
@@ -38,12 +34,6 @@ import { getCurrentUser, logout } from "@/lib/auth";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
 import { FilterBar, FilterConfig } from "@/components/ui/filter-bar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -446,121 +436,124 @@ export default function UsersPage() {
       ) : (
         <>
           {/* Users Grid - 3 Cards per row */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {users.map((user) => {
               const displayName = getDisplayName(user);
               const initials = displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
               const userRole = availableRoles.find(r => r.name === user.roles?.[0]);
 
               return (
-                <Card
+                <div
                   key={user.id}
-                  className="group hover:shadow-md transition-all duration-200 cursor-pointer border-border/50 hover:border-primary/30"
                   onClick={() => router.push(`/dashboard/users/${user.id}`)}
+                  className="group relative cursor-pointer"
                 >
-                  <CardContent className="p-4">
-                    {/* Top Row: Avatar, Name, Status */}
-                    <div className="flex items-start gap-3">
-                      <Avatar className="h-12 w-12">
-                        <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                          {initials}
-                        </AvatarFallback>
-                      </Avatar>
+                  {/* Card Container */}
+                  <div className="relative h-full rounded-2xl bg-card border border-border/40 overflow-hidden transition-all duration-300 ease-out group-hover:border-primary/30 group-hover:shadow-xl group-hover:shadow-primary/5 group-hover:-translate-y-1">
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold truncate">{displayName}</h3>
-                          {currentUser?.id === user.id && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400">
-                              {t('me')}
-                            </Badge>
-                          )}
+                    {/* Gradient Overlay on hover */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                    {/* Main Content */}
+                    <div className="p-5 pb-4">
+                      <div className="flex items-start gap-4">
+                        {/* Avatar */}
+                        <div className="relative flex-shrink-0">
+                          <Avatar className="h-14 w-14 ring-2 ring-border/50 transition-transform duration-300 group-hover:scale-105">
+                            <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg">
+                              {initials}
+                            </AvatarFallback>
+                          </Avatar>
                         </div>
-                        <div className="flex items-center gap-1.5 mt-1.5">
-                          <Badge
-                            className={`text-[10px] px-1.5 py-0 h-4 ${
+
+                        {/* Name & Role */}
+                        <div className="flex-1 min-w-0 pt-0.5">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-base text-foreground truncate group-hover:text-primary transition-colors duration-300">
+                              {displayName}
+                            </h3>
+                            {currentUser?.id === user.id && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 shrink-0 bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400">
+                                {t('me')}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                            {/* Status Badge */}
+                            <div className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
                               user.status === 'active'
-                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
-                                : 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800'
-                            }`}
-                          >
-                            {user.status === 'active' ? t('active') : t('inactive')}
-                          </Badge>
-                          {user.roles && user.roles.length > 0 ? (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
-                              <Shield className="h-2.5 w-2.5 me-0.5" />
-                              {getRoleDisplayName(user.roles[0], userRole)}
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
-                              {t('noRole')}
-                            </Badge>
-                          )}
+                                ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                                : 'bg-zinc-500/20 text-zinc-600 dark:text-zinc-400'
+                            }`}>
+                              {user.status === 'active' ? t('active') : t('inactive')}
+                            </div>
+                            {user.roles && user.roles.length > 0 ? (
+                              <Badge variant="secondary" className="text-[10px] px-2 py-0.5 h-5 font-medium">
+                                <Shield className="h-3 w-3 me-1" />
+                                {getRoleDisplayName(user.roles[0], userRole)}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px] px-2 py-0.5 h-5">
+                                {t('noRole')}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
-
-                      {/* Actions Dropdown */}
-                      {isSuperAdmin() && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                            <DropdownMenuItem onClick={() => router.push(`/dashboard/users/${user.id}`)}>
-                              <Eye className="h-4 w-4 me-2" />
-                              {t('view')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => router.push(`/dashboard/users/${user.id}/edit`)}>
-                              <Edit className="h-4 w-4 me-2" />
-                              {tCommon('edit')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => {
-                              setUserToAssignRole(user);
-                              setSelectedRoleId(userRole?.id || null);
-                            }}>
-                              <UserCog className="h-4 w-4 me-2" />
-                              {t('assignRole')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setUserToChangePassword(user)}>
-                              <Key className="h-4 w-4 me-2" />
-                              {t('changePassword')}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
                     </div>
 
                     {/* Contact Info */}
-                    <div className="mt-4 pt-4 border-t space-y-2">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Mail className="h-4 w-4 shrink-0" />
+                    <div className="px-5 pb-4 space-y-2">
+                      <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                        <Mail className="h-4 w-4 shrink-0 text-muted-foreground/60" />
                         <span className="truncate">{user.email || t('noEmail')}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Phone className="h-4 w-4 shrink-0" />
+                      <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                        <Phone className="h-4 w-4 shrink-0 text-muted-foreground/60" />
                         <span dir="ltr">{user.mobile}</span>
                       </div>
                     </div>
 
-                    {/* Footer: Last Active & Join Date */}
-                    <div className="mt-4 pt-4 border-t flex items-center justify-between text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5" />
-                        <span>
-                          {user.last_active
-                            ? new Date(user.last_active).toLocaleDateString(locale)
-                            : t('never')}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Calendar className="h-3.5 w-3.5" />
-                        <span>{new Date(user.created_at).toLocaleDateString(locale, { month: 'short', year: '2-digit' })}</span>
+                    {/* Date Badge */}
+                    <div className="px-5 pb-4">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/50 text-[11px] text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        <span>{t('since')} {new Date(user.created_at).toLocaleDateString(locale, { year: 'numeric', month: 'short' })}</span>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+
+                    {/* Bottom Action Bar */}
+                    <div className="px-5 pb-4 pt-2 border-t border-border/40 relative z-10">
+                      <div className="flex items-center justify-between">
+                        {/* Edit Button */}
+                        {isSuperAdmin() && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-3 text-xs opacity-0 group-hover:opacity-100 transition-opacity relative z-20"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              router.push(`/dashboard/users/${user.id}/edit`);
+                            }}
+                          >
+                            <Edit className="h-3.5 w-3.5 me-1.5" />
+                            {tCommon('edit')}
+                          </Button>
+                        )}
+                        {!isSuperAdmin() && (
+                          <span className="text-[11px] text-muted-foreground/60 font-medium">
+                            {t('view')}
+                          </span>
+                        )}
+                        {/* Arrow Icon */}
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center transition-all duration-300 group-hover:bg-primary group-hover:scale-110">
+                          <Eye className="h-4 w-4 text-primary group-hover:text-primary-foreground transition-colors duration-300" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               );
             })}
           </div>

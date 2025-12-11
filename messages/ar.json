@@ -161,6 +161,8 @@
     "allOrders": "جميع الطلبات",
     "viewDetails": "عرض التفاصيل",
     "acceptOrder": "قبول الطلب",
+    "accept": "قبول",
+    "reject": "رفض",
     "customer": "العميل",
     "vendor": "المورد",
     "deliveryAddress": "عنوان التوصيل",

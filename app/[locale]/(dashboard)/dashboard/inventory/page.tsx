@@ -6,7 +6,7 @@ import { useRouter } from "@/i18n/routing";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Warehouse, Plus, Loader2, MapPin, Phone, Edit, Trash2, Search, ArrowUpRight, Eye } from "lucide-react";
+import { Warehouse, Plus, Loader2, MapPin, Phone, Edit, Trash2, Search, ArrowUpRight } from "lucide-react";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { fetchInventories, deleteInventory, type Inventory } from "@/lib/services/inventories";
@@ -19,13 +19,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MoreVertical } from "lucide-react";
 
 export default function InventoryPage() {
   const t = useTranslations('inventory');
@@ -190,7 +183,7 @@ export default function InventoryPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filteredInventories.map((inventory) => {
             const displayName = locale === 'ar' && inventory.name_ar 
               ? inventory.name_ar 
@@ -207,17 +200,6 @@ export default function InventoryPage() {
 
                   {/* Gradient Overlay on hover */}
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-                  {/* Status Indicator - Floating pill */}
-                  <div className="absolute top-3 right-3 z-20">
-                    <div className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider backdrop-blur-md ${
-                      inventory.status === 'active' || inventory.is_active
-                        ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/30'
-                        : 'bg-zinc-500/20 text-zinc-600 dark:text-zinc-400 ring-1 ring-zinc-500/30'
-                    }`}>
-                      {inventory.status === 'active' || inventory.is_active ? t('active') : t('inactive')}
-                    </div>
-                  </div>
 
                   {/* Top Section - Icon & Name */}
                   <div className="p-5 pb-4">
@@ -241,14 +223,24 @@ export default function InventoryPage() {
                             {inventory.code}
                           </p>
                         )}
-                        {inventory.city && (
-                          <div className="flex items-center gap-1 mt-1.5 text-muted-foreground">
-                            <MapPin className="h-3 w-3 flex-shrink-0" />
-                            <span className="text-xs truncate">
-                              {locale === 'ar' ? inventory.city.name_ar : inventory.city.name_en}
-                            </span>
+                        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                          {/* Status Badge */}
+                          <div className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
+                            inventory.status === 'active' || inventory.is_active
+                              ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                              : 'bg-zinc-500/20 text-zinc-600 dark:text-zinc-400'
+                          }`}>
+                            {inventory.status === 'active' || inventory.is_active ? t('active') : t('inactive')}
                           </div>
-                        )}
+                          {inventory.city && (
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <MapPin className="h-3 w-3 flex-shrink-0" />
+                              <span className="text-xs truncate">
+                                {locale === 'ar' ? inventory.city.name_ar : inventory.city.name_en}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -279,53 +271,28 @@ export default function InventoryPage() {
                   )}
 
                   {/* Bottom Action Bar */}
-                  <div className="px-5 pb-4 pt-2 border-t border-border/40">
+                  <div className="px-5 pb-4 pt-2 border-t border-border/40 relative z-10">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {isSuperAdmin && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-7 w-7"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <MoreVertical className="h-3.5 w-3.5" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                router.push(`/dashboard/inventory/${inventory.id}`);
-                              }}>
-                                <Eye className="h-4 w-4 mr-2" />
-                                {tCommon('view')}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                router.push(`/dashboard/inventory/${inventory.id}/edit`);
-                              }}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                {t('edit')}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setInventoryToDelete(inventory);
-                                }}
-                                className="text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                {t('delete')}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
+                      {/* Edit Button */}
+                      {isSuperAdmin ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-3 text-xs opacity-0 group-hover:opacity-100 transition-opacity relative z-20"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            router.push(`/dashboard/inventory/${inventory.id}/edit`);
+                          }}
+                        >
+                          <Edit className="h-3.5 w-3.5 me-1.5" />
+                          {t('edit')}
+                        </Button>
+                      ) : (
                         <span className="text-[11px] text-muted-foreground/60 font-medium">
                           {t('viewDetails')}
                         </span>
-                      </div>
+                      )}
                       <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center transition-all duration-300 group-hover:bg-primary group-hover:scale-110">
                         <ArrowUpRight className="h-4 w-4 text-primary group-hover:text-primary-foreground transition-colors duration-300" />
                       </div>

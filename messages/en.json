@@ -161,6 +161,8 @@
     "allOrders": "All Orders",
     "viewDetails": "View Details",
     "acceptOrder": "Accept Order",
+    "accept": "Accept",
+    "reject": "Reject",
     "customer": "Customer",
     "vendor": "Vendor",
     "deliveryAddress": "Delivery Address",

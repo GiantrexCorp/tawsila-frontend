@@ -6,13 +6,14 @@ import { useRouter } from "@/i18n/routing";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Building2, Plus, Loader2, MapPin, ArrowUpRight } from "lucide-react";
+import { Building2, Plus, Loader2, MapPin, ArrowUpRight, Edit } from "lucide-react";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { fetchVendors, type Vendor } from "@/lib/services/vendors";
 
 export default function VendorsPage() {
   const t = useTranslations('organizations');
+  const tCommon = useTranslations('common');
   const locale = useLocale();
   const router = useRouter();
   
@@ -104,7 +105,7 @@ export default function VendorsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {vendors.map((vendor) => (
             <div
               key={vendor.id}
@@ -116,17 +117,6 @@ export default function VendorsPage() {
 
                 {/* Gradient Overlay on hover */}
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-                {/* Status Indicator - Floating pill */}
-                <div className="absolute top-3 right-3 z-20">
-                  <div className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider backdrop-blur-md ${
-                    vendor.status === 'active'
-                      ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/30'
-                      : 'bg-zinc-500/20 text-zinc-600 dark:text-zinc-400 ring-1 ring-zinc-500/30'
-                  }`}>
-                    {vendor.status === 'active' ? t('activeOrgs') : t('inactiveOrgs')}
-                  </div>
-                </div>
 
                 {/* Top Section - Logo & Name */}
                 <div className="p-5 pb-4">
@@ -155,11 +145,21 @@ export default function VendorsPage() {
                       <h3 className="font-semibold text-base text-foreground truncate group-hover:text-primary transition-colors duration-300">
                         {locale === 'ar' ? vendor.name_ar : vendor.name_en}
                       </h3>
-                      <div className="flex items-center gap-1 mt-1.5 text-muted-foreground">
-                        <MapPin className="h-3 w-3 flex-shrink-0" />
-                        <span className="text-xs truncate">
-                          {locale === 'ar' ? vendor.city.name_ar : vendor.city.name_en}
-                        </span>
+                      <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                        {/* Status Badge */}
+                        <div className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
+                          vendor.status === 'active'
+                            ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                            : 'bg-zinc-500/20 text-zinc-600 dark:text-zinc-400'
+                        }`}>
+                          {vendor.status === 'active' ? t('activeOrgs') : t('inactiveOrgs')}
+                        </div>
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <MapPin className="h-3 w-3 flex-shrink-0" />
+                          <span className="text-xs truncate">
+                            {locale === 'ar' ? vendor.city.name_ar : vendor.city.name_en}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -181,11 +181,21 @@ export default function VendorsPage() {
                 </div>
 
                 {/* Bottom Action Bar */}
-                <div className="px-5 pb-4 pt-2 border-t border-border/40">
+                <div className="px-5 pb-4 pt-2 border-t border-border/40 relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-muted-foreground/60 font-medium">
-                      {t('viewDetails')}
-                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-3 text-xs opacity-0 group-hover:opacity-100 transition-opacity relative z-20"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        router.push(`/dashboard/vendors/${vendor.id}/edit`);
+                      }}
+                    >
+                      <Edit className="h-3.5 w-3.5 me-1.5" />
+                      {tCommon('edit')}
+                    </Button>
                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center transition-all duration-300 group-hover:bg-primary group-hover:scale-110">
                       <ArrowUpRight className="h-4 w-4 text-primary group-hover:text-primary-foreground transition-colors duration-300" />
                     </div>
