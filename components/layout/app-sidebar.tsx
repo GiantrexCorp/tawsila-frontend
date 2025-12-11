@@ -62,9 +62,15 @@ export function AppSidebar() {
   const locale = useLocale();
   const t = useTranslations('nav');
   const [user, setUser] = React.useState<User | null>(null);
+  const [isHydrated, setIsHydrated] = React.useState(false);
 
   // Get user permissions from API (cached)
   const { permissions: userPermissions, isLoading: isLoadingPermissions } = useUserPermissions();
+
+  // Handle hydration - only show permission-based content after hydration
+  React.useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   React.useEffect(() => {
     const currentUser = getCurrentUser();
@@ -104,15 +110,17 @@ export function AppSidebar() {
     // If no permissions required, accessible to all authenticated users
     if (!requiredPermissions || requiredPermissions.length === 0) return true;
 
-    // If still loading permissions, don't show items yet
-    if (isLoadingPermissions) return false;
+    // If not hydrated yet or still loading permissions, don't show permission-based items
+    // This prevents showing all items on first render before permissions are loaded
+    if (!isHydrated || (isLoadingPermissions && userPermissions.length === 0)) return false;
 
     // Check if user has any of the required permissions
     return requiredPermissions.some(permission => userPermissions.includes(permission));
   };
 
   // Check if user is a vendor (has vendor role) - only used to show vendor profile link
-  const isVendor = user?.roles?.some(r => r.name === 'vendor');
+  // Only check after hydration to prevent hydration mismatch
+  const isVendor = isHydrated && user?.roles?.some(r => r.name === 'vendor');
 
   // Build navigation purely based on permissions
   // Each module is shown if user has ANY permission related to that module
