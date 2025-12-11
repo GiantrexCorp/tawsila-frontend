@@ -343,7 +343,7 @@ export default function OrdersPage() {
             </>
           )}
         </span>
-        <OrdersViewToggle view={view} onViewChange={handleViewChange} />
+        <OrdersViewToggle view={view} onViewChange={handleViewChange} t={t} />
       </div>
 
       {/* Content */}
