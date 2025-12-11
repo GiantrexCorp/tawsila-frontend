@@ -63,6 +63,13 @@ export interface Order {
   can_assign_pickup_agent?: boolean;
   /** Assigned inventory ID */
   inventory_id?: number;
+  /** Assigned inventory object */
+  inventory?: {
+    id: number;
+    name?: string;
+    name_en?: string;
+    name_ar?: string;
+  };
 }
 
 /**

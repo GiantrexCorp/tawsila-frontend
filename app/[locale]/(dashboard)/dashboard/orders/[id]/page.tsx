@@ -193,13 +193,15 @@ export default function OrderDetailPage() {
       });
       return;
     }
-    if (!order?.inventory_id) {
+    // Get inventory ID from either inventory_id or inventory.id
+    const inventoryId = order?.inventory_id || order?.inventory?.id;
+    if (!inventoryId) {
       toast.error(t('noInventoryAssigned'));
       return;
     }
     setShowAssignDialog(true);
-    loadAgents(order.inventory_id);
-  }, [assignments, t, loadAgents, order?.inventory_id]);
+    loadAgents(inventoryId);
+  }, [assignments, t, loadAgents, order?.inventory_id, order?.inventory?.id]);
 
   const handleAssignPickupAgent = useCallback(async () => {
     if (!selectedAgentId) {

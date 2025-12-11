@@ -247,6 +247,7 @@
     "agentAssignedFailed": "Failed to assign pickup agent",
     "errorLoadingAgents": "Failed to load agents",
     "noAgentsAvailable": "No agents available",
+    "noInventoryAssigned": "No inventory assigned to this order",
     "orderAlreadyAssigned": "Order Already Assigned",
     "orderAlreadyAssignedDesc": "This order is already assigned to an agent. Please complete or cancel the current assignment before assigning to another agent.",
     "orderAlreadyAssignedError": "This order is already assigned to an agent. You cannot assign it again.",

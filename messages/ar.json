@@ -247,6 +247,7 @@
     "agentAssignedFailed": "فشل تعيين مندوب الاستلام",
     "errorLoadingAgents": "فشل تحميل المناديب",
     "noAgentsAvailable": "مفيش مناديب متاحين",
+    "noInventoryAssigned": "مفيش مخزن مخصص لهذا الطلب",
     "orderAlreadyAssigned": "الطلب متعين بالفعل",
     "orderAlreadyAssignedDesc": "الطلب ده متعين بالفعل لمندوب. من فضلك كمل أو الغي التعيين الحالي قبل ما تعين مندوب تاني.",
     "orderAlreadyAssignedError": "الطلب ده متعين بالفعل لمندوب. مينفعش تعينه تاني.",
