@@ -22,10 +22,13 @@ import {
 } from "lucide-react";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
-import { fetchUser, changeUserPassword, assignUserRole, User, getRoleDisplayName } from "@/lib/services/users";
+import { fetchUser, changeUserPassword, assignUserRole, User, getRoleDisplayName, userHasRole } from "@/lib/services/users";
 import { fetchRoles, Role } from "@/lib/services/roles";
 import { toast } from "sonner";
 import { getCurrentUser, logout } from "@/lib/auth";
+import { fetchUserInventories, type Inventory } from "@/lib/services/inventories";
+import { useQuery } from "@tanstack/react-query";
+import { Warehouse } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -63,6 +66,15 @@ export default function ViewUserPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
+
+  // Check if user is a shipping agent and fetch their inventories
+  const isShippingAgent = user ? userHasRole(user, 'shipping-agent') : false;
+  const { data: userInventories = [], isLoading: isLoadingInventories } = useQuery<Inventory[]>({
+    queryKey: ['user-inventories', userId],
+    queryFn: () => fetchUserInventories(userId),
+    enabled: isShippingAgent && !!userId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
   // Change password dialog
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
@@ -423,6 +435,63 @@ export default function ViewUserPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Assigned Inventories Card - Only for Shipping Agents */}
+        {isShippingAgent && (
+          <Card className="hover:border-border transition-colors md:col-span-2 lg:col-span-3">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                  <Warehouse className="h-4 w-4 text-indigo-500" />
+                </div>
+                <CardTitle className="text-base">{t('assignedInventories')}</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingInventories ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : userInventories.length > 0 ? (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {userInventories.map((inventory) => (
+                    <div
+                      key={inventory.id}
+                      onClick={() => router.push(`/dashboard/inventory/${inventory.id}`)}
+                      className="group p-4 border rounded-lg hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
+                          <Warehouse className="h-5 w-5 text-indigo-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm group-hover:text-primary transition-colors">
+                            {locale === 'ar' ? inventory.name_ar : inventory.name_en || inventory.name}
+                          </p>
+                          {inventory.code && (
+                            <p className="text-xs text-muted-foreground mt-1 font-mono">
+                              {inventory.code}
+                            </p>
+                          )}
+                          {inventory.city && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {locale === 'ar' ? inventory.city.name_ar : inventory.city.name_en}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Warehouse className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">{t('noAssignedInventories')}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
       </div>
 

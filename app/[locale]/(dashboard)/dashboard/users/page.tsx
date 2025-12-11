@@ -20,7 +20,7 @@ import {
   Users,
   RefreshCw
 } from "lucide-react";
-import { User, UserFilters, getRoleDisplayName } from "@/lib/services/users";
+import { User, UserFilters, getRoleDisplayName, userHasRole } from "@/lib/services/users";
 import {
   validateEgyptianMobile,
   validateEmail,
@@ -35,6 +35,192 @@ import {
   useAssignUserRole,
   useRoles,
 } from "@/hooks/queries";
+import { fetchUserInventories, type Inventory } from "@/lib/services/inventories";
+import { useQuery } from "@tanstack/react-query";
+import { Warehouse } from "lucide-react";
+
+// User Card Component
+interface UserCardProps {
+  user: User;
+  displayName: string;
+  currentUser: ReturnType<typeof getCurrentUser>;
+  locale: string;
+  router: ReturnType<typeof useRouter>;
+  canUpdateUser: boolean;
+  t: ReturnType<typeof useTranslations<'users'>>;
+  tCommon: ReturnType<typeof useTranslations<'common'>>;
+  getLocalizedRoleDisplay: (user: User) => string;
+}
+
+function UserCard({
+  user,
+  displayName,
+  currentUser,
+  locale,
+  router,
+  canUpdateUser,
+  t,
+  tCommon,
+  getLocalizedRoleDisplay,
+}: UserCardProps) {
+  const isDeliveryAgent = userHasRole(user, 'shipping-agent');
+  
+  // Fetch inventories for delivery agents
+  const { data: userInventories = [] } = useQuery<Inventory[]>({
+    queryKey: ['user-inventories', user.id],
+    queryFn: () => fetchUserInventories(user.id),
+    enabled: isDeliveryAgent,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  return (
+    <div
+      onClick={() => router.push(`/dashboard/users/${user.id}`)}
+      className="group relative cursor-pointer"
+    >
+      {/* Card Container */}
+      <div className="relative h-full rounded-2xl bg-card border border-border/40 overflow-hidden transition-all duration-300 ease-out group-hover:border-primary/30 group-hover:shadow-xl group-hover:shadow-primary/5 group-hover:-translate-y-1">
+
+        {/* Gradient Overlay on hover */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+        {/* Main Content */}
+        <div className="p-5 pb-4">
+          <div className="flex items-start gap-4">
+            {/* Avatar */}
+            <div className="relative flex-shrink-0">
+              <UserAvatar
+                userId={user.id}
+                name={displayName}
+                role={user.roles?.[0]?.name}
+                size="lg"
+                className="ring-2 ring-border/50 transition-transform duration-300 group-hover:scale-105"
+              />
+            </div>
+
+            {/* Name & Role */}
+            <div className="flex-1 min-w-0 pt-0.5">
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-base text-foreground truncate group-hover:text-primary transition-colors duration-300">
+                  {displayName}
+                </h3>
+                {currentUser?.id === user.id && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 shrink-0 bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400">
+                    {t('me')}
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                {/* Status Badge */}
+                <div className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
+                  user.status === 'active'
+                    ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                    : 'bg-zinc-500/20 text-zinc-600 dark:text-zinc-400'
+                }`}>
+                  {user.status === 'active' ? t('active') : t('inactive')}
+                </div>
+                {user.roles && user.roles.length > 0 ? (
+                  <Badge variant="secondary" className="text-[10px] px-2 py-0.5 h-5 font-medium">
+                    <Shield className="h-3 w-3 me-1" />
+                    {getLocalizedRoleDisplay(user)}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-[10px] px-2 py-0.5 h-5">
+                    {t('noRole')}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Contact Info */}
+        <div className="px-5 pb-4 space-y-2">
+          <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+            <Mail className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+            <span className="truncate">{user.email || t('noEmail')}</span>
+          </div>
+          <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+            <Phone className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+            <span dir="ltr">{user.mobile}</span>
+          </div>
+          
+          {/* Inventories for Delivery Agents */}
+          {isDeliveryAgent && userInventories.length > 0 && (
+            <div className="flex items-start gap-2.5 text-sm text-muted-foreground pt-1">
+              <Warehouse className="h-4 w-4 shrink-0 text-muted-foreground/60 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-muted-foreground mb-1">{t('assignedInventories')}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {userInventories.map((inventory) => (
+                    <Badge
+                      key={inventory.id}
+                      variant="outline"
+                      className="text-[10px] px-2 py-0.5 h-5 font-medium bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400 cursor-pointer"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        router.push(`/dashboard/inventory/${inventory.id}`);
+                      }}
+                    >
+                      {locale === 'ar' ? inventory.name_ar : inventory.name_en || inventory.name}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          {isDeliveryAgent && userInventories.length === 0 && (
+            <div className="flex items-center gap-2.5 text-xs text-muted-foreground/70 pt-1">
+              <Warehouse className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+              <span>{t('noAssignedInventories')}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Date Badge */}
+        <div className="px-5 pb-4">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/50 text-[11px] text-muted-foreground">
+            <Calendar className="h-3 w-3" />
+            <span>{t('since')} {new Date(user.created_at).toLocaleDateString(locale, { year: 'numeric', month: 'short' })}</span>
+          </div>
+        </div>
+
+        {/* Bottom Action Bar */}
+        <div className="px-5 pb-4 pt-2 border-t border-border/40 relative z-10">
+          <div className="flex items-center justify-between">
+            {/* Edit Button */}
+            {canUpdateUser && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-3 text-xs opacity-0 group-hover:opacity-100 transition-opacity relative z-20"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  router.push(`/dashboard/users/${user.id}/edit`);
+                }}
+              >
+                <Edit className="h-3.5 w-3.5 me-1.5" />
+                {tCommon('edit')}
+              </Button>
+            )}
+            {!canUpdateUser && (
+              <span className="text-[11px] text-muted-foreground/60 font-medium">
+                {t('view')}
+              </span>
+            )}
+            {/* Arrow Icon */}
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center transition-all duration-300 group-hover:bg-primary group-hover:scale-110">
+              <Eye className="h-4 w-4 text-primary group-hover:text-primary-foreground transition-colors duration-300" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
 import { getCurrentUser, logout } from "@/lib/auth";
@@ -470,125 +656,20 @@ export default function UsersPage() {
         <>
           {/* Users Grid - 3 Cards per row */}
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {users.map((user) => {
-              const displayName = getDisplayName(user);
-
-              return (
-                <div
-                  key={user.id}
-                  onClick={() => router.push(`/dashboard/users/${user.id}`)}
-                  className="group relative cursor-pointer"
-                >
-                  {/* Card Container */}
-                  <div className="relative h-full rounded-2xl bg-card border border-border/40 overflow-hidden transition-all duration-300 ease-out group-hover:border-primary/30 group-hover:shadow-xl group-hover:shadow-primary/5 group-hover:-translate-y-1">
-
-                    {/* Gradient Overlay on hover */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-                    {/* Main Content */}
-                    <div className="p-5 pb-4">
-                      <div className="flex items-start gap-4">
-                        {/* Avatar */}
-                        <div className="relative flex-shrink-0">
-                          <UserAvatar
-                            userId={user.id}
-                            name={displayName}
-                            role={user.roles?.[0]?.name}
-                            size="lg"
-                            className="ring-2 ring-border/50 transition-transform duration-300 group-hover:scale-105"
-                          />
-                        </div>
-
-                        {/* Name & Role */}
-                        <div className="flex-1 min-w-0 pt-0.5">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-base text-foreground truncate group-hover:text-primary transition-colors duration-300">
-                              {displayName}
-                            </h3>
-                            {currentUser?.id === user.id && (
-                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 shrink-0 bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400">
-                                {t('me')}
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                            {/* Status Badge */}
-                            <div className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
-                              user.status === 'active'
-                                ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                                : 'bg-zinc-500/20 text-zinc-600 dark:text-zinc-400'
-                            }`}>
-                              {user.status === 'active' ? t('active') : t('inactive')}
-                            </div>
-                            {user.roles && user.roles.length > 0 ? (
-                              <Badge variant="secondary" className="text-[10px] px-2 py-0.5 h-5 font-medium">
-                                <Shield className="h-3 w-3 me-1" />
-                                {getLocalizedRoleDisplay(user)}
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-[10px] px-2 py-0.5 h-5">
-                                {t('noRole')}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Contact Info */}
-                    <div className="px-5 pb-4 space-y-2">
-                      <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                        <Mail className="h-4 w-4 shrink-0 text-muted-foreground/60" />
-                        <span className="truncate">{user.email || t('noEmail')}</span>
-                      </div>
-                      <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                        <Phone className="h-4 w-4 shrink-0 text-muted-foreground/60" />
-                        <span dir="ltr">{user.mobile}</span>
-                      </div>
-                    </div>
-
-                    {/* Date Badge */}
-                    <div className="px-5 pb-4">
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/50 text-[11px] text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        <span>{t('since')} {new Date(user.created_at).toLocaleDateString(locale, { year: 'numeric', month: 'short' })}</span>
-                      </div>
-                    </div>
-
-                    {/* Bottom Action Bar */}
-                    <div className="px-5 pb-4 pt-2 border-t border-border/40 relative z-10">
-                      <div className="flex items-center justify-between">
-                        {/* Edit Button */}
-                        {canUpdateUser && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 px-3 text-xs opacity-0 group-hover:opacity-100 transition-opacity relative z-20"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              router.push(`/dashboard/users/${user.id}/edit`);
-                            }}
-                          >
-                            <Edit className="h-3.5 w-3.5 me-1.5" />
-                            {tCommon('edit')}
-                          </Button>
-                        )}
-                        {!canUpdateUser && (
-                          <span className="text-[11px] text-muted-foreground/60 font-medium">
-                            {t('view')}
-                          </span>
-                        )}
-                        {/* Arrow Icon */}
-                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center transition-all duration-300 group-hover:bg-primary group-hover:scale-110">
-                          <Eye className="h-4 w-4 text-primary group-hover:text-primary-foreground transition-colors duration-300" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {users.map((user) => (
+              <UserCard
+                key={user.id}
+                user={user}
+                displayName={getDisplayName(user)}
+                currentUser={currentUser}
+                locale={locale}
+                router={router}
+                canUpdateUser={canUpdateUser}
+                t={t}
+                tCommon={tCommon}
+                getLocalizedRoleDisplay={getLocalizedRoleDisplay}
+              />
+            ))}
           </div>
 
           {/* Empty State */}

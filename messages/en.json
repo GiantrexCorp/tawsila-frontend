@@ -813,6 +813,8 @@
     "basicInformationDesc": "Enter basic user information",
     "accountStatus": "Account Status",
     "accountStatusDesc": "Control user account access",
+    "assignedInventories": "Assigned Inventories",
+    "noAssignedInventories": "No assigned inventories",
     "backToUser": "Back to User",
     "editingUser": "Editing {name}",
     "nameEnglishPlaceholder": "Enter name in English",

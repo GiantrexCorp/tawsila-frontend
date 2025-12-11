@@ -273,3 +273,30 @@ export async function fetchUsersForAssignment(): Promise<InventoryUser[]> {
   return response.data || [];
 }
 
+/**
+ * Fetch inventories assigned to a specific user
+ * This fetches all inventories and checks which ones have the user assigned
+ */
+export async function fetchUserInventories(userId: number): Promise<Inventory[]> {
+  // Fetch all inventories
+  const allInventories = await fetchInventories();
+  
+  // For each inventory, check if the user is assigned
+  const userInventories: Inventory[] = [];
+  
+  await Promise.all(
+    allInventories.map(async (inventory) => {
+      try {
+        const users = await fetchInventoryUsers(inventory.id);
+        if (users.some(user => user.id === userId)) {
+          userInventories.push(inventory);
+        }
+      } catch {
+        // If we can't fetch users for an inventory, skip it
+      }
+    })
+  );
+  
+  return userInventories;
+}
+
