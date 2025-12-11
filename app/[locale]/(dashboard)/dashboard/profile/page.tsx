@@ -5,7 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail, Phone, Clock, Calendar, Shield, Loader2, User as UserIcon } from "lucide-react";
@@ -60,11 +60,6 @@ export default function ProfilePage() {
   const getDisplayName = () => {
     if (!user) return '';
     return locale === 'ar' ? user.name_ar : user.name_en;
-  };
-
-  const getUserInitials = () => {
-    const name = getDisplayName();
-    return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
   };
 
   const getRoleDisplay = (roles: string[]) => {
@@ -177,11 +172,12 @@ export default function ProfilePage() {
         <Card className="md:col-span-1">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <Avatar className="h-24 w-24">
-                <AvatarFallback className="bg-primary/10 text-primary font-semibold text-2xl">
-                  {getUserInitials()}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                userId={user.id}
+                name={getDisplayName()}
+                role={user.roles?.[0]}
+                size="xl"
+              />
             </div>
             <CardTitle>{getDisplayName()}</CardTitle>
             <CardDescription className="flex items-center justify-center gap-2 mt-2">

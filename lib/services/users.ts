@@ -250,3 +250,35 @@ export async function assignUserRole(
   return response;
 }
 
+/**
+ * Current user profile with permissions
+ */
+export interface CurrentUserProfile {
+  id: number;
+  name_en: string;
+  name_ar: string;
+  mobile: string;
+  email: string;
+  status: 'active' | 'inactive';
+  last_active: string | null;
+  created_at: string;
+  updated_at: string;
+  roles: string[];
+  roles_permissions: string[];
+}
+
+/**
+ * Fetch current user profile (includes live permissions)
+ */
+export async function fetchCurrentUserProfile(): Promise<CurrentUserProfile> {
+  const response = await apiRequest<CurrentUserProfile>('/profile', {
+    method: 'GET',
+  });
+
+  if (!response.data) {
+    throw new Error('Failed to fetch profile');
+  }
+
+  return response.data;
+}
+

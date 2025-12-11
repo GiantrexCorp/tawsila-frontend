@@ -9,17 +9,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, Package, CreditCard, FileText, ShoppingCart, Plus, Trash2, Truck, User, CheckCircle2, X } from "lucide-react";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
+import { PERMISSIONS } from "@/hooks/use-permissions";
 import { createOrder, type OrderItem, type CreateOrderRequest } from "@/lib/services/orders";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getCurrentUser } from "@/lib/auth";
 
 export default function CreateOrderPage() {
   const t = useTranslations('orderCreate');
   const tCommon = useTranslations('common');
-  const currentUser = getCurrentUser();
-  const isSuperAdmin = currentUser?.roles?.includes('super-admin');
 
-  const hasPermission = usePagePermission(['super-admin', 'vendor']);
+  const hasPermission = usePagePermission({ requiredPermissions: [PERMISSIONS.CREATE_ORDER] });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastCreatedOrder, setLastCreatedOrder] = useState<{ order_number: string } | null>(null);
@@ -136,10 +134,7 @@ export default function CreateOrderPage() {
         shipping_cost: formData.shipping_cost || 0,
       };
 
-      // Remove internal_notes if not super-admin
-      if (!isSuperAdmin) {
-        delete orderData.internal_notes;
-      }
+      // Internal notes are now allowed for anyone who can create orders
 
       // Don't include vendor_id - backend will automatically associate with vendor user's vendor
       const createdOrder = await createOrder(orderData);
@@ -542,19 +537,17 @@ export default function CreateOrderPage() {
               />
               <p className="text-xs text-muted-foreground">{t('vendorNotesHelp')}</p>
             </div>
-            {isSuperAdmin && (
-              <div className="space-y-2">
-                <Label htmlFor="internal_notes">{t('internalNotes')}</Label>
-                <textarea
-                  id="internal_notes"
-                  className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder={t('internalNotesPlaceholder')}
-                  value={formData.internal_notes}
-                  onChange={(e) => handleInputChange('internal_notes', e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">{t('internalNotesHelp')}</p>
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="internal_notes">{t('internalNotes')}</Label>
+              <textarea
+                id="internal_notes"
+                className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder={t('internalNotesPlaceholder')}
+                value={formData.internal_notes}
+                onChange={(e) => handleInputChange('internal_notes', e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">{t('internalNotesHelp')}</p>
+            </div>
           </CardContent>
         </Card>
 

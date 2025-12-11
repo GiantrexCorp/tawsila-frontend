@@ -25,6 +25,7 @@ import {
   UserPlus
 } from "lucide-react";
 import { usePagePermission } from "@/hooks/use-page-permission";
+import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
 import { fetchOrder, acceptOrder, rejectOrder, assignPickupAgent, fetchOrderAssignments, type Order, type OrderItem, type Customer, type Assignment } from "@/lib/services/orders";
 import { fetchInventories, fetchCurrentInventory, type Inventory } from "@/lib/services/inventories";
 import { fetchActiveAgents, type Agent } from "@/lib/services/agents";
@@ -53,10 +54,27 @@ export default function OrderDetailPage() {
   const orderId = parseInt(params.id as string);
   const currentUser = getCurrentUser();
   const isVendor = currentUser?.roles?.includes('vendor');
-  const canAssignAgent = !isVendor && (currentUser?.roles?.includes('super-admin') || currentUser?.roles?.includes('inventory-manager'));
 
   // Check if user has permission to access order detail page
-  const hasPermission = usePagePermission(['super-admin', 'inventory-manager', 'vendor']);
+  // Allow access if user has ANY order-related permission
+  const hasPermission = usePagePermission({
+    requiredPermissions: [
+      PERMISSIONS.LIST_ORDERS,
+      PERMISSIONS.CREATE_ORDER,
+      PERMISSIONS.ACCEPT_ORDER,
+      PERMISSIONS.SCAN_ORDER_INVENTORY,
+      PERMISSIONS.SCAN_ORDER_DELIVERY,
+      PERMISSIONS.ASSIGN_PICKUP_AGENT,
+      PERMISSIONS.ASSIGN_DELIVERY_AGENT,
+      PERMISSIONS.PICKUP_ORDER_FROM_VENDOR,
+      PERMISSIONS.PICKUP_ORDER_FROM_INVENTORY,
+      PERMISSIONS.VERIFY_ORDER_OTP,
+    ]
+  });
+
+  // Permission checks for specific actions
+  const { hasPermission: canAcceptOrderPerm } = useHasPermission(PERMISSIONS.ACCEPT_ORDER);
+  const { hasPermission: canAssignPickupAgentPerm } = useHasPermission(PERMISSIONS.ASSIGN_PICKUP_AGENT);
 
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -263,9 +281,9 @@ export default function OrderDetailPage() {
   const customer: Customer = orderWithRelations.customer || { name: '', mobile: '', address: '' };
   const items = orderWithRelations.items || [];
   const vendor: { id?: number; name_en?: string; name_ar?: string; name?: string; [key: string]: unknown } = orderWithRelations.vendor || {};
-  const canAccept = order.status === 'pending' && !isVendor;
+  const canAccept = order.status === 'pending' && canAcceptOrderPerm;
   // Can assign pickup agent only if order is accepted or confirmed
-  const canAssignPickupAgent = canAssignAgent && (order.status === 'accepted' || order.status === 'confirmed');
+  const canAssignPickupAgent = canAssignPickupAgentPerm && (order.status === 'accepted' || order.status === 'confirmed');
 
   return (
     <div className="space-y-6 pb-8">

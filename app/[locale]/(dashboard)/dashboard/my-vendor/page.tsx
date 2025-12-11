@@ -37,7 +37,7 @@ export default function MyVendorProfilePage() {
   const locale = useLocale();
   const router = useRouter();
 
-  const hasPermission = usePagePermission(['vendor']);
+  const hasPermission = usePagePermission({ requiredPermissions: [] });
 
   const [isLoading, setIsLoading] = useState(true);
   const [vendor, setVendor] = useState<Vendor | null>(null);

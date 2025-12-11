@@ -11,8 +11,8 @@ export default function AnalyticsPage() {
   const t = useTranslations('analyticsPage');
   const tCommon = useTranslations('common');
   
-  // Check if user has permission to access analytics page
-  const hasPermission = usePagePermission(['super-admin', 'admin', 'manager', 'inventory-manager']);
+  // Check if user has permission to access analytics page (any authenticated user)
+  const hasPermission = usePagePermission({ requiredPermissions: [] });
 
   // Don't render page if permission check hasn't completed or user lacks permission
   if (hasPermission === null || hasPermission === false) {

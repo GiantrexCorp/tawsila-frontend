@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -16,28 +15,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { orders, productRequests, agents, products } from "@/lib/mock-data";
-import { Link, useRouter } from "@/i18n/routing";
-import { getCurrentUser } from "@/lib/auth";
+import { Link } from "@/i18n/routing";
+import { usePagePermission } from "@/hooks/use-page-permission";
 
 export default function DashboardPage() {
   const t = useTranslations('dashboard');
   const tOrders = useTranslations('orders');
   const tRequests = useTranslations('requests');
   const tCommon = useTranslations('common');
-  const router = useRouter();
-  const [isShippingAgent, setIsShippingAgent] = useState(false);
 
-  // Check if user is shipping agent and redirect
-  useEffect(() => {
-    const currentUser = getCurrentUser();
-    if (currentUser?.roles?.includes('shipping-agent')) {
-      setIsShippingAgent(true);
-      router.push('/dashboard/orders');
-    }
-  }, [router]);
+  // Dashboard is accessible to all authenticated users (no permission required)
+  const hasPermission = usePagePermission({ requiredPermissions: [] });
 
-  // Don't render dashboard for shipping agents
-  if (isShippingAgent) {
+  // Show loading while checking permissions
+  if (hasPermission === null) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

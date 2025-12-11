@@ -30,6 +30,7 @@ import {
   useRoles,
 } from "@/hooks/queries";
 import { usePagePermission } from "@/hooks/use-page-permission";
+import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
 import { getCurrentUser, logout } from "@/lib/auth";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
@@ -59,7 +60,11 @@ export default function UsersPage() {
   const router = useRouter();
 
   const currentUser = getCurrentUser();
-  const hasPermission = usePagePermission(['super-admin', 'admin', 'inventory-manager']);
+  const hasPermission = usePagePermission({ requiredPermissions: [PERMISSIONS.LIST_USERS] });
+
+  // Permission checks for actions
+  const { hasPermission: canCreateUser } = useHasPermission(PERMISSIONS.CREATE_USER);
+  const { hasPermission: canUpdateUser } = useHasPermission(PERMISSIONS.UPDATE_USER);
 
   // Pagination and filters state
   const [currentPage, setCurrentPage] = useState(1);
@@ -107,10 +112,6 @@ export default function UsersPage() {
 
   const [userToAssignRole, setUserToAssignRole] = useState<User | null>(null);
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
-
-  const isSuperAdmin = useCallback(() => {
-    return currentUser?.roles?.includes('super-admin') ?? false;
-  }, [currentUser?.roles]);
 
   const getDisplayName = useCallback((user: User) => {
     return locale === 'ar' ? user.name_ar : user.name_en;
@@ -367,7 +368,7 @@ export default function UsersPage() {
           >
             <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
           </Button>
-          {isSuperAdmin() && (
+          {canCreateUser && (
             <Button onClick={() => setShowAddDialog(true)} className="gap-2">
               <UserPlus className="h-4 w-4" />
               {t('addUser')}
@@ -527,7 +528,7 @@ export default function UsersPage() {
                     <div className="px-5 pb-4 pt-2 border-t border-border/40 relative z-10">
                       <div className="flex items-center justify-between">
                         {/* Edit Button */}
-                        {isSuperAdmin() && (
+                        {canUpdateUser && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -542,7 +543,7 @@ export default function UsersPage() {
                             {tCommon('edit')}
                           </Button>
                         )}
-                        {!isSuperAdmin() && (
+                        {!canUpdateUser && (
                           <span className="text-[11px] text-muted-foreground/60 font-medium">
                             {t('view')}
                           </span>

@@ -89,3 +89,8 @@ export {
   useUpdateRole,
   useDeleteRole,
 } from './use-roles';
+
+// Permissions
+export {
+  usePermissions,
+} from './use-permissions';

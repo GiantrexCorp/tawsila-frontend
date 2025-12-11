@@ -16,7 +16,7 @@ export interface User {
   created_at: string;
   updated_at: string;
   roles: string[];
-  permissions?: string[];
+  roles_permissions: string[]; // Permissions from all assigned roles
   // For vendor users, the backend should include vendor_id in the login response
   vendor_id?: number;
   organization_id?: number; // Alternative field name some backends use

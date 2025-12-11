@@ -11,6 +11,7 @@ import {
   Role,
   RolesResponse,
 } from "@/lib/services/roles";
+import { CURRENT_USER_QUERY_KEY } from "@/hooks/use-permissions";
 
 /**
  * Hook to fetch all roles with caching
@@ -55,6 +56,7 @@ export function useCreateRole() {
 
 /**
  * Hook to update a role
+ * Also invalidates current user permissions since role permissions may have changed
  */
 export function useUpdateRole() {
   const queryClient = useQueryClient();
@@ -66,12 +68,15 @@ export function useUpdateRole() {
       // Invalidate specific role and list
       queryClient.invalidateQueries({ queryKey: queryKeys.roles.all });
       queryClient.invalidateQueries({ queryKey: [...queryKeys.roles.all, variables.id] });
+      // Refresh current user's permissions as they may have changed
+      queryClient.invalidateQueries({ queryKey: CURRENT_USER_QUERY_KEY });
     },
   });
 }
 
 /**
  * Hook to delete a role
+ * Also invalidates current user permissions since their role may have been deleted
  */
 export function useDeleteRole() {
   const queryClient = useQueryClient();
@@ -80,6 +85,8 @@ export function useDeleteRole() {
     mutationFn: deleteRole,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.roles.all });
+      // Refresh current user's permissions as their role may have been deleted
+      queryClient.invalidateQueries({ queryKey: CURRENT_USER_QUERY_KEY });
     },
   });
 }

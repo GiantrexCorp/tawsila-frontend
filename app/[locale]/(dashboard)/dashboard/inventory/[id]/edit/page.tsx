@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
+import { PERMISSIONS } from "@/hooks/use-permissions";
 import { fetchInventory, updateInventory, type UpdateInventoryRequest } from "@/lib/services/inventories";
 import { fetchGovernorates, fetchCities, type Governorate, type City } from "@/lib/services/vendors";
 import { LocationPicker } from "@/components/ui/location-picker";
@@ -30,8 +31,8 @@ export default function EditInventoryPage() {
   const params = useParams();
   const inventoryId = parseInt(params.id as string);
   
-  // Check if user has permission (only super-admin)
-  const hasPermission = usePagePermission(['super-admin']);
+  // Check if user has permission
+  const hasPermission = usePagePermission({ requiredPermissions: [PERMISSIONS.UPDATE_INVENTORY] });
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);

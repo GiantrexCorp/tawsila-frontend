@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
+import { PERMISSIONS } from "@/hooks/use-permissions";
 import { createInventory, type CreateInventoryRequest } from "@/lib/services/inventories";
 import { fetchGovernorates, fetchCities, type Governorate, type City } from "@/lib/services/vendors";
 import { LocationPicker } from "@/components/ui/location-picker";
@@ -27,8 +28,8 @@ export default function NewInventoryPage() {
   const locale = useLocale();
   const router = useRouter();
   
-  // Check if user has permission (only super-admin)
-  const hasPermission = usePagePermission(['super-admin']);
+  // Check if user has permission
+  const hasPermission = usePagePermission({ requiredPermissions: [PERMISSIONS.CREATE_INVENTORY] });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   

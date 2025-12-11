@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
+import { PERMISSIONS } from "@/hooks/use-permissions";
 import {
   fetchVendor,
   updateVendor,
@@ -39,7 +40,7 @@ export default function EditVendorPage() {
   const vendorId = parseInt(params.id as string);
   
   // Check if user has permission
-  const hasPermission = usePagePermission(['super-admin', 'admin', 'manager', 'inventory-manager']);
+  const hasPermission = usePagePermission({ requiredPermissions: [PERMISSIONS.UPDATE_VENDOR] });
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);

@@ -10,11 +10,12 @@ import {
   ShoppingCart,
   Building2,
   BarChart3,
-  Settings,
   ChevronDown,
   Users,
   LogOut,
   User,
+  Shield,
+  LucideIcon,
 } from "lucide-react";
 import { getCurrentUser, logout } from "@/lib/auth";
 import { fetchRoles, Role } from "@/lib/services/roles";
@@ -41,6 +42,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TawsilaLogo } from "@/components/branding/tawsila-logo";
+import { useUserPermissions, PERMISSION_MODULES } from "@/hooks/use-permissions";
+
+interface NavItem {
+  title: string;
+  href: string;
+  icon: LucideIcon;
+  requiredPermissions?: string[]; // If empty or undefined, accessible to all authenticated users
+}
+
+interface NavGroup {
+  title: string;
+  items: NavItem[];
+}
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -55,6 +69,9 @@ export function AppSidebar() {
     roles: string[];
   } | null>(null);
   const [availableRoles, setAvailableRoles] = React.useState<Role[]>([]);
+
+  // Get user permissions from API (cached)
+  const { permissions: userPermissions, isLoading: isLoadingPermissions } = useUserPermissions();
 
   React.useEffect(() => {
     const currentUser = getCurrentUser();
@@ -91,8 +108,8 @@ export function AppSidebar() {
       toast.success(t('logoutSuccess'));
       router.push('/login');
     } catch (error) {
-      const errorMessage = (error && typeof error === 'object' && 'message' in error) 
-        ? String(error.message) 
+      const errorMessage = (error && typeof error === 'object' && 'message' in error)
+        ? String(error.message)
         : 'Logout failed';
       toast.error(t('logoutFailed'), {
         description: errorMessage,
@@ -103,10 +120,10 @@ export function AppSidebar() {
   const getRoleDisplay = (roles: string[]) => {
     if (!roles || roles.length === 0) return t('user');
     const roleName = roles[0];
-    
+
     // Find role in available roles to get slug
     const roleData = availableRoles.find(r => r.name === roleName);
-    
+
     // Use slug based on locale, fallback to formatted role name
     if (roleData) {
       const slug = locale === 'ar' ? roleData.slug_ar : roleData.slug_en;
@@ -114,62 +131,32 @@ export function AppSidebar() {
         return slug;
       }
     }
-    
+
     // Fallback: format role name
-    return roleName.split('-').map(word => 
+    return roleName.split('-').map(word =>
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
   };
 
-  // Check if user has any of the required roles
-  const hasPermission = (allowedRoles?: string[]) => {
-    if (!allowedRoles || allowedRoles.length === 0) return true; // No restriction
-    if (!user || !user.roles || user.roles.length === 0) return false;
-    
-    // Check if user has any of the allowed roles
-    return user.roles.some(role => allowedRoles.includes(role));
+  // Check if user has any of the required permissions
+  const hasPermission = (requiredPermissions?: string[]) => {
+    // If no permissions required, accessible to all authenticated users
+    if (!requiredPermissions || requiredPermissions.length === 0) return true;
+
+    // If still loading permissions, don't show items yet
+    if (isLoadingPermissions) return false;
+
+    // Check if user has any of the required permissions
+    return requiredPermissions.some(permission => userPermissions.includes(permission));
   };
 
-  // Check if user is vendor or shipping agent
+  // Check if user is a vendor (has vendor role) - only used to show vendor profile link
   const isVendor = user?.roles?.includes('vendor');
-  const isShippingAgent = user?.roles?.includes('shipping-agent');
-  
-  const navigation = isVendor ? [
-    {
-      title: t('myAccount'),
-      items: [
-        {
-          title: t('vendorProfile'),
-          href: "/dashboard/my-vendor",
-          icon: Building2,
-          allowedRoles: ['vendor'],
-        },
-      ],
-    },
-    {
-      title: t('orders'),
-      items: [
-        {
-          title: t('orders'),
-          href: "/dashboard/orders",
-          icon: ShoppingCart,
-          allowedRoles: ['vendor'],
-        },
-      ],
-    },
-  ] : isShippingAgent ? [
-    {
-      title: t('orders'),
-      items: [
-        {
-          title: t('orders'),
-          href: "/dashboard/orders",
-          icon: ShoppingCart,
-          allowedRoles: ['shipping-agent'],
-        },
-      ],
-    },
-  ] : [
+
+  // Build navigation purely based on permissions
+  // Each module is shown if user has ANY permission related to that module
+  const navigation: NavGroup[] = [
+    // Overview section - always visible to authenticated users
     {
       title: t('overview'),
       items: [
@@ -177,10 +164,22 @@ export function AppSidebar() {
           title: t('dashboard'),
           href: "/dashboard",
           icon: LayoutDashboard,
-          allowedRoles: ['super-admin', 'admin', 'manager', 'viewer', 'inventory-manager', 'order-preparer'],
+          // Dashboard is accessible to all authenticated users
         },
       ],
     },
+    // Vendor Profile - only for vendor users to access their own profile
+    ...(isVendor ? [{
+      title: t('myAccount'),
+      items: [
+        {
+          title: t('vendorProfile'),
+          href: "/dashboard/my-vendor",
+          icon: Building2,
+        },
+      ],
+    }] : []),
+    // Management section - permission-based
     {
       title: t('management'),
       items: [
@@ -188,22 +187,26 @@ export function AppSidebar() {
           title: t('inventory'),
           href: "/dashboard/inventory",
           icon: Package,
-          allowedRoles: ['super-admin', 'admin', 'manager', 'inventory-manager'],
+          // Show if user has ANY inventory permission
+          requiredPermissions: [...PERMISSION_MODULES.INVENTORIES],
         },
         {
           title: t('orders'),
           href: "/dashboard/orders",
           icon: ShoppingCart,
-          allowedRoles: ['super-admin', 'inventory-manager'],
+          // Show if user has ANY order permission
+          requiredPermissions: [...PERMISSION_MODULES.ORDERS],
         },
         {
           title: t('vendors'),
           href: "/dashboard/vendors",
           icon: Building2,
-          allowedRoles: ['super-admin', 'admin', 'manager', 'inventory-manager'],
+          // Show if user has ANY vendor permission
+          requiredPermissions: [...PERMISSION_MODULES.VENDORS],
         },
       ],
     },
+    // Analytics section - accessible to all authenticated users (uses dummy data)
     {
       title: t('analyticsSection'),
       items: [
@@ -211,10 +214,10 @@ export function AppSidebar() {
           title: t('analytics'),
           href: "/dashboard/analytics",
           icon: BarChart3,
-          allowedRoles: ['super-admin', 'admin', 'manager', 'inventory-manager'],
         },
       ],
     },
+    // System section - permission-based
     {
       title: t('system'),
       items: [
@@ -222,26 +225,22 @@ export function AppSidebar() {
           title: t('users'),
           href: "/dashboard/users",
           icon: Users,
-          allowedRoles: ['super-admin', 'admin', 'inventory-manager'],
+          // Show if user has ANY user permission
+          requiredPermissions: [...PERMISSION_MODULES.USERS],
         },
         {
-          title: t('settings'),
-          href: "/dashboard/settings",
-          icon: Settings,
-          allowedRoles: ['super-admin', 'admin', 'manager', 'viewer', 'inventory-manager'],
+          title: t('roles'),
+          href: "/dashboard/roles",
+          icon: Shield,
+          // Show if user has ANY role permission
+          requiredPermissions: [...PERMISSION_MODULES.ROLES],
         },
       ],
     },
   ];
 
-  // Determine home page based on user role
+  // Determine home page - always go to dashboard (accessible to all)
   const getHomePage = () => {
-    if (user?.roles?.includes('shipping-agent')) {
-      return '/dashboard/orders';
-    }
-    if (user?.roles?.includes('vendor')) {
-      return '/dashboard/vendor/profile';
-    }
     return '/dashboard';
   };
 
@@ -256,11 +255,11 @@ export function AppSidebar() {
       <SidebarContent>
         {navigation.map((group) => {
           // Filter items based on user permissions
-          const visibleItems = group.items.filter(item => hasPermission(item.allowedRoles));
-          
+          const visibleItems = group.items.filter(item => hasPermission(item.requiredPermissions));
+
           // Don't render group if no items are visible
           if (visibleItems.length === 0) return null;
-          
+
           return (
             <SidebarGroup key={group.title}>
               <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
@@ -321,14 +320,6 @@ export function AppSidebar() {
                 {t('profile')}
               </Link>
             </DropdownMenuItem>
-            {hasPermission(['super-admin', 'admin', 'manager', 'viewer']) && (
-              <DropdownMenuItem asChild>
-                <Link href="/dashboard/settings">
-                  <Settings className="me-2 h-4 w-4" />
-                  {t('settings')}
-                </Link>
-              </DropdownMenuItem>
-            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-red-600" onClick={handleLogout}>
               <LogOut className="me-2 h-4 w-4" />

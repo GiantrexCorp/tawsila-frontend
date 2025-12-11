@@ -14,6 +14,7 @@ import {
   UsersResponse,
   UserFilters,
 } from "@/lib/services/users";
+import { CURRENT_USER_QUERY_KEY } from "@/hooks/use-permissions";
 
 /**
  * Hook to fetch users with pagination and filters
@@ -115,6 +116,7 @@ export function useChangeUserPassword() {
 
 /**
  * Hook to assign role to user
+ * Also invalidates current user permissions if the user is assigning a role to themselves
  */
 export function useAssignUserRole() {
   const queryClient = useQueryClient();
@@ -126,6 +128,8 @@ export function useAssignUserRole() {
       // Invalidate the specific user and lists
       queryClient.invalidateQueries({ queryKey: queryKeys.users.detail(variables.userId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.users.lists() });
+      // Refresh current user's permissions in case they assigned a role to themselves
+      queryClient.invalidateQueries({ queryKey: CURRENT_USER_QUERY_KEY });
     },
   });
 }

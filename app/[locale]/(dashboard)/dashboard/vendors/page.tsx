@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Building2, Plus, Loader2, MapPin, ArrowUpRight, Edit } from "lucide-react";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
+import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
 import { fetchVendors, type Vendor } from "@/lib/services/vendors";
 
 export default function VendorsPage() {
@@ -18,7 +19,11 @@ export default function VendorsPage() {
   const router = useRouter();
   
   // Check if user has permission to access vendors page
-  const hasPermission = usePagePermission(['super-admin', 'admin', 'manager', 'inventory-manager']);
+  const hasPermission = usePagePermission({ requiredPermissions: [PERMISSIONS.LIST_VENDORS] });
+
+  // Permission checks for actions
+  const { hasPermission: canCreateVendor } = useHasPermission(PERMISSIONS.CREATE_VENDOR);
+  const { hasPermission: canUpdateVendor } = useHasPermission(PERMISSIONS.UPDATE_VENDOR);
 
   // Vendors state
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -59,10 +64,12 @@ export default function VendorsPage() {
             {t('subtitle')}
           </p>
         </div>
-        <Button className="w-full sm:w-auto" onClick={() => router.push('/dashboard/vendors/new')}>
-          <Plus className="h-4 w-4 me-2" />
-          {t('addOrganization')}
-        </Button>
+        {canCreateVendor && (
+          <Button className="w-full sm:w-auto" onClick={() => router.push('/dashboard/vendors/new')}>
+            <Plus className="h-4 w-4 me-2" />
+            {t('addOrganization')}
+          </Button>
+        )}
       </div>
 
       {/* Summary Stats */}
@@ -183,19 +190,25 @@ export default function VendorsPage() {
                 {/* Bottom Action Bar */}
                 <div className="px-5 pb-4 pt-2 border-t border-border/40 relative z-10">
                   <div className="flex items-center justify-between">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 px-3 text-xs opacity-0 group-hover:opacity-100 transition-opacity relative z-20"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        router.push(`/dashboard/vendors/${vendor.id}/edit`);
-                      }}
-                    >
-                      <Edit className="h-3.5 w-3.5 me-1.5" />
-                      {tCommon('edit')}
-                    </Button>
+                    {canUpdateVendor ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-3 text-xs opacity-0 group-hover:opacity-100 transition-opacity relative z-20"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          router.push(`/dashboard/vendors/${vendor.id}/edit`);
+                        }}
+                      >
+                        <Edit className="h-3.5 w-3.5 me-1.5" />
+                        {tCommon('edit')}
+                      </Button>
+                    ) : (
+                      <span className="text-[11px] text-muted-foreground/60 font-medium">
+                        {tCommon('view')}
+                      </span>
+                    )}
                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center transition-all duration-300 group-hover:bg-primary group-hover:scale-110">
                       <ArrowUpRight className="h-4 w-4 text-primary group-hover:text-primary-foreground transition-colors duration-300" />
                     </div>

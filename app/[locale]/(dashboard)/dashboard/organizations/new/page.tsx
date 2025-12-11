@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
+import { PERMISSIONS } from "@/hooks/use-permissions";
 import { createVendor, fetchGovernorates, fetchCities, type Governorate, type City, type CreateVendorRequest } from "@/lib/services/vendors";
 import { Separator } from "@/components/ui/separator";
 
@@ -26,8 +27,8 @@ export default function NewVendorPage() {
   const tCommon = useTranslations('common');
   const router = useRouter();
   
-  // Check if user has permission
-  const hasPermission = usePagePermission(['super-admin', 'admin', 'manager', 'inventory-manager']);
+  // Check if user has permission to create vendors
+  const hasPermission = usePagePermission({ requiredPermissions: [PERMISSIONS.CREATE_VENDOR] });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string>('');

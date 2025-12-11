@@ -171,3 +171,4 @@ For issues or questions, please refer to:
 - [Shadcn/ui Documentation](https://ui.shadcn.com)
 - [next-intl Documentation](https://next-intl-docs.vercel.app)
 
+

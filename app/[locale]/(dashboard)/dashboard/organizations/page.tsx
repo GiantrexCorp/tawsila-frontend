@@ -25,7 +25,7 @@ export default function OrganizationsPage() {
   const router = useRouter();
   
   // Check if user has permission to access vendors page
-  const hasPermission = usePagePermission(['super-admin', 'admin', 'manager', 'inventory-manager']);
+  const hasPermission = usePagePermission({ requiredPermissions: [] });
 
   // Vendors state
   const [vendors, setVendors] = useState<Vendor[]>([]);

@@ -25,6 +25,7 @@ import {
   Shield
 } from "lucide-react";
 import { usePagePermission } from "@/hooks/use-page-permission";
+import { PERMISSIONS } from "@/hooks/use-permissions";
 import { fetchUser, updateUser, User as UserType } from "@/lib/services/users";
 import { toast } from "sonner";
 
@@ -36,7 +37,7 @@ export default function EditUserPage() {
   const params = useParams();
   const userId = parseInt(params.id as string);
 
-  const hasPermission = usePagePermission(['super-admin']);
+  const hasPermission = usePagePermission({ requiredPermissions: [PERMISSIONS.UPDATE_USER] });
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);

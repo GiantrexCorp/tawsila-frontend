@@ -92,19 +92,13 @@ export default function LoginPage() {
       // Normal login flow (status_code 200)
       if (response.data) {
         const userName = response.data.name_en || response.data.name_ar || response.data.email;
-        
+
         toast.success(t('loginSuccess'), {
           description: t('welcomeBack', { name: userName }),
         });
 
-        // Redirect based on role
-        if (response.data.roles?.includes('shipping-agent')) {
-          router.push('/dashboard/orders');
-        } else if (response.data.roles?.includes('vendor')) {
-          router.push('/dashboard/vendor/profile');
-        } else {
-          router.push('/dashboard');
-        }
+        // Always redirect to dashboard - permissions control what users can access
+        router.push('/dashboard');
       }
     } catch (error: unknown) {
       handleLoginError(error);

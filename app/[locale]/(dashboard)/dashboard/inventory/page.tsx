@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Warehouse, Plus, Loader2, MapPin, Phone, Edit, Trash2, Search, ArrowUpRight } from "lucide-react";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
+import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
 import { fetchInventories, deleteInventory, type Inventory } from "@/lib/services/inventories";
-import { getCurrentUser } from "@/lib/auth";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +27,11 @@ export default function InventoryPage() {
   const router = useRouter();
   
   // Check if user has permission to access inventory page
-  const hasPermission = usePagePermission(['super-admin', 'admin', 'manager', 'inventory-manager']);
+  const hasPermission = usePagePermission({ requiredPermissions: [PERMISSIONS.LIST_INVENTORIES] });
+
+  // Permission checks for actions
+  const { hasPermission: canCreateInventory } = useHasPermission(PERMISSIONS.CREATE_INVENTORY);
+  const { hasPermission: canUpdateInventory } = useHasPermission(PERMISSIONS.UPDATE_INVENTORY);
 
   // Inventories state
   const [inventories, setInventories] = useState<Inventory[]>([]);
@@ -104,9 +108,6 @@ export default function InventoryPage() {
     );
   }
 
-  const currentUser = getCurrentUser();
-  const isSuperAdmin = currentUser?.roles?.includes('super-admin') || false;
-
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -116,7 +117,7 @@ export default function InventoryPage() {
             {t('subtitle')}
           </p>
         </div>
-        {isSuperAdmin && (
+        {canCreateInventory && (
           <Button className="w-full sm:w-auto gap-2" onClick={() => router.push('/dashboard/inventory/new')}>
             <Plus className="h-4 w-4" />
             {t('createInventory')}
@@ -174,7 +175,7 @@ export default function InventoryPage() {
             <Warehouse className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">{t('noInventories')}</h3>
             <p className="text-sm text-muted-foreground mb-4">{t('noInventoriesDesc')}</p>
-            {isSuperAdmin && (
+            {canCreateInventory && (
               <Button onClick={() => router.push('/dashboard/inventory/new')} className="gap-2">
                 <Plus className="h-4 w-4" />
                 {t('createInventory')}
@@ -274,7 +275,7 @@ export default function InventoryPage() {
                   <div className="px-5 pb-4 pt-2 border-t border-border/40 relative z-10">
                     <div className="flex items-center justify-between">
                       {/* Edit Button */}
-                      {isSuperAdmin ? (
+                      {canUpdateInventory ? (
                         <Button
                           variant="ghost"
                           size="sm"

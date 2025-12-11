@@ -21,6 +21,7 @@ import {
   UserCog
 } from "lucide-react";
 import { usePagePermission } from "@/hooks/use-page-permission";
+import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
 import { fetchUser, changeUserPassword, assignUserRole, User } from "@/lib/services/users";
 import { fetchRoles, Role } from "@/lib/services/roles";
 import { toast } from "sonner";
@@ -52,7 +53,12 @@ export default function ViewUserPage() {
   const userId = parseInt(params.id as string);
   const currentUser = getCurrentUser();
 
-  const hasPermission = usePagePermission(['super-admin', 'admin', 'inventory-manager']);
+  const hasPermission = usePagePermission({ requiredPermissions: [PERMISSIONS.SHOW_USER] });
+
+  // Permission checks for actions
+  const { hasPermission: canUpdateUser } = useHasPermission(PERMISSIONS.UPDATE_USER);
+  const { hasPermission: canChangePassword } = useHasPermission(PERMISSIONS.CHANGE_USER_PASSWORD);
+  const { hasPermission: canAssignRole } = useHasPermission(PERMISSIONS.ASSIGN_USER_ROLE);
 
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
@@ -70,8 +76,6 @@ export default function ViewUserPage() {
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [isAssigningRole, setIsAssigningRole] = useState(false);
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
-
-  const isSuperAdmin = () => currentUser?.roles?.includes('super-admin') ?? false;
 
   useEffect(() => {
     const loadData = async () => {
@@ -280,31 +284,37 @@ export default function ViewUserPage() {
                   </div>
                   <p className="text-muted-foreground mt-1">{user.email}</p>
                 </div>
-                {isSuperAdmin() && (
+                {(canAssignRole || canChangePassword || canUpdateUser) && (
                   <div className="flex gap-2 shrink-0">
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowRoleDialog(true)}
-                      className="gap-2"
-                    >
-                      <UserCog className="h-4 w-4" />
-                      {t('assignRole')}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowPasswordDialog(true)}
-                      className="gap-2"
-                    >
-                      <Key className="h-4 w-4" />
-                      {t('changePassword')}
-                    </Button>
-                    <Button
-                      onClick={() => router.push(`/dashboard/users/${user.id}/edit`)}
-                      className="gap-2"
-                    >
-                      <Edit className="h-4 w-4" />
-                      {tCommon('edit')}
-                    </Button>
+                    {canAssignRole && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowRoleDialog(true)}
+                        className="gap-2"
+                      >
+                        <UserCog className="h-4 w-4" />
+                        {t('assignRole')}
+                      </Button>
+                    )}
+                    {canChangePassword && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowPasswordDialog(true)}
+                        className="gap-2"
+                      >
+                        <Key className="h-4 w-4" />
+                        {t('changePassword')}
+                      </Button>
+                    )}
+                    {canUpdateUser && (
+                      <Button
+                        onClick={() => router.push(`/dashboard/users/${user.id}/edit`)}
+                        className="gap-2"
+                      >
+                        <Edit className="h-4 w-4" />
+                        {tCommon('edit')}
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>

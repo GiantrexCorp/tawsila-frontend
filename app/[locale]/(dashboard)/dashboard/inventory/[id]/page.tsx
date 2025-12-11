@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
+import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
 import {
   fetchInventory,
   type Inventory
@@ -32,7 +33,8 @@ export default function ViewInventoryPage() {
   const params = useParams();
   const inventoryId = parseInt(params.id as string);
 
-  const hasPermission = usePagePermission(['super-admin', 'admin', 'manager', 'inventory-manager']);
+  const hasPermission = usePagePermission({ requiredPermissions: [PERMISSIONS.SHOW_INVENTORY] });
+  const { hasPermission: canUpdateInventory } = useHasPermission(PERMISSIONS.UPDATE_INVENTORY);
 
   const [isLoading, setIsLoading] = useState(true);
   const [inventory, setInventory] = useState<Inventory | null>(null);
@@ -120,15 +122,17 @@ export default function ViewInventoryPage() {
                     <p className="text-muted-foreground mt-1 font-mono text-sm">{inventory.code}</p>
                   )}
                 </div>
-                <div className="flex gap-2 shrink-0">
-                  <Button
-                    onClick={() => router.push(`/dashboard/inventory/${inventory.id}/edit`)}
-                    className="gap-2"
-                  >
-                    <Edit className="h-4 w-4" />
-                    {tCommon('edit')}
-                  </Button>
-                </div>
+                {canUpdateInventory && (
+                  <div className="flex gap-2 shrink-0">
+                    <Button
+                      onClick={() => router.push(`/dashboard/inventory/${inventory.id}/edit`)}
+                      className="gap-2"
+                    >
+                      <Edit className="h-4 w-4" />
+                      {tCommon('edit')}
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Quick Info Pills */}

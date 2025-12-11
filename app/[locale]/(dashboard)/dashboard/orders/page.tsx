@@ -9,6 +9,7 @@ import { Search, Eye, Loader2, CheckCircle, Plus, XCircle } from "lucide-react";
 import { OrderStatusBadge } from "@/components/ui/status-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePagePermission } from "@/hooks/use-page-permission";
+import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
 import { fetchOrders, acceptOrder, rejectOrder, type Order, type Customer } from "@/lib/services/orders";
 import { fetchInventories, fetchCurrentInventory, type Inventory } from "@/lib/services/inventories";
 import { toast } from "sonner";
@@ -43,12 +44,28 @@ export default function OrdersPage() {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const currentUser = getCurrentUser();
-  const isVendor = currentUser?.roles?.includes('vendor');
   const isShippingAgent = currentUser?.roles?.includes('shipping-agent');
-  
+
   // Check if user has permission to access orders page
-  // Orders management is for super-admin, inventory-manager, vendors (view-only), and shipping-agents (assigned orders only)
-  const hasPermission = usePagePermission(['super-admin', 'inventory-manager', 'vendor', 'shipping-agent']);
+  // Allow access if user has ANY order-related permission
+  const hasPermission = usePagePermission({
+    requiredPermissions: [
+      PERMISSIONS.LIST_ORDERS,
+      PERMISSIONS.CREATE_ORDER,
+      PERMISSIONS.ACCEPT_ORDER,
+      PERMISSIONS.SCAN_ORDER_INVENTORY,
+      PERMISSIONS.SCAN_ORDER_DELIVERY,
+      PERMISSIONS.ASSIGN_PICKUP_AGENT,
+      PERMISSIONS.ASSIGN_DELIVERY_AGENT,
+      PERMISSIONS.PICKUP_ORDER_FROM_VENDOR,
+      PERMISSIONS.PICKUP_ORDER_FROM_INVENTORY,
+      PERMISSIONS.VERIFY_ORDER_OTP,
+    ]
+  });
+
+  // Permission checks for specific actions
+  const { hasPermission: canCreateOrder } = useHasPermission(PERMISSIONS.CREATE_ORDER);
+  const { hasPermission: canAcceptOrder } = useHasPermission(PERMISSIONS.ACCEPT_ORDER);
 
   // Fetch orders on mount
   useEffect(() => {
@@ -231,7 +248,7 @@ export default function OrdersPage() {
           <p className="text-sm text-muted-foreground mb-4">
             {isShippingAgent ? t('noAssignedOrdersDesc') : t('noOrdersDesc')}
           </p>
-          {isVendor && (
+          {canCreateOrder && (
             <Button onClick={() => router.push('/dashboard/orders/new')} className="gap-2">
               <Plus className="h-4 w-4" />
               {t('createOrder')}
@@ -245,8 +262,8 @@ export default function OrdersPage() {
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {ordersList.map((order) => {
           const customer: Customer = order.customer || { name: '', mobile: '', address: '' };
-          const canAccept = order.status === 'pending' && !isVendor;
-          const canReject = order.status === 'pending' && !isVendor;
+          const canAccept = order.status === 'pending' && canAcceptOrder;
+          const canReject = order.status === 'pending' && canAcceptOrder;
 
           return (
             <div
@@ -366,7 +383,7 @@ export default function OrdersPage() {
             {isShippingAgent ? t('myAssignedOrdersDesc') : t('subtitle')}
           </p>
         </div>
-        {isVendor && (
+        {canCreateOrder && (
           <Button
             onClick={() => router.push('/dashboard/orders/new')}
             className="w-full sm:w-auto gap-2"

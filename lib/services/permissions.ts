@@ -30,11 +30,22 @@ export interface PermissionsResponse {
   };
 }
 
+export interface PermissionFilters {
+  name?: string;
+}
+
 /**
- * Fetch all permissions
+ * Fetch all permissions with optional filtering
  */
-export async function fetchPermissions(page: number = 1): Promise<PermissionsResponse> {
-  const response = await apiRequest<Permission[]>(`/permissions?page=${page}`, {
+export async function fetchPermissions(page: number = 1, filters?: PermissionFilters): Promise<PermissionsResponse> {
+  const params = new URLSearchParams();
+  params.append('page', page.toString());
+
+  if (filters?.name) {
+    params.append('filter[name]', filters.name);
+  }
+
+  const response = await apiRequest<Permission[]>(`/permissions?${params.toString()}`, {
     method: 'GET',
   });
 
