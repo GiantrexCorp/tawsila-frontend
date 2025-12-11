@@ -120,6 +120,20 @@ export interface UserFilters {
 }
 
 /**
+ * Data required to create a new user
+ */
+export interface CreateUserData {
+  name: string;
+  name_en: string;
+  name_ar: string;
+  email: string;
+  mobile: string;
+  password: string;
+  password_confirmation: string;
+  status: 'active' | 'inactive';
+}
+
+/**
  * Build query string from filters
  */
 function buildFilterQuery(filters: UserFilters): string {
@@ -185,7 +199,7 @@ export async function fetchUser(id: number): Promise<User> {
 /**
  * Create a new user
  */
-export async function createUser(userData: Partial<User>): Promise<User> {
+export async function createUser(userData: CreateUserData): Promise<User> {
   const response = await apiRequest<User>('/users', {
     method: 'POST',
     body: JSON.stringify(userData),

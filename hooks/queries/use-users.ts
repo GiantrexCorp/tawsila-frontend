@@ -13,6 +13,7 @@ import {
   User,
   UsersResponse,
   UserFilters,
+  CreateUserData,
 } from "@/lib/services/users";
 import { CURRENT_USER_QUERY_KEY } from "@/hooks/use-permissions";
 
@@ -54,7 +55,7 @@ export function useCreateUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: createUser,
+    mutationFn: (data: CreateUserData) => createUser(data),
     onSuccess: () => {
       // Invalidate all user list queries
       queryClient.invalidateQueries({ queryKey: queryKeys.users.lists() });
