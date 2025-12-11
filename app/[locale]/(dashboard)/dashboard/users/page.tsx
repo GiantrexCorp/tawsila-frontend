@@ -267,6 +267,8 @@ export default function UsersPage() {
         name_ar: addFormData.name_ar,
         email: addFormData.email,
         mobile: addFormData.mobile,
+        password: addFormData.password,
+        password_confirmation: addFormData.confirmPassword,
         status: addFormData.status,
       });
 
