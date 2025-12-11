@@ -28,7 +28,7 @@ import { usePagePermission } from "@/hooks/use-page-permission";
 import { PERMISSIONS } from "@/hooks/use-permissions";
 import { fetchOrder, acceptOrder, rejectOrder, assignPickupAgent, fetchOrderAssignments, type Order, type OrderItem, type Customer, type Assignment } from "@/lib/services/orders";
 import { fetchInventories, fetchCurrentInventory, type Inventory } from "@/lib/services/inventories";
-import { fetchActiveAgents, type Agent } from "@/lib/services/agents";
+import { fetchPickupAgents, type Agent } from "@/lib/services/agents";
 import { toast } from "sonner";
 import { getCurrentUser } from "@/lib/auth";
 import {
@@ -172,10 +172,10 @@ export default function OrderDetailPage() {
     }
   }, [orderId, rejectionReason, t, tCommon]);
 
-  const loadAgents = useCallback(async () => {
+  const loadAgents = useCallback(async (inventoryId: number) => {
     setIsLoadingAgents(true);
     try {
-      const fetchedAgents = await fetchActiveAgents();
+      const fetchedAgents = await fetchPickupAgents(inventoryId);
       setAgents(fetchedAgents);
     } catch {
       toast.error(t('errorLoadingAgents'));
@@ -193,9 +193,13 @@ export default function OrderDetailPage() {
       });
       return;
     }
+    if (!order?.inventory_id) {
+      toast.error(t('noInventoryAssigned'));
+      return;
+    }
     setShowAssignDialog(true);
-    loadAgents();
-  }, [assignments, t, loadAgents]);
+    loadAgents(order.inventory_id);
+  }, [assignments, t, loadAgents, order?.inventory_id]);
 
   const handleAssignPickupAgent = useCallback(async () => {
     if (!selectedAgentId) {

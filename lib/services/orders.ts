@@ -61,6 +61,8 @@ export interface Order {
   can_reject?: boolean;
   /** Whether current user can assign a pickup agent to this order */
   can_assign_pickup_agent?: boolean;
+  /** Assigned inventory ID */
+  inventory_id?: number;
 }
 
 /**

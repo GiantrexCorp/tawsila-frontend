@@ -53,3 +53,21 @@ export async function fetchActiveAgents(): Promise<Agent[]> {
   return shippingAgents;
 }
 
+/**
+ * Fetch agents eligible for pickup assignment
+ * Filters by permission and inventory assignment
+ */
+export async function fetchPickupAgents(inventoryId: number): Promise<Agent[]> {
+  const params = new URLSearchParams({
+    'filter[status]': 'active',
+    'filter[hasPermission]': 'pickup-order-from-vendor',
+    'filter[assignedToInventory]': inventoryId.toString(),
+  });
+
+  const response = await apiRequest<Agent[]>(`/get-users?${params.toString()}`, {
+    method: 'GET',
+  });
+
+  return response.data || [];
+}
+
