@@ -219,7 +219,7 @@ export function FilterBar({
                   <span className="text-sm">{tag}</span>
                   <button
                     onClick={() => handleRemoveTag(config.key, tag)}
-                    className="hover:text-destructive ml-1"
+                    className="hover:text-destructive ms-1"
                     type="button"
                   >
                     <X className="h-3 w-3" />
@@ -359,7 +359,7 @@ export function FilterBar({
                       onFilterChange(config.key, '');
                     }
                   }}
-                  className="ml-1 hover:text-destructive"
+                  className="ms-1 hover:text-destructive"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -418,7 +418,7 @@ export function FilterBar({
                         setSelectedFilters(prev => prev.filter(k => k !== config.key));
                         onFilterChange(config.key, '');
                       }}
-                      className="absolute top-0 right-0 text-muted-foreground hover:text-destructive"
+                      className="absolute top-0 end-0 text-muted-foreground hover:text-destructive"
                       title="Remove this filter"
                     >
                       <X className="h-4 w-4" />

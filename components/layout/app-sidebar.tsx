@@ -31,7 +31,7 @@ import {
   SidebarGroupLabel,
   SidebarGroupContent,
 } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,6 +48,7 @@ export function AppSidebar() {
   const locale = useLocale();
   const t = useTranslations('nav');
   const [user, setUser] = React.useState<{
+    id: number;
     name: string;
     name_en: string;
     name_ar: string;
@@ -59,6 +60,7 @@ export function AppSidebar() {
     const currentUser = getCurrentUser();
     if (currentUser) {
       setUser({
+        id: currentUser.id,
         name: currentUser.name,
         name_en: currentUser.name_en,
         name_ar: currentUser.name_ar,
@@ -96,11 +98,6 @@ export function AppSidebar() {
         description: errorMessage,
       });
     }
-  };
-
-  const getUserInitials = () => {
-    const name = getDisplayName();
-    return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
   };
 
   const getRoleDisplay = (roles: string[]) => {
@@ -300,11 +297,12 @@ export function AppSidebar() {
               className="flex w-full items-center gap-3 rounded-lg px-2 py-2 hover:bg-sidebar-accent"
               suppressHydrationWarning
             >
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                  {user ? getUserInitials() : "U"}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                userId={user?.id || 0}
+                name={getDisplayName()}
+                role={user?.roles?.[0]}
+                size="sm"
+              />
               <div className="flex-1 text-start text-sm">
                 <p className="font-medium">{getDisplayName()}</p>
                 <p className="text-xs text-muted-foreground">

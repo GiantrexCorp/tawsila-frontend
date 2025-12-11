@@ -390,7 +390,7 @@ export default function OrderDetailPage() {
                           <UserPlus className="h-4 w-4 text-muted-foreground" />
                           <p className="text-xs font-medium text-muted-foreground">{t('assignedTo')}</p>
                         </div>
-                        <div className="pl-6 space-y-1">
+                        <div className="ps-6 space-y-1">
                           <p className="font-medium">
                             {locale === 'ar' && assignment.assigned_to.name_ar
                               ? assignment.assigned_to.name_ar
@@ -430,7 +430,7 @@ export default function OrderDetailPage() {
                           <UserPlus className="h-4 w-4 text-muted-foreground" />
                           <p className="text-xs font-medium text-muted-foreground">{t('assignedTo')}</p>
                         </div>
-                        <div className="pl-6">
+                        <div className="ps-6">
                           <p className="text-sm text-muted-foreground italic">{t('notAssigned')}</p>
                         </div>
                       </div>
@@ -443,7 +443,7 @@ export default function OrderDetailPage() {
                           <User className="h-4 w-4 text-muted-foreground" />
                           <p className="text-xs font-medium text-muted-foreground">{t('assignedBy')}</p>
                         </div>
-                        <div className="pl-6 space-y-1">
+                        <div className="ps-6 space-y-1">
                           <p className="font-medium">
                             {locale === 'ar' && assignment.assigned_by.name_ar
                               ? assignment.assigned_by.name_ar
@@ -463,7 +463,7 @@ export default function OrderDetailPage() {
                           <User className="h-4 w-4 text-muted-foreground" />
                           <p className="text-xs font-medium text-muted-foreground">{t('assignedBy')}</p>
                         </div>
-                        <div className="pl-6">
+                        <div className="ps-6">
                           <p className="text-sm text-muted-foreground italic">{t('notAssigned')}</p>
                         </div>
                       </div>
@@ -731,7 +731,7 @@ export default function OrderDetailPage() {
                       </div>
                     </div>
                     {item.unit_price && (
-                      <div className="text-right">
+                      <div className="text-end">
                         <p className="text-xs text-muted-foreground">{t('itemTotal')}</p>
                         <p className="font-semibold">{tCommon('egpSymbol')} {(item.quantity * item.unit_price).toFixed(2)}</p>
                       </div>
@@ -1123,7 +1123,7 @@ export default function OrderDetailPage() {
             {/* Vertical line on the left */}
             <div className="absolute left-0 top-0 bottom-0 w-1 bg-gray-900"></div>
             
-            <div className="p-6 pl-8 space-y-4">
+            <div className="p-6 ps-8 space-y-4">
               {/* Header with LABEL, ORDER NUMBER, QR Code, and Tawsila */}
               <div className="flex items-start justify-between border-b-2 border-gray-900 pb-3">
                 <div className="flex-1">
@@ -1137,7 +1137,7 @@ export default function OrderDetailPage() {
                     </div>
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-3 ml-4">
+                <div className="flex flex-col items-end gap-3 ms-4">
                   {order.qr_code && (
                     <div className="flex-shrink-0">
                       <QRCodeSVG
@@ -1148,7 +1148,7 @@ export default function OrderDetailPage() {
                       />
                     </div>
                   )}
-                  <div className="flex flex-col items-end text-right">
+                  <div className="flex flex-col items-end text-end">
                     <div className="text-gray-400 text-lg font-semibold opacity-60" style={{ fontFamily: 'sans-serif' }}>{tApp('name')}</div>
                     <div className="text-gray-400 text-xs opacity-60 leading-tight" style={{ maxWidth: '140px', wordWrap: 'break-word', fontFamily: 'sans-serif' }}>
                       {tApp('tagline')}
@@ -1193,7 +1193,7 @@ export default function OrderDetailPage() {
                     {items.slice(0, 5).map((item: OrderItem, index: number) => (
                       <div key={index} className="flex justify-between text-gray-700">
                         <span className="flex-1">{item.product_name || `${t('product')} ${index + 1}`}</span>
-                        <span className="font-semibold ml-2">{tCommon('qty')}: {item.quantity}</span>
+                        <span className="font-semibold ms-2">{tCommon('qty')}: {item.quantity}</span>
                       </div>
                     ))}
                     {items.length > 5 && (

@@ -188,7 +188,7 @@ export default function DashboardPage() {
                       </span>
                     </div>
                   </div>
-                  <div className="text-right shrink-0">
+                  <div className="text-end shrink-0">
                     <p className="text-xs text-muted-foreground whitespace-nowrap">
                       {request.requestedAt.toLocaleDateString()}
                     </p>
@@ -233,7 +233,7 @@ export default function DashboardPage() {
                       )}
                     </div>
                   </div>
-                  <div className="text-right shrink-0">
+                  <div className="text-end shrink-0">
                     <p className="text-sm font-medium whitespace-nowrap">{order.totalAmount} {tCommon('egp')}</p>
                   </div>
                 </div>
@@ -268,7 +268,7 @@ export default function DashboardPage() {
                       <p className="font-medium text-sm md:text-base truncate">{product.name}</p>
                       <p className="text-xs text-muted-foreground">{product.sku}</p>
                     </div>
-                    <div className="text-right shrink-0 ml-4">
+                    <div className="text-end shrink-0 ms-4">
                       <p className={`font-bold text-sm md:text-base ${product.quantity === 0 ? 'text-red-600' : 'text-orange-600'}`}>
                         {product.quantity} / {product.minStock}
                       </p>

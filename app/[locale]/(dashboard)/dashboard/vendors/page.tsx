@@ -60,7 +60,7 @@ export default function VendorsPage() {
           </p>
         </div>
         <Button className="w-full sm:w-auto" onClick={() => router.push('/dashboard/vendors/new')}>
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="h-4 w-4 me-2" />
           {t('addOrganization')}
         </Button>
       </div>

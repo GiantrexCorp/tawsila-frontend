@@ -7,7 +7,7 @@ import { useRouter } from "@/i18n/routing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import {
   ArrowLeft,
   Loader2,
@@ -226,7 +226,6 @@ export default function ViewUserPage() {
   }
 
   const displayName = getDisplayName(user);
-  const initials = displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
   const userRole = availableRoles.find(r => r.name === user.roles?.[0]);
 
   return (
@@ -254,11 +253,13 @@ export default function ViewUserPage() {
           <div className="flex flex-col md:flex-row gap-6 items-start">
             {/* Avatar */}
             <div className="relative">
-              <Avatar className="h-28 w-28 ring-4 ring-background shadow-xl">
-                <AvatarFallback className="bg-primary text-primary-foreground text-3xl font-bold">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                userId={user.id}
+                name={displayName}
+                role={user.roles?.[0]}
+                size="xl"
+                className="ring-4 ring-background shadow-xl"
+              />
               {/* Status Dot */}
               <div className={`absolute -bottom-1 -right-1 h-6 w-6 rounded-full ring-4 ring-background ${
                 user.status === 'active' ? 'bg-emerald-500' : 'bg-zinc-400'

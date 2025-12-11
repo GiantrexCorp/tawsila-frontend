@@ -73,7 +73,7 @@ export default function OrganizationsPage() {
           </p>
         </div>
         <Button className="w-full sm:w-auto" onClick={() => router.push('/dashboard/organizations/new')}>
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="h-4 w-4 me-2" />
           {t('addOrganization')}
         </Button>
       </div>
@@ -191,12 +191,12 @@ export default function OrganizationsPage() {
                     <MapPin className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">{vendor.address}</span>
                   </div>
-                  <div className="text-sm text-muted-foreground ml-6">
+                  <div className="text-sm text-muted-foreground ms-6">
                     {locale === 'ar' ? vendor.city.name_ar : vendor.city.name_en},{' '}
                     {locale === 'ar' ? vendor.governorate.name_ar : vendor.governorate.name_en}
                   </div>
                   {(vendor.latitude || vendor.longitude) && (
-                    <div className="text-xs text-muted-foreground ml-6">
+                    <div className="text-xs text-muted-foreground ms-6">
                       {t('coordinates')}: {vendor.latitude}, {vendor.longitude}
                     </div>
                   )}

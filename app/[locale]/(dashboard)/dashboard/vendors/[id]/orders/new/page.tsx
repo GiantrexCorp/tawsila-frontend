@@ -392,7 +392,7 @@ export default function CreateOrderPage() {
                       {t('pricePerUnit')} ({tCommon('egpSymbol')})
                     </Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{tCommon('egpSymbol')}</span>
+                      <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{tCommon('egpSymbol')}</span>
                       <Input
                         id={`price_${index}`}
                         type="number"
@@ -405,13 +405,13 @@ export default function CreateOrderPage() {
                           handleItemChange(index, 'price', val);
                           handleItemChange(index, 'unit_price', val);
                         }}
-                        className="pl-10"
+                        className="ps-10"
                         required
                       />
                     </div>
                   </div>
                   <div className="col-span-12 md:col-span-2 flex items-end gap-2">
-                    <div className="flex-1 text-right">
+                    <div className="flex-1 text-end">
                       <p className="text-xs text-muted-foreground">{t('itemTotal')}</p>
                       <p className="font-semibold">
                         {tCommon('egpSymbol')} {(item.quantity * (item.price || item.unit_price || 0)).toFixed(2)}
@@ -486,7 +486,7 @@ export default function CreateOrderPage() {
               <div className="space-y-2">
                 <Label htmlFor="shipping_cost">{t('shippingCost')}</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{tCommon('egpSymbol')}</span>
+                  <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{tCommon('egpSymbol')}</span>
                   <Input
                     id="shipping_cost"
                     type="number"
@@ -494,7 +494,7 @@ export default function CreateOrderPage() {
                     step="0.01"
                     value={formData.shipping_cost}
                     readOnly
-                    className="pl-10 bg-muted"
+                    className="ps-10 bg-muted"
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">{t('shippingCostFixed')}</p>

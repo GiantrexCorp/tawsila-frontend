@@ -57,7 +57,7 @@ export default function TrackPage() {
                   className="text-base md:text-lg h-11 md:h-12"
                 />
                 <Button onClick={handleTrack} size="lg" className="px-6 md:px-8 w-full sm:w-auto">
-                  <Search className="h-4 md:h-5 w-4 md:w-5 mr-2" />
+                  <Search className="h-4 md:h-5 w-4 md:w-5 me-2" />
                   {t('search')}
                 </Button>
               </div>

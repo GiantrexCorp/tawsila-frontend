@@ -200,7 +200,7 @@ export default function EditUserPage() {
             <div className="space-y-2">
               <Label htmlFor="email">{t('email')} *</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Mail className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="email"
                   type="email"
@@ -208,21 +208,21 @@ export default function EditUserPage() {
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                   placeholder={t('emailPlaceholder')}
                   disabled={isSaving}
-                  className="pl-10"
+                  className="ps-10"
                 />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="mobile">{t('mobile')} *</Label>
               <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Phone className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="mobile"
                   value={formData.mobile}
                   onChange={(e) => setFormData(prev => ({ ...prev, mobile: e.target.value }))}
                   placeholder={t('mobilePlaceholder')}
                   disabled={isSaving}
-                  className="pl-10"
+                  className="ps-10"
                   dir="ltr"
                 />
               </div>

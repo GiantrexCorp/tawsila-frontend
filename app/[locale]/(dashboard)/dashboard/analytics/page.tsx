@@ -155,7 +155,7 @@ export default function AnalyticsPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-end">
                       <p className="text-lg font-bold">{agent.totalDeliveries}</p>
                       <p className="text-xs text-muted-foreground">{t('deliveries')}</p>
                     </div>
@@ -193,7 +193,7 @@ export default function AnalyticsPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-end">
                       <p className="text-lg font-bold">{item.revenue.toLocaleString()}</p>
                       <p className="text-xs text-muted-foreground">{tCommon('egp')}</p>
                     </div>

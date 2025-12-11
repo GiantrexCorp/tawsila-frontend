@@ -5,7 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import {
   Mail,
   Phone,
@@ -439,7 +439,6 @@ export default function UsersPage() {
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {users.map((user) => {
               const displayName = getDisplayName(user);
-              const initials = displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
               const userRole = availableRoles.find(r => r.name === user.roles?.[0]);
 
               return (
@@ -459,11 +458,13 @@ export default function UsersPage() {
                       <div className="flex items-start gap-4">
                         {/* Avatar */}
                         <div className="relative flex-shrink-0">
-                          <Avatar className="h-14 w-14 ring-2 ring-border/50 transition-transform duration-300 group-hover:scale-105">
-                            <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg">
-                              {initials}
-                            </AvatarFallback>
-                          </Avatar>
+                          <UserAvatar
+                            userId={user.id}
+                            name={displayName}
+                            role={user.roles?.[0]}
+                            size="lg"
+                            className="ring-2 ring-border/50 transition-transform duration-300 group-hover:scale-105"
+                          />
                         </div>
 
                         {/* Name & Role */}
