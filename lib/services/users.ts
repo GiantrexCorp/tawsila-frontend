@@ -70,7 +70,8 @@ export function getRoleDisplayName(role: UserRoleObject | undefined, locale: str
   const localizedSlug = locale === 'ar' ? role.slug_ar : role.slug_en;
   if (localizedSlug) return localizedSlug;
 
-  // Fallback: format role name
+  // Fallback: format role name (with safety check)
+  if (!role.name) return '';
   return role.name.split('-').map(word =>
     word.charAt(0).toUpperCase() + word.slice(1)
   ).join(' ');

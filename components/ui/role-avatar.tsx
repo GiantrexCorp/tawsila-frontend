@@ -31,6 +31,8 @@ const sizeClasses = {
  * Get the appropriate icon for a role
  */
 function getRoleIcon(roleName: string) {
+  if (!roleName) return Shield;
+
   const roleIcons: Record<string, typeof Shield> = {
     'super-admin': ShieldCheck,
     'admin': UserCog,
