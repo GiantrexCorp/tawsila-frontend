@@ -201,3 +201,32 @@
   right: auto;
   left: 0;
 }
+
+/* Leaflet Map z-index fix - ensure maps don't overlay dialogs/modals */
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-pane > canvas,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+  z-index: 1 !important;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 2 !important;
+}
+
+.leaflet-control {
+  z-index: 2 !important;
+}
+
+/* Ensure the map container itself has a proper stacking context */
+.leaflet-container {
+  z-index: 0 !important;
+  isolation: isolate;
+}

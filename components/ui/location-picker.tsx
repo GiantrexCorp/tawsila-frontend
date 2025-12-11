@@ -61,7 +61,7 @@ export function LocationPicker({ latitude, longitude, onLocationChange, disabled
   }
 
   return (
-    <div className="w-full rounded-lg overflow-hidden border-2 border-muted relative" style={{ height }}>
+    <div className="w-full rounded-lg overflow-hidden border-2 border-muted relative isolate" style={{ height, zIndex: 0 }}>
       <MapContainer
         center={center}
         zoom={13}
@@ -79,7 +79,7 @@ export function LocationPicker({ latitude, longitude, onLocationChange, disabled
         )}
       </MapContainer>
       {!disabled && (
-        <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg z-[1000] text-sm">
+        <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg z-10 text-sm">
           <p className="font-medium">📍 Click on the map to set location</p>
           {latitude && longitude && (
             <p className="text-xs text-muted-foreground mt-1">
@@ -89,7 +89,7 @@ export function LocationPicker({ latitude, longitude, onLocationChange, disabled
         </div>
       )}
       {disabled && latitude && longitude && (
-        <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg z-[1000] text-sm">
+        <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg z-10 text-sm">
           <p className="text-xs text-muted-foreground">
             {latitude}, {longitude}
           </p>
