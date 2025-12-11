@@ -98,7 +98,10 @@ export default function ViewUserPage() {
 
         // Set initial role selection
         if (fetchedUser.roles && fetchedUser.roles.length > 0) {
-          const currentRole = rolesResponse.data.find(r => r.name === fetchedUser.roles[0]?.name);
+          const userRole = fetchedUser.roles[0];
+          const currentRole = rolesResponse.data.find(r =>
+            r.name === userRole?.name || r.id === userRole?.id
+          );
           if (currentRole) {
             setSelectedRoleId(currentRole.id);
           }

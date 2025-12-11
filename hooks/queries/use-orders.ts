@@ -12,20 +12,30 @@ import {
   assignPickupAgent,
   fetchOrderAssignments,
   Order,
+  OrdersResponse,
+  OrderFilters,
   Assignment,
   CreateOrderRequest,
 } from "@/lib/services/orders";
 
+// Re-export types for convenience
+export type { Order, OrdersResponse, OrderFilters };
+
 /**
- * Hook to fetch all orders
+ * Hook to fetch orders with pagination and filters
  * Orders are dynamic data - cached for 2 minutes
  */
-export function useOrders(filters: Record<string, unknown> = {}) {
-  return useQuery<Order[], Error>({
-    queryKey: queryKeys.orders.list(filters),
-    queryFn: fetchOrders,
+export function useOrders(
+  page: number = 1,
+  perPage: number = 50,
+  filters: OrderFilters = {}
+) {
+  return useQuery<OrdersResponse, Error>({
+    queryKey: queryKeys.orders.list({ page, perPage, ...filters }),
+    queryFn: () => fetchOrders(page, perPage, filters),
     staleTime: STALE_TIMES.DYNAMIC,
     gcTime: CACHE_TIMES.DYNAMIC,
+    placeholderData: (previousData) => previousData,
     refetchOnWindowFocus: true,
   });
 }

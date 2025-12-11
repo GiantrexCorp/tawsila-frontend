@@ -605,13 +605,21 @@ export default function OrderDetailPage() {
                 {customer.governorate && (
                   <div>
                     <p className="text-muted-foreground">{t('governorate')}</p>
-                    <p className="font-medium">{customer.governorate}</p>
+                    <p className="font-medium">
+                      {typeof customer.governorate === 'object'
+                        ? (locale === 'ar' ? (customer.governorate as { name_ar?: string }).name_ar : (customer.governorate as { name_en?: string }).name_en)
+                        : customer.governorate}
+                    </p>
                   </div>
                 )}
                 {customer.city && (
                   <div>
                     <p className="text-muted-foreground">{t('city')}</p>
-                    <p className="font-medium">{customer.city}</p>
+                    <p className="font-medium">
+                      {typeof customer.city === 'object'
+                        ? (locale === 'ar' ? (customer.city as { name_ar?: string }).name_ar : (customer.city as { name_en?: string }).name_en)
+                        : customer.city}
+                    </p>
                   </div>
                 )}
               </div>
@@ -1200,7 +1208,14 @@ export default function OrderDetailPage() {
                   )}
                   {(customer.governorate || customer.city) && (
                     <p className="text-sm text-gray-700 font-medium">
-                      {[customer.city, customer.governorate].filter(Boolean).join(', ')}
+                      {[
+                        customer.city && (typeof customer.city === 'object'
+                          ? (locale === 'ar' ? (customer.city as { name_ar?: string }).name_ar : (customer.city as { name_en?: string }).name_en)
+                          : customer.city),
+                        customer.governorate && (typeof customer.governorate === 'object'
+                          ? (locale === 'ar' ? (customer.governorate as { name_ar?: string }).name_ar : (customer.governorate as { name_en?: string }).name_en)
+                          : customer.governorate)
+                      ].filter(Boolean).join(', ')}
                     </p>
                   )}
                 </div>

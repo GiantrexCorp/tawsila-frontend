@@ -13,8 +13,8 @@ import { apiRequest } from '../api';
 export interface UserRoleObject {
   id: number;
   name: string;
-  slug_en: string | null;
-  slug_ar: string | null;
+  slug_en?: string | null;
+  slug_ar?: string | null;
 }
 
 /**

@@ -374,18 +374,20 @@ export function VendorDashboard({ userName }: VendorDashboardProps) {
                     <p className="font-medium">{vendor.contact_person}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                {vendor.city && vendor.governorate && (
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">{t("location")}</p>
+                      <p className="font-medium">
+                        {locale === "ar" ? vendor.city.name_ar : vendor.city.name_en},{" "}
+                        {locale === "ar" ? vendor.governorate.name_ar : vendor.governorate.name_en}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">{t("location")}</p>
-                    <p className="font-medium">
-                      {locale === "ar" ? vendor.city.name_ar : vendor.city.name_en},{" "}
-                      {locale === "ar" ? vendor.governorate.name_ar : vendor.governorate.name_en}
-                    </p>
-                  </div>
-                </div>
+                )}
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center">
                     <Calendar className="h-4 w-4 text-muted-foreground" />

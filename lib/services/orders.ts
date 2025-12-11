@@ -8,6 +8,151 @@
 import { apiRequest } from '../api';
 
 /**
+ * Pagination links from API response
+ */
+export interface PaginationLinks {
+  first: string;
+  last: string;
+  prev: string | null;
+  next: string | null;
+}
+
+/**
+ * Pagination metadata from API response
+ */
+export interface PaginationMeta {
+  current_page: number;
+  from: number;
+  last_page: number;
+  links: Array<{
+    url: string | null;
+    label: string;
+    page: number | null;
+    active: boolean;
+  }>;
+  path: string;
+  per_page: number;
+  to: number;
+  total: number;
+}
+
+/**
+ * Paginated orders response
+ */
+export interface OrdersResponse {
+  data: Order[];
+  links: PaginationLinks;
+  meta: PaginationMeta;
+}
+
+/**
+ * Filters for orders list
+ */
+export interface OrderFilters {
+  order_number?: string;
+  customer_name?: string;
+  customer_mobile?: string;
+  status?: string;
+  payment_status?: string;
+  created_at_between?: string;
+  vendor_id?: string;
+  [key: string]: string | undefined;
+}
+
+/**
+ * Build query string from filters
+ */
+function buildFilterQuery(filters: OrderFilters): string {
+  const params: string[] = [];
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') {
+      params.push(`filter[${key}]=${encodeURIComponent(value)}`);
+    }
+  });
+
+  return params.length > 0 ? `&${params.join('&')}` : '';
+}
+
+/**
+ * Vendor information
+ */
+export interface Vendor {
+  id: number;
+  name?: string;
+  name_en?: string;
+  name_ar?: string;
+  email?: string;
+  mobile?: string;
+  phone?: string;
+  address?: string;
+  logo?: string;
+  status?: string;
+}
+
+/**
+ * User information for assignments and logs
+ */
+export interface AssignedUser {
+  id: number;
+  name?: string;
+  name_en?: string;
+  name_ar?: string;
+  mobile?: string;
+  email?: string;
+  status?: string;
+  last_active?: string;
+  created_at?: string;
+  updated_at?: string;
+  roles?: string[];
+}
+
+/**
+ * Status log entry for order history
+ */
+export interface StatusLog {
+  id: number;
+  order_id: number;
+  status: string;
+  status_label?: string;
+  notes?: string | null;
+  created_at: string;
+  created_by?: AssignedUser;
+}
+
+/**
+ * Scan record for order tracking
+ */
+export interface Scan {
+  id: number;
+  order_id: number;
+  scan_type: string;
+  scan_type_label?: string;
+  scanned_at: string;
+  scanned_by?: AssignedUser;
+  location?: string;
+  notes?: string | null;
+}
+
+/**
+ * Inventory location
+ */
+export interface Inventory {
+  id: number;
+  name?: string;
+  name_en?: string;
+  name_ar?: string;
+  code?: string;
+  phone?: string;
+  address?: string;
+  governorate?: string;
+  city?: string;
+  latitude?: number;
+  longitude?: number;
+  status?: string;
+}
+
+/**
  * Order entity representing a delivery order in the system
  */
 export interface Order {
@@ -53,23 +198,49 @@ export interface Order {
   created_at: string;
   /** Last update timestamp */
   updated_at: string;
+
+  // Included relations
   /** Associated customer information */
   customer?: Customer;
+  /** Associated vendor information */
+  vendor?: Vendor;
+  /** Order items */
+  items?: OrderItem[];
+  /** Order assignments (pickup/delivery agents) */
+  assignments?: Assignment[];
+  /** Status change history */
+  status_logs?: StatusLog[];
+  /** Scan records */
+  scans?: Scan[];
+  /** User who rejected the order */
+  rejected_by?: AssignedUser;
+  /** Assigned inventory location */
+  inventory?: Inventory;
+
+  // Permission flags
   /** Whether current user can accept this order */
   can_accept?: boolean;
   /** Whether current user can reject this order */
   can_reject?: boolean;
   /** Whether current user can assign a pickup agent to this order */
   can_assign_pickup_agent?: boolean;
-  /** Assigned inventory ID */
+  /** Whether current user can assign a delivery agent to this order */
+  can_assign_delivery_agent?: boolean;
+  /** Whether current user can scan this order at inventory */
+  can_scan_inventory?: boolean;
+  /** Whether current user can scan this order for delivery */
+  can_scan_delivery?: boolean;
+  /** Whether current user can pickup this order from vendor */
+  can_pickup_from_vendor?: boolean;
+  /** Whether current user can pickup this order from inventory */
+  can_pickup_from_inventory?: boolean;
+  /** Whether current user can verify OTP */
+  can_verify_otp?: boolean;
+
+  /** Assigned inventory ID (direct field) */
   inventory_id?: number;
-  /** Assigned inventory object */
-  inventory?: {
-    id: number;
-    name?: string;
-    name_en?: string;
-    name_ar?: string;
-  };
+  /** Vendor ID */
+  vendor_id?: number;
 }
 
 /**
@@ -162,15 +333,53 @@ export async function createOrder(orderData: CreateOrderRequest): Promise<Order>
 }
 
 /**
- * Fetch all orders
+ * Available includes for orders API
+ */
+const ORDER_INCLUDES = [
+  'vendor',
+  'customer',
+  'items',
+  'assignments',
+  'statusLogs',
+  'scans',
+  'rejectedBy',
+  'inventory',
+].join(',');
+
+/**
+ * Fetch orders with pagination and filters
  * For shipping agents, only returns orders assigned to them
  */
-export async function fetchOrders(): Promise<Order[]> {
-  const response = await apiRequest<Order[]>('/orders', {
-    method: 'GET',
-  });
+export async function fetchOrders(
+  page: number = 1,
+  perPage: number = 50,
+  filters: OrderFilters = {}
+): Promise<OrdersResponse> {
+  const filterQuery = buildFilterQuery(filters);
+  const response = await apiRequest<OrdersResponse>(
+    `/orders?page=${page}&per_page=${perPage}&include=${ORDER_INCLUDES}${filterQuery}`,
+    {
+      method: 'GET',
+    }
+  );
 
-  return response.data || [];
+  // apiRequest returns the raw JSON response which has data, links, meta at root level
+  const rawResponse = response as unknown as OrdersResponse;
+
+  return {
+    data: rawResponse.data || [],
+    links: rawResponse.links || { first: '', last: '', prev: null, next: null },
+    meta: rawResponse.meta || {
+      current_page: 1,
+      from: 0,
+      last_page: 1,
+      links: [],
+      path: '',
+      per_page: perPage,
+      to: 0,
+      total: 0,
+    },
+  };
 }
 
 /**
@@ -286,20 +495,6 @@ export async function rejectOrder(id: number, rejectionReason?: string): Promise
 export interface AssignPickupAgentRequest {
   agent_id: number;
   notes?: string;
-}
-
-export interface AssignedUser {
-  id: number;
-  name?: string; // Fallback for older API versions
-  name_en?: string;
-  name_ar?: string;
-  mobile?: string;
-  email?: string;
-  status?: string;
-  last_active?: string;
-  created_at?: string;
-  updated_at?: string;
-  roles?: string[];
 }
 
 export interface Assignment {
