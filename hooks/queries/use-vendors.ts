@@ -21,12 +21,13 @@ import {
  * Hook to fetch all vendors
  * Vendors are semi-static - cached for 5 minutes
  */
-export function useVendors() {
+export function useVendors(options?: { enabled?: boolean }) {
   return useQuery<Vendor[], Error>({
     queryKey: queryKeys.vendors.lists(),
     queryFn: fetchVendors,
     staleTime: STALE_TIMES.SEMI_STATIC,
     gcTime: CACHE_TIMES.SEMI_STATIC,
+    enabled: options?.enabled !== false, // Default to true, can be disabled
   });
 }
 
