@@ -26,8 +26,7 @@ import {
   ChevronUp,
   Hash,
   CheckCircle2,
-  Warehouse,
-  UserCheck
+  Warehouse
 } from "lucide-react";
 import { User, UserFilters, getRoleDisplayName, userHasRole } from "@/lib/services/users";
 import {

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Loader2, Package, RefreshCw, Search, X, MapPin, Building2, Warehouse, UserCheck, Hash, Phone, Calendar, Filter, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Loader2, Package, RefreshCw, Search, X, MapPin, Building2, UserCheck, Hash, Phone, Calendar, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { useRouter } from "@/i18n/routing";
 import { toast } from "sonner";
 
@@ -127,7 +127,7 @@ export default function OrdersPage() {
         setInventories(inventoriesData);
         setAgents(agentsData);
         setGovernorates(governoratesData);
-      } catch (error) {
+      } catch {
         toast.error(tCommon("errorLoadingData"));
       }
     };
@@ -735,7 +735,7 @@ export default function OrdersPage() {
                           <SelectContent>
                             {vendors.map((vendor) => (
                               <SelectItem key={vendor.id} value={vendor.id.toString()}>
-                                {locale === "ar" ? vendor.name_ar || vendor.name : vendor.name_en || vendor.name}
+                                {locale === "ar" ? vendor.name_ar : vendor.name_en}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -939,10 +939,10 @@ export default function OrdersPage() {
               displayValue = city ? (locale === "ar" ? city.name_ar : city.name_en) : value;
             } else if (key === "vendor_id") {
               const vendor = vendors.find((v) => v.id.toString() === value);
-              displayValue = vendor ? (locale === "ar" ? vendor.name_ar || vendor.name : vendor.name_en || vendor.name) : value;
+              displayValue = vendor ? (locale === "ar" ? vendor.name_ar : vendor.name_en) : value;
             } else if (key === "inventory_id") {
               const inventory = inventories.find((i) => i.id.toString() === value);
-              displayValue = inventory ? (locale === "ar" ? inventory.name_ar || inventory.name : inventory.name_en || inventory.name) : value;
+              displayValue = inventory ? (locale === "ar" ? inventory.name_ar || inventory.name || "" : inventory.name_en || inventory.name || "") : value;
             } else if (key === "agent_id") {
               const agent = agents.find((a) => a.id.toString() === value);
               displayValue = agent ? agent.name : value;

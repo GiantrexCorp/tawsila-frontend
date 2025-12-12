@@ -112,12 +112,10 @@ export default function VendorsPage() {
         const searchLower = searchQuery.toLowerCase();
         const nameEn = (vendor.name_en || '').toLowerCase();
         const nameAr = (vendor.name_ar || '').toLowerCase();
-        const name = (vendor.name || '').toLowerCase();
         
         if (
           !nameEn.includes(searchLower) &&
-          !nameAr.includes(searchLower) &&
-          !name.includes(searchLower)
+          !nameAr.includes(searchLower)
         ) {
           return false;
         }
@@ -128,8 +126,7 @@ export default function VendorsPage() {
         const searchLower = filters.name.toLowerCase();
         const nameEn = (vendor.name_en || '').toLowerCase();
         const nameAr = (vendor.name_ar || '').toLowerCase();
-        const name = (vendor.name || '').toLowerCase();
-        if (!nameEn.includes(searchLower) && !nameAr.includes(searchLower) && !name.includes(searchLower)) {
+        if (!nameEn.includes(searchLower) && !nameAr.includes(searchLower)) {
           return false;
         }
       }
@@ -137,7 +134,7 @@ export default function VendorsPage() {
       // Governorate filter
       if (filters.governorate_id) {
         const governorateId = parseInt(filters.governorate_id);
-        if (vendor.governorate_id !== governorateId && vendor.governorate?.id !== governorateId) {
+        if (vendor.governorate?.id !== governorateId) {
           return false;
         }
       }
@@ -145,7 +142,7 @@ export default function VendorsPage() {
       // City filter
       if (filters.city_id) {
         const cityId = parseInt(filters.city_id);
-        if (vendor.city_id !== cityId && vendor.city?.id !== cityId) {
+        if (vendor.city?.id !== cityId) {
           return false;
         }
       }

@@ -12,8 +12,6 @@ import { usePagePermission } from "@/hooks/use-page-permission";
 import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
 import { fetchInventories, deleteInventory, type Inventory } from "@/lib/services/inventories";
 import { fetchGovernorates, fetchCities, type Governorate, type City } from "@/lib/services/vendors";
-import { FilterBar } from "@/components/ui/filter-bar";
-import { getInventoryFilterConfigs, DEFAULT_INVENTORY_FILTERS } from "@/components/inventory/inventory-filter-config";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";

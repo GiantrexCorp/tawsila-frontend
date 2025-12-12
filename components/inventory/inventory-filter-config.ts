@@ -1,13 +1,9 @@
 import type { FilterConfig } from "@/components/ui/filter-bar";
-import type { Governorate, City } from "@/lib/services/vendors";
 
 type TranslationFunction = (key: string) => string;
 
 export const getInventoryFilterConfigs = (
-  t: TranslationFunction,
-  governorates: Governorate[],
-  cities: City[],
-  locale: string
+  t: TranslationFunction
 ): FilterConfig[] => [
   {
     key: "name",
