@@ -381,7 +381,22 @@
     "agentPending": "Awaiting agent acceptance",
     "selectGovernorate": "Select governorate",
     "selectCity": "Select city",
-    "selectAgent": "Select agent"
+    "selectAgent": "Select agent",
+    "backToOrders": "Back to Orders",
+    "loadingOrder": "Loading order...",
+    "deliveryDetails": "Delivery details",
+    "orderSource": "Order source",
+    "vendorInformation": "Vendor Information",
+    "item": "item",
+    "unit": "unit",
+    "inventoryLocation": "Inventory Location",
+    "assignmentsCount": "assigned",
+    "statusHistory": "Status history",
+    "orderRejected": "Order Rejected",
+    "scanHistory": "Scan History",
+    "scansRecorded": "scans recorded",
+    "by": "By",
+    "completed": "Completed"
   },
   "orderCreate": {
     "title": "Create New Order",

@@ -380,7 +380,22 @@
     "agentPending": "في انتظار قبول المندوب",
     "selectGovernorate": "اختار المحافظة",
     "selectCity": "اختار المدينة",
-    "selectAgent": "اختار المندوب"
+    "selectAgent": "اختار المندوب",
+    "backToOrders": "العودة للطلبات",
+    "loadingOrder": "جاري تحميل الطلب...",
+    "deliveryDetails": "تفاصيل التوصيل",
+    "orderSource": "مصدر الطلب",
+    "vendorInformation": "معلومات البائع",
+    "item": "منتج",
+    "unit": "وحدة",
+    "inventoryLocation": "موقع المخزن",
+    "assignmentsCount": "تم تعيينهم",
+    "statusHistory": "سجل الحالات",
+    "orderRejected": "تم رفض الطلب",
+    "scanHistory": "سجل المسح",
+    "scansRecorded": "عمليات مسح مسجلة",
+    "by": "بواسطة",
+    "completed": "مكتمل"
   },
   "orderCreate": {
     "title": "عمل طلب جديد",
