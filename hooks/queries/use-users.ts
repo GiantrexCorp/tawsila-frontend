@@ -24,7 +24,8 @@ import { CURRENT_USER_QUERY_KEY } from "@/hooks/use-permissions";
 export function useUsers(
   page: number = 1,
   perPage: number = 50,
-  filters: UserFilters = {}
+  filters: UserFilters = {},
+  options?: { enabled?: boolean }
 ) {
   return useQuery<UsersResponse, Error>({
     queryKey: queryKeys.users.list({ page, perPage, ...filters }),
@@ -32,6 +33,7 @@ export function useUsers(
     staleTime: STALE_TIMES.SEMI_STATIC,
     gcTime: CACHE_TIMES.SEMI_STATIC,
     placeholderData: (previousData) => previousData, // Keep previous data while fetching
+    enabled: options?.enabled !== false, // Default to true, can be disabled
   });
 }
 

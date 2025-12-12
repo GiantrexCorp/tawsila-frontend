@@ -18,12 +18,16 @@ import {
  * Hook to fetch all inventories
  * Inventories are semi-static - cached for 5 minutes
  */
-export function useInventories(filters: Record<string, unknown> = {}) {
+export function useInventories(
+  filters: Record<string, unknown> = {},
+  options?: { enabled?: boolean }
+) {
   return useQuery<Inventory[], Error>({
     queryKey: queryKeys.inventory.list(filters),
     queryFn: fetchInventories,
     staleTime: STALE_TIMES.SEMI_STATIC,
     gcTime: CACHE_TIMES.SEMI_STATIC,
+    enabled: options?.enabled !== false, // Default to true, can be disabled
   });
 }
 

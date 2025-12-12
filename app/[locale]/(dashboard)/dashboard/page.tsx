@@ -42,14 +42,6 @@ export default function DashboardPage() {
   // Dashboard is accessible to all authenticated users (no permission required)
   const hasPermission = usePagePermission({ requiredPermissions: [] });
 
-  // Fetch recent orders (last 10, sorted by created_at desc)
-  const { data: ordersResponse, isLoading: isLoadingOrders } = useOrders(1, 50, {});
-  
-  // Fetch system counts
-  const { data: usersResponse, isLoading: isLoadingUsers } = useUsers(1, 1, {});
-  const { data: inventories, isLoading: isLoadingInventories } = useInventories({});
-  const { data: vendors, isLoading: isLoadingVendors } = useVendors();
-
   useEffect(() => {
     setIsHydrated(true);
     const currentUser = getCurrentUser();
@@ -58,8 +50,26 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // Check if user is a vendor
+  // Check user roles (must be after hydration)
   const isVendor = isHydrated && user?.roles?.some(r => r.name === 'vendor');
+  const isSuperAdmin = isHydrated && user?.roles?.some(r => r.name === 'super-admin');
+
+  // Fetch recent orders (last 10, sorted by created_at desc) - all authenticated users can access this
+  const { data: ordersResponse, isLoading: isLoadingOrders } = useOrders(1, 50, {});
+  
+  // Fetch system counts - ONLY for super-admin (they're the only ones with permission)
+  // System stats (users, inventories, vendors) should only be visible to super-admin
+  const shouldFetchSystemData = isHydrated && isSuperAdmin;
+  
+  const { data: usersResponse, isLoading: isLoadingUsers } = useUsers(1, 1, {}, {
+    enabled: shouldFetchSystemData,
+  });
+  const { data: inventories, isLoading: isLoadingInventories } = useInventories({}, {
+    enabled: shouldFetchSystemData,
+  });
+  const { data: vendors, isLoading: isLoadingVendors } = useVendors({
+    enabled: shouldFetchSystemData,
+  });
 
   // Get display name for vendor dashboard
   const getDisplayName = () => {
@@ -180,139 +190,143 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - Available to all authenticated users */}
       <OrdersStatsCards stats={stats} isLoading={isLoadingOrders} t={tOrders} />
 
-      {/* System Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {tUsers('title')}
-            </CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center">
-              <Users className="h-4 w-4 text-blue-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isLoadingUsers ? (
-              <Skeleton className="h-8 w-16" />
-            ) : (
-              <div className="text-2xl font-bold">{systemStats.users.toLocaleString()}</div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {tInventory('title')}
-            </CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-purple-50 dark:bg-purple-950/20 flex items-center justify-center">
-              <Warehouse className="h-4 w-4 text-purple-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isLoadingInventories ? (
-              <Skeleton className="h-8 w-16" />
-            ) : (
-              <div className="text-2xl font-bold">{systemStats.inventories.toLocaleString()}</div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t('vendors')}
-            </CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-green-50 dark:bg-green-950/20 flex items-center justify-center">
-              <Building2 className="h-4 w-4 text-green-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isLoadingVendors ? (
-              <Skeleton className="h-8 w-16" />
-            ) : (
-              <div className="text-2xl font-bold">{systemStats.vendors.toLocaleString()}</div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts Section */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Order Status Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('orderStatusDistribution')}</CardTitle>
-            <CardDescription>{t('orderStatusDistributionDesc')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoadingOrders ? (
-              <Skeleton className="h-[300px] w-full" />
-            ) : orderStatusChartData.length === 0 ? (
-              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                <p>{t('noDataAvailable')}</p>
+      {/* System Stats Cards - ONLY for super-admin */}
+      {isSuperAdmin && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {tUsers('title')}
+              </CardTitle>
+              <div className="h-8 w-8 rounded-lg bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center">
+                <Users className="h-4 w-4 text-blue-600" />
               </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={orderStatusChartData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {orderStatusChartData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent>
+              {isLoadingUsers ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <div className="text-2xl font-bold">{systemStats.users.toLocaleString()}</div>
+              )}
+            </CardContent>
+          </Card>
 
-        {/* Orders Over Time */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('ordersOverTime')}</CardTitle>
-            <CardDescription>{t('ordersOverTimeDesc')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoadingOrders ? (
-              <Skeleton className="h-[300px] w-full" />
-            ) : ordersOverTimeData.length === 0 ? (
-              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                <p>{t('noDataAvailable')}</p>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {tInventory('title')}
+              </CardTitle>
+              <div className="h-8 w-8 rounded-lg bg-purple-50 dark:bg-purple-950/20 flex items-center justify-center">
+                <Warehouse className="h-4 w-4 text-purple-600" />
               </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={ordersOverTimeData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="orders"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    name={tOrders('orders')}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingInventories ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <div className="text-2xl font-bold">{systemStats.inventories.toLocaleString()}</div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {t('vendors')}
+              </CardTitle>
+              <div className="h-8 w-8 rounded-lg bg-green-50 dark:bg-green-950/20 flex items-center justify-center">
+                <Building2 className="h-4 w-4 text-green-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingVendors ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <div className="text-2xl font-bold">{systemStats.vendors.toLocaleString()}</div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Charts Section - ONLY for super-admin */}
+      {isSuperAdmin && (
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Order Status Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('orderStatusDistribution')}</CardTitle>
+              <CardDescription>{t('orderStatusDistributionDesc')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingOrders ? (
+                <Skeleton className="h-[300px] w-full" />
+              ) : orderStatusChartData.length === 0 ? (
+                <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                  <p>{t('noDataAvailable')}</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={orderStatusChartData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {orderStatusChartData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Orders Over Time */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('ordersOverTime')}</CardTitle>
+              <CardDescription>{t('ordersOverTimeDesc')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingOrders ? (
+                <Skeleton className="h-[300px] w-full" />
+              ) : ordersOverTimeData.length === 0 ? (
+                <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                  <p>{t('noDataAvailable')}</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={ordersOverTimeData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="orders"
+                      stroke="#3b82f6"
+                      strokeWidth={2}
+                      name={tOrders('orders')}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Pending Orders Requiring Action */}
       {pendingOrders.length > 0 && (
@@ -426,7 +440,7 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Quick Links */}
+      {/* Quick Links - Show based on permissions */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card className="hover:border-primary/50 transition-colors">
           <CardHeader>
@@ -440,29 +454,37 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="hover:border-primary/50 transition-colors">
-          <CardHeader>
-            <CardTitle className="text-base">{tInventory('title')}</CardTitle>
-            <CardDescription>{tInventory('subtitle')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild variant="outline" className="w-full">
-              <Link href="/dashboard/inventory">{t('viewInventory')}</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        {/* Only show inventory link if user has inventory permissions */}
+        {user?.roles_permissions?.some(p => 
+          ['list-inventories', 'show-inventory'].includes(p)
+        ) && (
+          <Card className="hover:border-primary/50 transition-colors">
+            <CardHeader>
+              <CardTitle className="text-base">{tInventory('title')}</CardTitle>
+              <CardDescription>{tInventory('subtitle')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild variant="outline" className="w-full">
+                <Link href="/dashboard/inventory">{t('viewInventory')}</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
-        <Card className="hover:border-primary/50 transition-colors">
-          <CardHeader>
-            <CardTitle className="text-base">{tUsers('title')}</CardTitle>
-            <CardDescription>{tUsers('subtitle')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild variant="outline" className="w-full">
-              <Link href="/dashboard/users">{tUsers('viewAllUsers')}</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        {/* Only show users link if user has user management permissions (super-admin) */}
+        {isSuperAdmin && (
+          <Card className="hover:border-primary/50 transition-colors">
+            <CardHeader>
+              <CardTitle className="text-base">{tUsers('title')}</CardTitle>
+              <CardDescription>{tUsers('subtitle')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild variant="outline" className="w-full">
+                <Link href="/dashboard/users">{tUsers('viewAllUsers')}</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
