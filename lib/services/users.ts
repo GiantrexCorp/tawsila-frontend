@@ -115,6 +115,8 @@ export interface UserFilters {
   name_ar?: string;
   email?: string;
   mobile?: string;
+  role_id?: string;
+  inventory_id?: string;
   createdAtBetween?: string;
   [key: string]: string | undefined;
 }

@@ -3,6 +3,7 @@ import type { FilterConfig } from "@/components/ui/filter-bar";
 type TranslationFunction = (key: string) => string;
 
 export const getOrdersFilterConfigs = (t: TranslationFunction): FilterConfig[] => [
+  // Order Information
   {
     key: "order_number",
     label: t("orderNumber"),
@@ -10,17 +11,57 @@ export const getOrdersFilterConfigs = (t: TranslationFunction): FilterConfig[] =
     placeholder: t("searchByOrderNumber"),
   },
   {
-    key: "customer_name",
-    label: t("customerName"),
+    key: "tracking_number",
+    label: t("trackingNumber"),
     type: "text",
-    placeholder: t("searchByCustomerName"),
+    placeholder: t("searchByTrackingNumber"),
   },
+  // Customer Information
   {
     key: "customer_mobile",
-    label: t("customerMobile"),
+    label: t("customerPhone"),
     type: "text",
-    placeholder: t("searchByMobile"),
+    placeholder: t("searchByPhone"),
   },
+  // Location
+  {
+    key: "governorate_id",
+    label: t("governorate"),
+    type: "select",
+    options: [], // Will be populated dynamically
+    placeholder: t("selectGovernorate"),
+  },
+  {
+    key: "city_id",
+    label: t("city"),
+    type: "select",
+    options: [], // Will be populated dynamically
+    placeholder: t("selectCity"),
+  },
+  // Organization
+  {
+    key: "vendor_id",
+    label: t("vendor"),
+    type: "select",
+    options: [], // Will be populated dynamically
+    placeholder: t("selectVendor"),
+  },
+  {
+    key: "inventory_id",
+    label: t("inventory"),
+    type: "select",
+    options: [], // Will be populated dynamically
+    placeholder: t("selectInventory"),
+  },
+  // Agent
+  {
+    key: "agent_id",
+    label: t("assignedAgent"),
+    type: "select",
+    options: [], // Will be populated dynamically
+    placeholder: t("selectAgent"),
+  },
+  // Status
   {
     key: "status",
     label: t("status"),
@@ -50,9 +91,10 @@ export const getOrdersFilterConfigs = (t: TranslationFunction): FilterConfig[] =
     ],
     placeholder: t("selectPaymentStatus"),
   },
+  // Date Range
   {
     key: "created_at_between",
-    label: t("createdAt"),
+    label: t("dateRange"),
     type: "daterange",
   },
 ];

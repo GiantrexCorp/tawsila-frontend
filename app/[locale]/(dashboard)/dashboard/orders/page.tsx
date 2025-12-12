@@ -1,11 +1,15 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Loader2, Package, RefreshCw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Loader2, Package, RefreshCw, Search, X, MapPin, Building2, Warehouse, UserCheck, Hash, Phone, Calendar, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { useRouter } from "@/i18n/routing";
 import { toast } from "sonner";
 
@@ -20,22 +24,23 @@ import {
   useAssignPickupAgent,
   type OrderFilters,
 } from "@/hooks/queries/use-orders";
+import { useVendors } from "@/hooks/queries/use-vendors";
 
 // Components
-import { FilterBar } from "@/components/ui/filter-bar";
 import {
   OrdersStatsCards,
   OrdersViewToggle,
   OrdersTable,
   OrdersCardGrid,
   OrderActionDialogs,
-  getOrdersFilterConfigs,
-  DEFAULT_ORDER_FILTERS,
   type ViewType,
 } from "@/components/orders";
 
 // Services
 import type { Order } from "@/lib/services/orders";
+import { fetchInventories, type Inventory } from "@/lib/services/inventories";
+import { fetchGovernorates, fetchCities, type Governorate, type City } from "@/lib/services/vendors";
+import { fetchActiveAgents, type Agent } from "@/lib/services/agents";
 
 const ORDERS_PER_PAGE = 50;
 const VIEW_STORAGE_KEY = "orders-view-preference";
@@ -43,6 +48,7 @@ const VIEW_STORAGE_KEY = "orders-view-preference";
 export default function OrdersPage() {
   const t = useTranslations("orders");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
   const router = useRouter();
   const isMobile = useIsMobile();
 
@@ -52,9 +58,27 @@ export default function OrdersPage() {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Filters
+  // Search and Filters
+  const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [appliedFilters, setAppliedFilters] = useState<OrderFilters>({});
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    orderInfo: true,
+    customerInfo: false,
+    location: false,
+    organization: false,
+    agent: false,
+    status: true,
+  });
+
+  // Data for filters
+  const { data: vendors = [] } = useVendors();
+  const [inventories, setInventories] = useState<Inventory[]>([]);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [governorates, setGovernorates] = useState<Governorate[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
+  const [isLoadingCities, setIsLoadingCities] = useState(false);
 
   // Dialog states
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -91,13 +115,59 @@ export default function OrdersPage() {
   const rejectOrderMutation = useRejectOrder();
   const assignAgentMutation = useAssignPickupAgent();
 
+  // Load data for filters
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [inventoriesData, agentsData, governoratesData] = await Promise.all([
+          fetchInventories(),
+          fetchActiveAgents(),
+          fetchGovernorates(),
+        ]);
+        setInventories(inventoriesData);
+        setAgents(agentsData);
+        setGovernorates(governoratesData);
+      } catch (error) {
+        toast.error(tCommon("errorLoadingData"));
+      }
+    };
+    if (hasPermission) {
+      loadData();
+    }
+  }, [hasPermission, tCommon]);
+
+  // Load cities when governorate is selected
+  useEffect(() => {
+    const loadCities = async () => {
+      if (!filters.governorate_id) {
+        setCities([]);
+        return;
+      }
+
+      setIsLoadingCities(true);
+      try {
+        const fetchedCities = await fetchCities(parseInt(filters.governorate_id));
+        setCities(fetchedCities);
+        // Clear city filter if governorate changes
+        if (filters.city_id) {
+          setFilters((prev) => ({ ...prev, city_id: "" }));
+        }
+      } catch {
+        toast.error(t("errorLoadingCities"));
+      } finally {
+        setIsLoadingCities(false);
+      }
+    };
+
+    loadCities();
+  }, [filters.governorate_id, t]);
+
   // Initialize view from localStorage
   useEffect(() => {
     const savedView = localStorage.getItem(VIEW_STORAGE_KEY);
     if (savedView === "table" || savedView === "cards") {
       setView(savedView);
     } else {
-      // Default based on device
       setView(isMobile ? "cards" : "table");
     }
   }, [isMobile]);
@@ -113,26 +183,55 @@ export default function OrdersPage() {
     setFilters((prev) => ({ ...prev, [key]: value }));
   }, []);
 
+  const handleLocationFilterChange = useCallback((governorateId: string, cityId?: string) => {
+    setFilters((prev) => {
+      const newFilters = { ...prev };
+      if (governorateId) {
+        newFilters.governorate_id = governorateId;
+        if (cityId !== undefined) {
+          newFilters.city_id = cityId;
+        } else if (!cityId) {
+          delete newFilters.city_id;
+        }
+      } else {
+        delete newFilters.governorate_id;
+        delete newFilters.city_id;
+      }
+      return newFilters;
+    });
+  }, []);
+
   const handleClearFilters = useCallback(() => {
     setFilters({});
+    setSearchQuery("");
   }, []);
 
   const handleClearAllFilters = useCallback(() => {
     setFilters({});
     setAppliedFilters({});
+    setSearchQuery("");
     setCurrentPage(1);
   }, []);
 
   const handleApplyFilters = useCallback(() => {
     const newFilters: OrderFilters = {};
+    
+    // Add search query to filters if present
+    if (searchQuery.trim()) {
+      // Search can match order_number or tracking_number
+      newFilters.order_number = searchQuery.trim();
+    }
+
+    // Add all other filters
     Object.entries(filters).forEach(([key, value]) => {
-      if (value) {
-        newFilters[key] = value;
+      if (value && value.trim()) {
+        newFilters[key as keyof OrderFilters] = value.trim();
       }
     });
+
     setAppliedFilters(newFilters);
     setCurrentPage(1);
-  }, [filters]);
+  }, [filters, searchQuery]);
 
   const handleRemoveFilter = useCallback((key: string) => {
     setFilters((prev) => {
@@ -270,7 +369,9 @@ export default function OrdersPage() {
     };
   }, [orders, totalOrders]);
 
-  const filterConfigs = useMemo(() => getOrdersFilterConfigs(t), [t]);
+  const activeFiltersCount = useMemo(() => {
+    return Object.values(filters).filter((v) => v && v.trim()).length + (searchQuery.trim() ? 1 : 0);
+  }, [filters, searchQuery]);
 
   // Loading state
   if (hasPermission === null) {
@@ -319,17 +420,552 @@ export default function OrdersPage() {
       {/* Stats Cards */}
       <OrdersStatsCards stats={stats} isLoading={isLoading} t={t} />
 
-      {/* Filters */}
-      <FilterBar
-        filters={filters}
-        filterConfigs={filterConfigs}
-        onFilterChange={handleFilterChange}
-        onClearFilters={handleClearFilters}
-        onClearAllFilters={handleClearAllFilters}
-        onApplyFilters={handleApplyFilters}
-        onRemoveFilter={handleRemoveFilter}
-        defaultFilters={DEFAULT_ORDER_FILTERS}
-      />
+      {/* Search Bar & Filters */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="space-y-6">
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder={t("searchPlaceholder")}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleApplyFilters();
+                  }
+                }}
+                className="pl-10 pr-10 h-11 bg-background border-border focus:ring-2 focus:ring-primary/20"
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            {/* Filter Header */}
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
+                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+              >
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold">{t("filters")}</h3>
+                {activeFiltersCount > 0 && (
+                  <Badge variant="secondary" className="ms-2">
+                    {activeFiltersCount}
+                  </Badge>
+                )}
+                {isFiltersExpanded ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground ms-2" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground ms-2" />
+                )}
+              </button>
+              {activeFiltersCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearAllFilters}
+                  className="gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  {tCommon("clearAll")}
+                </Button>
+              )}
+            </div>
+
+            {/* Filter Sections - Organized in Two Columns */}
+            {isFiltersExpanded && (
+              <>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Column */}
+              <div className="space-y-4">
+                {/* Order Information */}
+                <div className="border rounded-lg p-4 bg-muted/30">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedSections((prev) => ({ ...prev, orderInfo: !prev.orderInfo }))}
+                    className="flex items-center justify-between w-full mb-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Hash className="h-4 w-4 text-primary" />
+                      <Label className="text-sm font-semibold text-foreground">{t("orderInformation")}</Label>
+                      {(filters.order_number || filters.tracking_number) && (
+                        <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">
+                          {(filters.order_number ? 1 : 0) + (filters.tracking_number ? 1 : 0)}
+                        </Badge>
+                      )}
+                    </div>
+                    {expandedSections.orderInfo ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </button>
+                  {expandedSections.orderInfo && (
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="order-number" className="text-xs text-muted-foreground font-medium">
+                          {t("orderNumber")}
+                        </Label>
+                        <Input
+                          id="order-number"
+                          value={filters.order_number || ""}
+                          onChange={(e) => handleFilterChange("order_number", e.target.value)}
+                          placeholder={t("searchByOrderNumber")}
+                          className="h-10 bg-background"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="tracking-number" className="text-xs text-muted-foreground font-medium">
+                          {t("trackingNumber")}
+                        </Label>
+                        <Input
+                          id="tracking-number"
+                          value={filters.tracking_number || ""}
+                          onChange={(e) => handleFilterChange("tracking_number", e.target.value)}
+                          placeholder={t("searchByTrackingNumber")}
+                          className="h-10 bg-background"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Customer Information */}
+                <div className="border rounded-lg p-4 bg-muted/30">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedSections((prev) => ({ ...prev, customerInfo: !prev.customerInfo }))}
+                    className="flex items-center justify-between w-full mb-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-primary" />
+                      <Label className="text-sm font-semibold text-foreground">{t("customerInformation")}</Label>
+                      {filters.customer_mobile && (
+                        <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">1</Badge>
+                      )}
+                    </div>
+                    {expandedSections.customerInfo ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </button>
+                  {expandedSections.customerInfo && (
+                    <div className="space-y-2">
+                      <Label htmlFor="customer-phone" className="text-xs text-muted-foreground font-medium">
+                        {t("customerPhone")}
+                      </Label>
+                      <Input
+                        id="customer-phone"
+                        value={filters.customer_mobile || ""}
+                        onChange={(e) => handleFilterChange("customer_mobile", e.target.value)}
+                        placeholder={t("searchByPhone")}
+                        className="h-10 bg-background"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Location */}
+                <div className="border rounded-lg p-4 bg-muted/30">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedSections((prev) => ({ ...prev, location: !prev.location }))}
+                    className="flex items-center justify-between w-full mb-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-primary" />
+                      <Label className="text-sm font-semibold text-foreground">{t("location")}</Label>
+                      {(filters.governorate_id || filters.city_id) && (
+                        <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">
+                          {(filters.governorate_id ? 1 : 0) + (filters.city_id ? 1 : 0)}
+                        </Badge>
+                      )}
+                    </div>
+                    {expandedSections.location ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </button>
+                  {expandedSections.location && (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label htmlFor="governorate-filter" className="text-xs text-muted-foreground font-normal">
+                            {t("governorate")}
+                          </Label>
+                          <Select
+                            value={filters.governorate_id || undefined}
+                            onValueChange={(value) => handleLocationFilterChange(value)}
+                          >
+                            <SelectTrigger id="governorate-filter" className="h-10 bg-background">
+                              <SelectValue placeholder={t("selectGovernorate")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {governorates.map((gov) => (
+                                <SelectItem key={gov.id} value={gov.id.toString()}>
+                                  {locale === "ar" ? gov.name_ar : gov.name_en}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="city-filter" className="text-xs text-muted-foreground font-normal">
+                            {t("city")}
+                          </Label>
+                          <Select
+                            value={filters.city_id || undefined}
+                            onValueChange={(value) => handleLocationFilterChange(filters.governorate_id || "", value)}
+                            disabled={!filters.governorate_id || isLoadingCities}
+                          >
+                            <SelectTrigger id="city-filter" className="h-10 bg-background" disabled={!filters.governorate_id || isLoadingCities}>
+                              <SelectValue
+                                placeholder={
+                                  isLoadingCities
+                                    ? t("loadingCities")
+                                    : filters.governorate_id
+                                      ? t("selectCity")
+                                      : locale === "ar"
+                                        ? "اختر المحافظة أولاً"
+                                        : "Select governorate first"
+                                }
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {cities.map((city) => (
+                                <SelectItem key={city.id} value={city.id.toString()}>
+                                  {locale === "ar" ? city.name_ar : city.name_en}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      {(filters.governorate_id || filters.city_id) && (
+                        <div className="flex items-center gap-2 flex-wrap pt-2">
+                          {filters.governorate_id && (
+                            <Badge variant="secondary" className="gap-1.5">
+                              {t("governorate")}:{" "}
+                              {governorates.find((g) => g.id.toString() === filters.governorate_id)
+                                ? locale === "ar"
+                                  ? governorates.find((g) => g.id.toString() === filters.governorate_id)!.name_ar
+                                  : governorates.find((g) => g.id.toString() === filters.governorate_id)!.name_en
+                                : filters.governorate_id}
+                              <button
+                                onClick={() => handleLocationFilterChange("")}
+                                className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          )}
+                          {filters.city_id && (
+                            <Badge variant="secondary" className="gap-1.5">
+                              {t("city")}:{" "}
+                              {cities.find((c) => c.id.toString() === filters.city_id)
+                                ? locale === "ar"
+                                  ? cities.find((c) => c.id.toString() === filters.city_id)!.name_ar
+                                  : cities.find((c) => c.id.toString() === filters.city_id)!.name_en
+                                : filters.city_id}
+                              <button
+                                onClick={() => handleLocationFilterChange(filters.governorate_id || "", "")}
+                                className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Column */}
+              <div className="space-y-4">
+                {/* Organization */}
+                <div className="border rounded-lg p-4 bg-muted/30">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedSections((prev) => ({ ...prev, organization: !prev.organization }))}
+                    className="flex items-center justify-between w-full mb-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-primary" />
+                      <Label className="text-sm font-semibold text-foreground">{t("organization")}</Label>
+                      {(filters.vendor_id || filters.inventory_id) && (
+                        <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">
+                          {(filters.vendor_id ? 1 : 0) + (filters.inventory_id ? 1 : 0)}
+                        </Badge>
+                      )}
+                    </div>
+                    {expandedSections.organization ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </button>
+                  {expandedSections.organization && (
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="vendor-filter" className="text-xs text-muted-foreground font-medium">
+                          {t("vendor")}
+                        </Label>
+                        <Select
+                          value={filters.vendor_id || undefined}
+                          onValueChange={(value) => handleFilterChange("vendor_id", value)}
+                        >
+                          <SelectTrigger id="vendor-filter" className="h-10 bg-background">
+                            <SelectValue placeholder={t("selectVendor")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {vendors.map((vendor) => (
+                              <SelectItem key={vendor.id} value={vendor.id.toString()}>
+                                {locale === "ar" ? vendor.name_ar || vendor.name : vendor.name_en || vendor.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="inventory-filter" className="text-xs text-muted-foreground font-medium">
+                          {t("inventory")} ({t("warehouse")})
+                        </Label>
+                        <Select
+                          value={filters.inventory_id || undefined}
+                          onValueChange={(value) => handleFilterChange("inventory_id", value)}
+                        >
+                          <SelectTrigger id="inventory-filter" className="h-10 bg-background">
+                            <SelectValue placeholder={t("selectInventory")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {inventories.map((inventory) => (
+                              <SelectItem key={inventory.id} value={inventory.id.toString()}>
+                                {locale === "ar" ? inventory.name_ar || inventory.name : inventory.name_en || inventory.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Agent */}
+                <div className="border rounded-lg p-4 bg-muted/30">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedSections((prev) => ({ ...prev, agent: !prev.agent }))}
+                    className="flex items-center justify-between w-full mb-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <UserCheck className="h-4 w-4 text-primary" />
+                      <Label className="text-sm font-semibold text-foreground">{t("assignedAgent")}</Label>
+                      {filters.agent_id && (
+                        <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">1</Badge>
+                      )}
+                    </div>
+                    {expandedSections.agent ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </button>
+                  {expandedSections.agent && (
+                    <div className="space-y-2">
+                      <Label htmlFor="agent-filter" className="text-xs text-muted-foreground font-medium">
+                        {t("agent")}
+                      </Label>
+                      <Select
+                        value={filters.agent_id || undefined}
+                        onValueChange={(value) => handleFilterChange("agent_id", value)}
+                      >
+                        <SelectTrigger id="agent-filter" className="h-10 bg-background">
+                          <SelectValue placeholder={t("selectAgent")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {agents.map((agent) => (
+                            <SelectItem key={agent.id} value={agent.id.toString()}>
+                              {agent.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+
+                {/* Status & Date */}
+                <div className="border rounded-lg p-4 bg-muted/30">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedSections((prev) => ({ ...prev, status: !prev.status }))}
+                    className="flex items-center justify-between w-full mb-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-primary" />
+                      <Label className="text-sm font-semibold text-foreground">{t("statusAndDate")}</Label>
+                      {(filters.status || filters.created_at_between) && (
+                        <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">
+                          {(filters.status ? 1 : 0) + (filters.created_at_between ? 1 : 0)}
+                        </Badge>
+                      )}
+                    </div>
+                    {expandedSections.status ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </button>
+                  {expandedSections.status && (
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="status-filter" className="text-xs text-muted-foreground font-medium">
+                          {t("status")}
+                        </Label>
+                        <Select
+                          value={filters.status || undefined}
+                          onValueChange={(value) => handleFilterChange("status", value)}
+                        >
+                          <SelectTrigger id="status-filter" className="h-10 bg-background">
+                            <SelectValue placeholder={t("selectStatus")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">{t("pending")}</SelectItem>
+                            <SelectItem value="accepted">{t("accepted")}</SelectItem>
+                            <SelectItem value="pickup_assigned">{t("pickupAssigned")}</SelectItem>
+                            <SelectItem value="picked_up">{t("pickedUp")}</SelectItem>
+                            <SelectItem value="in_transit">{t("inTransit")}</SelectItem>
+                            <SelectItem value="at_hub">{t("atHub")}</SelectItem>
+                            <SelectItem value="delivery_assigned">{t("deliveryAssigned")}</SelectItem>
+                            <SelectItem value="out_for_delivery">{t("outForDelivery")}</SelectItem>
+                            <SelectItem value="delivered">{t("delivered")}</SelectItem>
+                            <SelectItem value="failed_delivery">{t("failedDelivery")}</SelectItem>
+                            <SelectItem value="rejected">{t("rejected")}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="date-range" className="text-xs text-muted-foreground font-medium">
+                          {t("dateRange")}
+                        </Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            id="date-from"
+                            type="date"
+                            value={filters.created_at_between?.split(",")[0] || ""}
+                            onChange={(e) => {
+                              const to = filters.created_at_between?.split(",")[1] || "";
+                              handleFilterChange("created_at_between", e.target.value ? `${e.target.value},${to}` : "");
+                            }}
+                            className="h-10 bg-background"
+                          />
+                          <Input
+                            id="date-to"
+                            type="date"
+                            value={filters.created_at_between?.split(",")[1] || ""}
+                            onChange={(e) => {
+                              const from = filters.created_at_between?.split(",")[0] || "";
+                              handleFilterChange("created_at_between", from ? `${from},${e.target.value}` : "");
+                            }}
+                            className="h-10 bg-background"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Apply Filters Button */}
+            <div className="flex items-center justify-end gap-3 pt-4 border-t">
+              <Button variant="outline" onClick={handleClearFilters} className="min-w-[100px]">
+                {tCommon("clear")}
+              </Button>
+              <Button onClick={handleApplyFilters} className="min-w-[100px]">
+                {tCommon("apply")}
+              </Button>
+            </div>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Active Filters */}
+      {Object.keys(appliedFilters).length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(appliedFilters).map(([key, value]) => {
+            if (!value) return null;
+            let displayValue = value;
+            let label = key;
+            
+            // Get label for filter
+            const labelMap: Record<string, string> = {
+              order_number: t("orderNumber"),
+              tracking_number: t("trackingNumber"),
+              customer_mobile: t("customerPhone"),
+              governorate_id: t("governorate"),
+              city_id: t("city"),
+              vendor_id: t("vendor"),
+              inventory_id: t("inventory"),
+              agent_id: t("assignedAgent"),
+              status: t("status"),
+              payment_status: t("paymentStatus"),
+              created_at_between: t("dateRange"),
+            };
+            label = labelMap[key] || key;
+
+            if (key === "governorate_id") {
+              const gov = governorates.find((g) => g.id.toString() === value);
+              displayValue = gov ? (locale === "ar" ? gov.name_ar : gov.name_en) : value;
+            } else if (key === "city_id") {
+              const city = cities.find((c) => c.id.toString() === value);
+              displayValue = city ? (locale === "ar" ? city.name_ar : city.name_en) : value;
+            } else if (key === "vendor_id") {
+              const vendor = vendors.find((v) => v.id.toString() === value);
+              displayValue = vendor ? (locale === "ar" ? vendor.name_ar || vendor.name : vendor.name_en || vendor.name) : value;
+            } else if (key === "inventory_id") {
+              const inventory = inventories.find((i) => i.id.toString() === value);
+              displayValue = inventory ? (locale === "ar" ? inventory.name_ar || inventory.name : inventory.name_en || inventory.name) : value;
+            } else if (key === "agent_id") {
+              const agent = agents.find((a) => a.id.toString() === value);
+              displayValue = agent ? agent.name : value;
+            } else if (key === "status") {
+              displayValue = t(value as string);
+            } else if (key === "created_at_between") {
+              const [from, to] = value.split(",");
+              displayValue = `${from} - ${to}`;
+            }
+            return (
+              <Badge key={key} variant="secondary" className="gap-1.5">
+                {label}: {displayValue}
+                <button
+                  onClick={() => handleRemoveFilter(key)}
+                  className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            );
+          })}
+        </div>
+      )}
 
       {/* View Toggle & Results Count */}
       <div className="flex items-center justify-between">

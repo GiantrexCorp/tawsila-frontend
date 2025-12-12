@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,16 @@ import {
   Shield,
   Edit,
   Users,
-  RefreshCw
+  RefreshCw,
+  Search,
+  X,
+  Filter,
+  ChevronDown,
+  ChevronUp,
+  Hash,
+  CheckCircle2,
+  Warehouse,
+  UserCheck
 } from "lucide-react";
 import { User, UserFilters, getRoleDisplayName, userHasRole } from "@/lib/services/users";
 import {
@@ -35,9 +44,8 @@ import {
   useAssignUserRole,
   useRoles,
 } from "@/hooks/queries";
-import { fetchUserInventories, type Inventory } from "@/lib/services/inventories";
+import { fetchInventories, fetchUserInventories, type Inventory } from "@/lib/services/inventories";
 import { useQuery } from "@tanstack/react-query";
-import { Warehouse } from "lucide-react";
 
 // User Card Component
 interface UserCardProps {
@@ -228,7 +236,6 @@ import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
 import { getCurrentUser, logout } from "@/lib/auth";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
-import { FilterBar, FilterConfig } from "@/components/ui/filter-bar";
 import {
   Dialog,
   DialogContent,
@@ -263,8 +270,20 @@ export default function UsersPage() {
 
   // Pagination and filters state
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<UserFilters>({});
   const [appliedFilters, setAppliedFilters] = useState<UserFilters>({});
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    userInfo: true,
+    status: false,
+    role: false,
+    inventory: false,
+  });
+
+  // Inventories for filter
+  const [inventories, setInventories] = useState<Inventory[]>([]);
+  const [isLoadingInventories, setIsLoadingInventories] = useState(false);
 
   // React Query hooks - data is automatically cached!
   const {
@@ -275,6 +294,22 @@ export default function UsersPage() {
   } = useUsers(currentPage, 50, appliedFilters);
 
   const { data: rolesResponse } = useRoles();
+
+  // Load inventories for filter
+  useEffect(() => {
+    const loadInventories = async () => {
+      setIsLoadingInventories(true);
+      try {
+        const fetchedInventories = await fetchInventories();
+        setInventories(fetchedInventories);
+      } catch {
+        // Silently fail - inventories filter is optional
+      } finally {
+        setIsLoadingInventories(false);
+      }
+    };
+    loadInventories();
+  }, []);
 
   // Mutations with automatic cache invalidation
   const createUserMutation = useCreateUser();
@@ -312,80 +347,45 @@ export default function UsersPage() {
     return locale === 'ar' ? user.name_ar : user.name_en;
   }, [locale]);
 
-  const filterConfigs: FilterConfig[] = useMemo(() => [
-    {
-      key: 'id',
-      label: t('id'),
-      type: 'tags',
-      placeholder: t('enterIdPlaceholder'),
-    },
-    ...(locale === 'ar'
-      ? [{
-          key: 'name_ar',
-          label: t('name'),
-          type: 'text' as const,
-          placeholder: t('searchByNamePlaceholder'),
-        }]
-      : [{
-          key: 'name_en',
-          label: t('name'),
-          type: 'text' as const,
-          placeholder: t('searchByNamePlaceholder'),
-        }]
-    ),
-    {
-      key: 'email',
-      label: t('email'),
-      type: 'text',
-      placeholder: t('searchByEmailPlaceholder'),
-    },
-    {
-      key: 'mobile',
-      label: t('mobile'),
-      type: 'text',
-      placeholder: t('searchByMobilePlaceholder'),
-    },
-    {
-      key: 'status',
-      label: t('status'),
-      type: 'select',
-      options: [
-        { label: t('active'), value: 'active' },
-        { label: t('inactive'), value: 'inactive' },
-      ],
-      placeholder: t('allStatus'),
-    },
-  ], [t, locale]);
-
   const handleFilterChange = useCallback((key: string, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters((prev) => ({ ...prev, [key]: value }));
   }, []);
 
   const handleClearFilters = useCallback(() => {
     setFilters({});
+    setSearchQuery("");
   }, []);
 
   const handleClearAllFilters = useCallback(() => {
     setFilters({});
     setAppliedFilters({});
+    setSearchQuery("");
     setCurrentPage(1);
   }, []);
 
   const handleApplyFilters = useCallback(() => {
-    setAppliedFilters(filters);
+    const filtersToApply: UserFilters = { ...filters };
+    
+    // Add search query to filters if it exists
+    if (searchQuery.trim()) {
+      if (locale === 'ar') {
+        filtersToApply.name_ar = searchQuery.trim();
+      } else {
+        filtersToApply.name_en = searchQuery.trim();
+      }
+    } else {
+      // Remove name filters if search is empty
+      delete filtersToApply.name_ar;
+      delete filtersToApply.name_en;
+    }
+    
+    setAppliedFilters(filtersToApply);
     setCurrentPage(1);
-  }, [filters]);
+  }, [filters, searchQuery, locale]);
 
-  const handleRemoveFilter = useCallback((key: string) => {
-    const newFilters = { ...filters };
-    delete newFilters[key];
-    setFilters(newFilters);
-
-    const newAppliedFilters = { ...appliedFilters };
-    delete newAppliedFilters[key];
-    setAppliedFilters(newAppliedFilters);
-    setCurrentPage(1);
-  }, [filters, appliedFilters]);
+  const activeFiltersCount = useMemo(() => {
+    return Object.values(filters).filter((v) => v && v.trim()).length + (searchQuery.trim() ? 1 : 0);
+  }, [filters, searchQuery]);
 
   const getLocalizedRoleDisplay = useCallback((user: User) => {
     if (!user.roles || user.roles.length === 0) return t('noRole');
@@ -634,17 +634,405 @@ export default function UsersPage() {
         </Card>
       </div>
 
-      {/* Filters */}
-      <FilterBar
-        filters={filters as Record<string, string>}
-        filterConfigs={filterConfigs}
-        onFilterChange={handleFilterChange}
-        onClearFilters={handleClearFilters}
-        onClearAllFilters={handleClearAllFilters}
-        onApplyFilters={handleApplyFilters}
-        onRemoveFilter={handleRemoveFilter}
-        defaultFilters={[locale === 'ar' ? 'name_ar' : 'name_en']}
-      />
+      {/* Search Bar & Filters */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="space-y-6">
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder={t("searchUsers")}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleApplyFilters();
+                  }
+                }}
+                className="pl-10 pr-10 h-11 bg-background border-border focus:ring-2 focus:ring-primary/20"
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+
+            {/* Filter Header */}
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
+                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+              >
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold">{t("filters")}</h3>
+                {activeFiltersCount > 0 && (
+                  <Badge variant="secondary" className="ms-2">
+                    {activeFiltersCount}
+                  </Badge>
+                )}
+                {isFiltersExpanded ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground ms-2" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground ms-2" />
+                )}
+              </button>
+              {activeFiltersCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearAllFilters}
+                  className="gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  {tCommon("clearAll")}
+                </Button>
+              )}
+            </div>
+
+            {/* Filter Sections - Organized */}
+            {isFiltersExpanded && (
+              <>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Left Column */}
+                  <div className="space-y-4">
+                    {/* User Information */}
+                    <div className="border rounded-lg p-4 bg-muted/30">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedSections((prev) => ({ ...prev, userInfo: !prev.userInfo }))}
+                        className="flex items-center justify-between w-full mb-3"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Hash className="h-4 w-4 text-primary" />
+                          <Label className="text-sm font-semibold text-foreground">{t("userInformation")}</Label>
+                          {(filters.id || filters.email || filters.mobile || (locale === 'ar' ? filters.name_ar : filters.name_en)) && (
+                            <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">
+                              {(filters.id ? 1 : 0) + (filters.email ? 1 : 0) + (filters.mobile ? 1 : 0) + ((locale === 'ar' ? filters.name_ar : filters.name_en) ? 1 : 0)}
+                            </Badge>
+                          )}
+                        </div>
+                        {expandedSections.userInfo ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                      {expandedSections.userInfo && (
+                        <div className="space-y-3">
+                          <div className="space-y-2">
+                            <Label htmlFor="name-filter" className="text-xs text-muted-foreground font-medium">
+                              {t("name")}
+                            </Label>
+                            <Input
+                              id="name-filter"
+                              value={(locale === 'ar' ? filters.name_ar : filters.name_en) || ""}
+                              onChange={(e) => handleFilterChange(locale === 'ar' ? 'name_ar' : 'name_en', e.target.value)}
+                              placeholder={t("searchByNamePlaceholder")}
+                              className="h-10 bg-background"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="id-filter" className="text-xs text-muted-foreground font-medium">
+                              {t("id")}
+                            </Label>
+                            <Input
+                              id="id-filter"
+                              value={filters.id || ""}
+                              onChange={(e) => handleFilterChange("id", e.target.value)}
+                              placeholder={t("enterIdPlaceholder")}
+                              className="h-10 bg-background"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="email-filter" className="text-xs text-muted-foreground font-medium">
+                              {t("email")}
+                            </Label>
+                            <Input
+                              id="email-filter"
+                              value={filters.email || ""}
+                              onChange={(e) => handleFilterChange("email", e.target.value)}
+                              placeholder={t("searchByEmailPlaceholder")}
+                              className="h-10 bg-background"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="mobile-filter" className="text-xs text-muted-foreground font-medium">
+                              {t("mobile")}
+                            </Label>
+                            <Input
+                              id="mobile-filter"
+                              value={filters.mobile || ""}
+                              onChange={(e) => handleFilterChange("mobile", e.target.value)}
+                              placeholder={t("searchByMobilePlaceholder")}
+                              className="h-10 bg-background"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right Column */}
+                  <div className="space-y-4">
+                    {/* Status */}
+                    <div className="border rounded-lg p-4 bg-muted/30">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedSections((prev) => ({ ...prev, status: !prev.status }))}
+                        className="flex items-center justify-between w-full mb-3"
+                      >
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-primary" />
+                          <Label className="text-sm font-semibold text-foreground">{t("status")}</Label>
+                          {filters.status && (
+                            <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">1</Badge>
+                          )}
+                        </div>
+                        {expandedSections.status ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                      {expandedSections.status && (
+                        <div className="space-y-2">
+                          <Label htmlFor="status-filter" className="text-xs text-muted-foreground font-medium">
+                            {t("status")}
+                          </Label>
+                          <Select
+                            value={filters.status || undefined}
+                            onValueChange={(value) => handleFilterChange("status", value)}
+                          >
+                            <SelectTrigger id="status-filter" className="h-10 bg-background">
+                              <SelectValue placeholder={t("allStatus")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="active">{t("active")}</SelectItem>
+                              <SelectItem value="inactive">{t("inactive")}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Role */}
+                    <div className="border rounded-lg p-4 bg-muted/30">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedSections((prev) => ({ ...prev, role: !prev.role }))}
+                        className="flex items-center justify-between w-full mb-3"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Shield className="h-4 w-4 text-primary" />
+                          <Label className="text-sm font-semibold text-foreground">{t("role")}</Label>
+                          {filters.role_id && (
+                            <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">1</Badge>
+                          )}
+                        </div>
+                        {expandedSections.role ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                      {expandedSections.role && (
+                        <div className="space-y-2">
+                          <Label htmlFor="role-filter" className="text-xs text-muted-foreground font-medium">
+                            {t("role")}
+                          </Label>
+                          <Select
+                            value={filters.role_id || undefined}
+                            onValueChange={(value) => handleFilterChange("role_id", value)}
+                          >
+                            <SelectTrigger id="role-filter" className="h-10 bg-background">
+                              <SelectValue placeholder={t("selectRole")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableRoles.map((role) => (
+                                <SelectItem key={role.id} value={role.id.toString()}>
+                                  {getRoleSelectDisplay(role)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Inventory */}
+                    <div className="border rounded-lg p-4 bg-muted/30">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedSections((prev) => ({ ...prev, inventory: !prev.inventory }))}
+                        className="flex items-center justify-between w-full mb-3"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Warehouse className="h-4 w-4 text-primary" />
+                          <Label className="text-sm font-semibold text-foreground">{t("inventory")}</Label>
+                          {filters.inventory_id && (
+                            <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">1</Badge>
+                          )}
+                        </div>
+                        {expandedSections.inventory ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                      {expandedSections.inventory && (
+                        <div className="space-y-2">
+                          <Label htmlFor="inventory-filter" className="text-xs text-muted-foreground font-medium">
+                            {t("inventory")}
+                          </Label>
+                          <Select
+                            value={filters.inventory_id || undefined}
+                            onValueChange={(value) => handleFilterChange("inventory_id", value)}
+                            disabled={isLoadingInventories}
+                          >
+                            <SelectTrigger id="inventory-filter" className="h-10 bg-background" disabled={isLoadingInventories}>
+                              <SelectValue placeholder={isLoadingInventories ? t("loading") : t("selectInventory")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {inventories.map((inventory) => (
+                                <SelectItem key={inventory.id} value={inventory.id.toString()}>
+                                  {locale === "ar" ? inventory.name_ar : inventory.name_en || inventory.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Apply Filters Button */}
+                <div className="flex items-center justify-end gap-3 pt-4 border-t">
+                  <Button variant="outline" onClick={handleClearFilters} className="min-w-[100px]">
+                    {tCommon("clear")}
+                  </Button>
+                  <Button onClick={handleApplyFilters} className="min-w-[100px]">
+                    {tCommon("apply")}
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Active Filters Display */}
+      {(Object.keys(appliedFilters).length > 0 || searchQuery.trim()) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {searchQuery.trim() && (
+            <Badge variant="secondary" className="gap-1.5">
+              {t("name")}: {searchQuery}
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  handleApplyFilters();
+                }}
+                className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {appliedFilters.id && (
+            <Badge variant="secondary" className="gap-1.5">
+              {t("id")}: {appliedFilters.id}
+              <button
+                onClick={() => {
+                  handleFilterChange("id", "");
+                  handleApplyFilters();
+                }}
+                className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {appliedFilters.email && (
+            <Badge variant="secondary" className="gap-1.5">
+              {t("email")}: {appliedFilters.email}
+              <button
+                onClick={() => {
+                  handleFilterChange("email", "");
+                  handleApplyFilters();
+                }}
+                className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {appliedFilters.mobile && (
+            <Badge variant="secondary" className="gap-1.5">
+              {t("mobile")}: {appliedFilters.mobile}
+              <button
+                onClick={() => {
+                  handleFilterChange("mobile", "");
+                  handleApplyFilters();
+                }}
+                className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {appliedFilters.status && (
+            <Badge variant="secondary" className="gap-1.5">
+              {t("status")}: {appliedFilters.status === 'active' ? t("active") : t("inactive")}
+              <button
+                onClick={() => {
+                  handleFilterChange("status", "");
+                  handleApplyFilters();
+                }}
+                className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {appliedFilters.role_id && (
+            <Badge variant="secondary" className="gap-1.5">
+              {t("role")}: {getRoleSelectDisplay(availableRoles.find(r => r.id.toString() === appliedFilters.role_id) || { name: '', slug_en: null, slug_ar: null })}
+              <button
+                onClick={() => {
+                  handleFilterChange("role_id", "");
+                  handleApplyFilters();
+                }}
+                className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {appliedFilters.inventory_id && (
+            <Badge variant="secondary" className="gap-1.5">
+              {t("inventory")}: {locale === "ar" ? inventories.find(i => i.id.toString() === appliedFilters.inventory_id)?.name_ar : inventories.find(i => i.id.toString() === appliedFilters.inventory_id)?.name_en || inventories.find(i => i.id.toString() === appliedFilters.inventory_id)?.name}
+              <button
+                onClick={() => {
+                  handleFilterChange("inventory_id", "");
+                  handleApplyFilters();
+                }}
+                className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+        </div>
+      )}
 
       {/* Loading State */}
       {isLoading ? (

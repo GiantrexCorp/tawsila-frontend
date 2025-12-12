@@ -1,16 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Building2, Plus, Loader2, MapPin, ArrowUpRight, Edit } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Building2, Plus, Loader2, MapPin, ArrowUpRight, Edit, Search, X, Filter, ChevronDown, ChevronUp, Hash, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
-import { fetchVendors, type Vendor } from "@/lib/services/vendors";
+import { fetchVendors, fetchGovernorates, fetchCities, type Vendor, type Governorate, type City } from "@/lib/services/vendors";
 
 export default function VendorsPage() {
   const t = useTranslations('organizations');
@@ -28,6 +32,60 @@ export default function VendorsPage() {
   // Vendors state
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [isLoadingVendors, setIsLoadingVendors] = useState(true);
+  
+  // Search and Filters
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    vendorInfo: true,
+    location: false,
+    status: false,
+  });
+  
+  // Governorates and Cities for filters
+  const [governorates, setGovernorates] = useState<Governorate[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
+  const [isLoadingCities, setIsLoadingCities] = useState(false);
+
+  // Load governorates on mount
+  useEffect(() => {
+    const loadGovernorates = async () => {
+      try {
+        const fetchedGovernorates = await fetchGovernorates();
+        setGovernorates(fetchedGovernorates);
+      } catch {
+        toast.error(t('errorLoadingGovernorates'));
+      }
+    };
+    loadGovernorates();
+  }, [t]);
+
+  // Load cities when governorate is selected
+  useEffect(() => {
+    const loadCities = async () => {
+      if (!filters.governorate_id) {
+        setCities([]);
+        return;
+      }
+
+      setIsLoadingCities(true);
+      try {
+        const fetchedCities = await fetchCities(parseInt(filters.governorate_id));
+        setCities(fetchedCities);
+        // Clear city filter if governorate changes
+        if (filters.city_id) {
+          setFilters((prev) => ({ ...prev, city_id: "" }));
+        }
+      } catch {
+        toast.error(t('errorLoadingCities'));
+      } finally {
+        setIsLoadingCities(false);
+      }
+    };
+
+    loadCities();
+  }, [filters.governorate_id, t]);
 
   // Load vendors on mount
   useEffect(() => {
@@ -45,6 +103,94 @@ export default function VendorsPage() {
 
     loadVendors();
   }, [t]);
+
+  // Filter vendors based on search query and filters
+  const filteredVendors = useMemo(() => {
+    return vendors.filter((vendor) => {
+      // Search query (searches name)
+      if (searchQuery) {
+        const searchLower = searchQuery.toLowerCase();
+        const nameEn = (vendor.name_en || '').toLowerCase();
+        const nameAr = (vendor.name_ar || '').toLowerCase();
+        const name = (vendor.name || '').toLowerCase();
+        
+        if (
+          !nameEn.includes(searchLower) &&
+          !nameAr.includes(searchLower) &&
+          !name.includes(searchLower)
+        ) {
+          return false;
+        }
+      }
+
+      // Name filter
+      if (filters.name) {
+        const searchLower = filters.name.toLowerCase();
+        const nameEn = (vendor.name_en || '').toLowerCase();
+        const nameAr = (vendor.name_ar || '').toLowerCase();
+        const name = (vendor.name || '').toLowerCase();
+        if (!nameEn.includes(searchLower) && !nameAr.includes(searchLower) && !name.includes(searchLower)) {
+          return false;
+        }
+      }
+
+      // Governorate filter
+      if (filters.governorate_id) {
+        const governorateId = parseInt(filters.governorate_id);
+        if (vendor.governorate_id !== governorateId && vendor.governorate?.id !== governorateId) {
+          return false;
+        }
+      }
+
+      // City filter
+      if (filters.city_id) {
+        const cityId = parseInt(filters.city_id);
+        if (vendor.city_id !== cityId && vendor.city?.id !== cityId) {
+          return false;
+        }
+      }
+
+      // Status filter
+      if (filters.status) {
+        if (vendor.status !== filters.status) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [vendors, filters, searchQuery]);
+
+  const handleFilterChange = useCallback((key: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  const handleLocationFilterChange = useCallback((governorateId: string, cityId?: string) => {
+    setFilters((prev) => {
+      const newFilters = { ...prev };
+      if (governorateId) {
+        newFilters.governorate_id = governorateId;
+        if (cityId !== undefined) {
+          newFilters.city_id = cityId;
+        } else if (!cityId) {
+          delete newFilters.city_id;
+        }
+      } else {
+        delete newFilters.governorate_id;
+        delete newFilters.city_id;
+      }
+      return newFilters;
+    });
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    setFilters({});
+    setSearchQuery("");
+  }, []);
+
+  const activeFiltersCount = useMemo(() => {
+    return Object.values(filters).filter((v) => v && v.trim()).length + (searchQuery.trim() ? 1 : 0);
+  }, [filters, searchQuery]);
 
   // Don't render page if permission check hasn't completed or user lacks permission
   if (hasPermission === null || hasPermission === false) {
@@ -77,14 +223,14 @@ export default function VendorsPage() {
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">{t('totalOrganizations')}</p>
-            <p className="text-2xl font-bold">{isLoadingVendors ? '-' : vendors.length}</p>
+            <p className="text-2xl font-bold">{isLoadingVendors ? '-' : filteredVendors.length}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">{t('activeOrgs')}</p>
             <p className="text-2xl font-bold text-green-600">
-              {isLoadingVendors ? '-' : vendors.filter(v => v.status === 'active').length}
+              {isLoadingVendors ? '-' : filteredVendors.filter(v => v.status === 'active').length}
             </p>
           </CardContent>
         </Card>
@@ -92,28 +238,323 @@ export default function VendorsPage() {
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">{t('inactiveOrgs')}</p>
             <p className="text-2xl font-bold text-muted-foreground">
-              {isLoadingVendors ? '-' : vendors.filter(v => v.status === 'inactive').length}
+              {isLoadingVendors ? '-' : filteredVendors.filter(v => v.status === 'inactive').length}
             </p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Search Bar & Filters */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="space-y-6">
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder={t("searchVendors")}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-10 h-11 bg-background border-border focus:ring-2 focus:ring-primary/20"
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+
+            {/* Filter Header */}
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
+                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+              >
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold">{t("filters")}</h3>
+                {activeFiltersCount > 0 && (
+                  <Badge variant="secondary" className="ms-2">
+                    {activeFiltersCount}
+                  </Badge>
+                )}
+                {isFiltersExpanded ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground ms-2" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground ms-2" />
+                )}
+              </button>
+              {activeFiltersCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearFilters}
+                  className="gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  {tCommon("clearAll")}
+                </Button>
+              )}
+            </div>
+
+            {/* Filter Sections - Organized */}
+            {isFiltersExpanded && (
+              <>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Left Column */}
+                  <div className="space-y-4">
+                    {/* Vendor Information */}
+                    <div className="border rounded-lg p-4 bg-muted/30">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedSections((prev) => ({ ...prev, vendorInfo: !prev.vendorInfo }))}
+                        className="flex items-center justify-between w-full mb-3"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Hash className="h-4 w-4 text-primary" />
+                          <Label className="text-sm font-semibold text-foreground">{t("vendorInformation")}</Label>
+                          {filters.name && (
+                            <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">1</Badge>
+                          )}
+                        </div>
+                        {expandedSections.vendorInfo ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                      {expandedSections.vendorInfo && (
+                        <div className="space-y-2">
+                          <Label htmlFor="name-filter" className="text-xs text-muted-foreground font-medium">
+                            {t("name")}
+                          </Label>
+                          <Input
+                            id="name-filter"
+                            value={filters.name || ""}
+                            onChange={(e) => handleFilterChange("name", e.target.value)}
+                            placeholder={t("searchVendors")}
+                            className="h-10 bg-background"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right Column */}
+                  <div className="space-y-4">
+                    {/* Location */}
+                    <div className="border rounded-lg p-4 bg-muted/30">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedSections((prev) => ({ ...prev, location: !prev.location }))}
+                        className="flex items-center justify-between w-full mb-3"
+                      >
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-primary" />
+                          <Label className="text-sm font-semibold text-foreground">{t("location")}</Label>
+                          {(filters.governorate_id || filters.city_id) && (
+                            <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">
+                              {(filters.governorate_id ? 1 : 0) + (filters.city_id ? 1 : 0)}
+                            </Badge>
+                          )}
+                        </div>
+                        {expandedSections.location ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                      {expandedSections.location && (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                              <Label htmlFor="governorate-filter" className="text-xs text-muted-foreground font-normal">
+                                {t("governorate")}
+                              </Label>
+                              <Select
+                                value={filters.governorate_id || undefined}
+                                onValueChange={(value) => handleLocationFilterChange(value)}
+                              >
+                                <SelectTrigger id="governorate-filter" className="h-10 bg-background">
+                                  <SelectValue placeholder={t("selectGovernorate")} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {governorates.map((gov) => (
+                                    <SelectItem key={gov.id} value={gov.id.toString()}>
+                                      {locale === "ar" ? gov.name_ar : gov.name_en}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="city-filter" className="text-xs text-muted-foreground font-normal">
+                                {t("city")}
+                              </Label>
+                              <Select
+                                value={filters.city_id || undefined}
+                                onValueChange={(value) => handleLocationFilterChange(filters.governorate_id || "", value)}
+                                disabled={!filters.governorate_id || isLoadingCities}
+                              >
+                                <SelectTrigger id="city-filter" className="h-10 bg-background" disabled={!filters.governorate_id || isLoadingCities}>
+                                  <SelectValue
+                                    placeholder={
+                                      isLoadingCities
+                                        ? t("loadingCities")
+                                        : filters.governorate_id
+                                          ? t("selectCity")
+                                          : locale === "ar"
+                                            ? "اختر المحافظة أولاً"
+                                            : "Select governorate first"
+                                    }
+                                  />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {cities.map((city) => (
+                                    <SelectItem key={city.id} value={city.id.toString()}>
+                                      {locale === "ar" ? city.name_ar : city.name_en}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          {(filters.governorate_id || filters.city_id) && (
+                            <div className="flex items-center gap-2 flex-wrap pt-2">
+                              {filters.governorate_id && (
+                                <Badge variant="secondary" className="gap-1.5">
+                                  {t("governorate")}:{" "}
+                                  {governorates.find((g) => g.id.toString() === filters.governorate_id)
+                                    ? locale === "ar"
+                                      ? governorates.find((g) => g.id.toString() === filters.governorate_id)!.name_ar
+                                      : governorates.find((g) => g.id.toString() === filters.governorate_id)!.name_en
+                                    : filters.governorate_id}
+                                  <button
+                                    onClick={() => handleLocationFilterChange("")}
+                                    className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </Badge>
+                              )}
+                              {filters.city_id && (
+                                <Badge variant="secondary" className="gap-1.5">
+                                  {t("city")}:{" "}
+                                  {cities.find((c) => c.id.toString() === filters.city_id)
+                                    ? locale === "ar"
+                                      ? cities.find((c) => c.id.toString() === filters.city_id)!.name_ar
+                                      : cities.find((c) => c.id.toString() === filters.city_id)!.name_en
+                                    : filters.city_id}
+                                  <button
+                                    onClick={() => handleLocationFilterChange(filters.governorate_id || "", "")}
+                                    className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Status */}
+                    <div className="border rounded-lg p-4 bg-muted/30">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedSections((prev) => ({ ...prev, status: !prev.status }))}
+                        className="flex items-center justify-between w-full mb-3"
+                      >
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-primary" />
+                          <Label className="text-sm font-semibold text-foreground">{t("status")}</Label>
+                          {filters.status && (
+                            <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">1</Badge>
+                          )}
+                        </div>
+                        {expandedSections.status ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                      {expandedSections.status && (
+                        <div className="space-y-2">
+                          <Label htmlFor="status-filter" className="text-xs text-muted-foreground font-medium">
+                            {t("status")}
+                          </Label>
+                          <Select
+                            value={filters.status || undefined}
+                            onValueChange={(value) => handleFilterChange("status", value)}
+                          >
+                            <SelectTrigger id="status-filter" className="h-10 bg-background">
+                              <SelectValue placeholder={t("selectStatus")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="active">{t("activeOrgs")}</SelectItem>
+                              <SelectItem value="inactive">{t("inactiveOrgs")}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Results Count */}
+      {!isLoadingVendors && filteredVendors.length > 0 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {filteredVendors.length === vendors.length
+              ? `${filteredVendors.length} ${filteredVendors.length === 1 ? 'vendor' : 'vendors'}`
+              : `Showing ${filteredVendors.length} of ${vendors.length} vendors`
+            }
+          </p>
+        </div>
+      )}
 
       {/* Vendors Grid */}
       {isLoadingVendors ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      ) : vendors.length === 0 ? (
+      ) : filteredVendors.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-lg font-medium">{t('noVendors')}</p>
-            <p className="text-sm text-muted-foreground mt-2">{t('noVendorsDesc')}</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              {searchQuery || Object.values(filters).some(v => v)
+                ? 'No vendors match your search criteria. Try adjusting your filters.'
+                : t('noVendorsDesc')
+              }
+            </p>
+            {(searchQuery || Object.values(filters).some(v => v)) && (
+              <Button 
+                variant="outline" 
+                onClick={handleClearFilters}
+                className="gap-2 mt-4"
+              >
+                {tCommon('clearAll')}
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {vendors.map((vendor) => (
+          {filteredVendors.map((vendor) => (
             <div
               key={vendor.id}
               onClick={() => router.push(`/dashboard/vendors/${vendor.id}`)}
@@ -164,7 +605,7 @@ export default function VendorsPage() {
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <MapPin className="h-3 w-3 flex-shrink-0" />
                           <span className="text-xs truncate">
-                            {locale === 'ar' ? vendor.city.name_ar : vendor.city.name_en}
+                            {locale === 'ar' ? vendor.city?.name_ar : vendor.city?.name_en}
                           </span>
                         </div>
                       </div>
@@ -223,4 +664,3 @@ export default function VendorsPage() {
     </div>
   );
 }
-

@@ -50,12 +50,17 @@ export interface OrdersResponse {
  */
 export interface OrderFilters {
   order_number?: string;
+  tracking_number?: string;
   customer_name?: string;
   customer_mobile?: string;
   status?: string;
   payment_status?: string;
   created_at_between?: string;
   vendor_id?: string;
+  inventory_id?: string;
+  agent_id?: string;
+  governorate_id?: string;
+  city_id?: string;
   [key: string]: string | undefined;
 }
 
