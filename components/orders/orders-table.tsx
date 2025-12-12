@@ -1,14 +1,6 @@
 "use client";
 
 import { useLocale } from "next-intl";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/ui/status-badge";
@@ -46,7 +38,6 @@ export function OrdersTable({
 
   // Helper to get location name based on phase
   const getLocationInfo = (order: Order) => {
-    // Use truthy check instead of strict boolean comparison to handle 1/true/"1" etc.
     const isPhase1 = !!order.is_in_phase1;
     const isPhase2 = !!order.is_in_phase2;
 
@@ -83,7 +74,6 @@ export function OrdersTable({
   // Helper to get active assignment info
   const getAssignmentInfo = (order: Order) => {
     if (!order.assignments || order.assignments.length === 0) return null;
-    // Find active assignment, prioritize delivery (inventory_to_customer) over pickup (vendor_to_inventory)
     const deliveryAssignment = order.assignments.find(
       (a: Assignment) => a.assignment_type === "inventory_to_customer" && a.is_active
     );
@@ -110,155 +100,155 @@ export function OrdersTable({
   };
 
   return (
-    <div className="rounded-md border overflow-hidden">
-      <div className="overflow-x-auto">
-        <Table className="w-full">
-        <TableHeader>
-          <TableRow>
-            <TableHead className="min-w-[140px]">{t("orderNumber")}</TableHead>
-            <TableHead className="min-w-[180px]">{t("customer")}</TableHead>
-            <TableHead className="min-w-[160px]">{t("currentLocation")}</TableHead>
-            <TableHead className="min-w-[140px]">{t("assignedAgent")}</TableHead>
-            <TableHead className="min-w-[120px]">{t("status")}</TableHead>
-            <TableHead className="min-w-[100px]">{t("paymentStatus")}</TableHead>
-            <TableHead className="min-w-[100px] text-end">{t("total")}</TableHead>
-            <TableHead className="min-w-[120px]">{t("createdAt")}</TableHead>
-            <TableHead className="w-[70px]">{t("actions")}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {orders.map((order) => {
-            const canAccept = order.can_accept === true;
-            const canReject = order.can_reject === true;
-            const canAssignPickupAgent = order.can_assign_pickup_agent === true;
-            const hasActions = canAccept || canReject || canAssignPickupAgent;
-            const locationInfo = getLocationInfo(order);
-            const assignmentInfo = getAssignmentInfo(order);
-            const agentName = assignmentInfo?.agent
-              ? locale === "ar"
-                ? assignmentInfo.agent.name_ar || assignmentInfo.agent.name
-                : assignmentInfo.agent.name_en || assignmentInfo.agent.name
-              : null;
+    <div className="w-full max-w-full rounded-md border">
+      <div className="overflow-x-auto max-w-full" style={{ maxWidth: '100%' }}>
+        <table className="min-w-[900px] w-full caption-bottom text-sm">
+          <thead className="[&_tr]:border-b">
+            <tr className="border-b transition-colors hover:bg-muted/50">
+              <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">{t("orderNumber")}</th>
+              <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">{t("customer")}</th>
+              <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">{t("currentLocation")}</th>
+              <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">{t("assignedAgent")}</th>
+              <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">{t("status")}</th>
+              <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">{t("paymentStatus")}</th>
+              <th className="h-12 px-4 text-end align-middle font-medium text-muted-foreground whitespace-nowrap">{t("total")}</th>
+              <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">{t("createdAt")}</th>
+              <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">{t("actions")}</th>
+            </tr>
+          </thead>
+          <tbody className="[&_tr:last-child]:border-0">
+            {orders.map((order) => {
+              const canAccept = order.can_accept === true;
+              const canReject = order.can_reject === true;
+              const canAssignPickupAgent = order.can_assign_pickup_agent === true;
+              const hasActions = canAccept || canReject || canAssignPickupAgent;
+              const locationInfo = getLocationInfo(order);
+              const assignmentInfo = getAssignmentInfo(order);
+              const agentName = assignmentInfo?.agent
+                ? locale === "ar"
+                  ? assignmentInfo.agent.name_ar || assignmentInfo.agent.name
+                  : assignmentInfo.agent.name_en || assignmentInfo.agent.name
+                : null;
 
-            return (
-              <TableRow
-                key={order.id}
-                className={cn(
-                  "cursor-pointer hover:bg-muted/50",
-                  locationInfo?.rowClass
-                )}
-                onClick={() => onOrderClick(order.id)}
-              >
-                <TableCell>
-                  <div>
-                    <p className="font-medium">{order.order_number}</p>
-                    <p className="text-xs text-muted-foreground" dir="ltr">
-                      {order.track_number}
-                    </p>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div>
-                    <p className="font-medium">{order.customer?.name || "-"}</p>
-                    <p className="text-xs text-muted-foreground" dir="ltr">
-                      {order.customer?.mobile || "-"}
-                    </p>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {locationInfo ? (
-                    <div className="flex items-center gap-2">
-                      <locationInfo.icon className={cn("h-4 w-4 shrink-0", locationInfo.iconClass)} />
-                      <div className="min-w-0">
-                        <Badge variant="outline" className={cn("text-xs mb-0.5", locationInfo.badgeClass)}>
-                          {locationInfo.label}
-                        </Badge>
-                        <p className="text-sm truncate max-w-[140px]">{locationInfo.name || "-"}</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground">-</span>
+              return (
+                <tr
+                  key={order.id}
+                  className={cn(
+                    "border-b transition-colors hover:bg-muted/50 cursor-pointer",
+                    locationInfo?.rowClass
                   )}
-                </TableCell>
-                <TableCell>
-                  {assignmentInfo ? (
-                    <div className="flex items-center gap-2">
-                      <UserCheck className="h-4 w-4 shrink-0 text-green-600" />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1 flex-wrap">
-                          <Badge variant="outline" className="text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-300 dark:border-green-700">
-                            {assignmentInfo.label}
+                  onClick={() => onOrderClick(order.id)}
+                >
+                  <td className="p-4 align-middle">
+                    <div>
+                      <p className="font-medium whitespace-nowrap">{order.order_number}</p>
+                      <p className="text-xs text-muted-foreground whitespace-nowrap" dir="ltr">
+                        {order.track_number}
+                      </p>
+                    </div>
+                  </td>
+                  <td className="p-4 align-middle">
+                    <div>
+                      <p className="font-medium whitespace-nowrap">{order.customer?.name || "-"}</p>
+                      <p className="text-xs text-muted-foreground whitespace-nowrap" dir="ltr">
+                        {order.customer?.mobile || "-"}
+                      </p>
+                    </div>
+                  </td>
+                  <td className="p-4 align-middle">
+                    {locationInfo ? (
+                      <div className="flex items-center gap-2">
+                        <locationInfo.icon className={cn("h-4 w-4 shrink-0", locationInfo.iconClass)} />
+                        <div className="min-w-0">
+                          <Badge variant="outline" className={cn("text-xs mb-0.5", locationInfo.badgeClass)}>
+                            {locationInfo.label}
                           </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            {assignmentInfo.statusLabel}
-                          </Badge>
+                          <p className="text-sm whitespace-nowrap">{locationInfo.name || "-"}</p>
                         </div>
-                        <p className="text-sm truncate max-w-[120px] mt-0.5">
-                          {agentName || t("agentPending")}
-                        </p>
                       </div>
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground text-sm">{t("notAssigned")}</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <OrderStatusBadge
-                    status={order.status}
-                    statusLabel={order.status_label}
-                  />
-                </TableCell>
-                <TableCell>
-                  <PaymentStatusBadge
-                    status={order.payment_status}
-                    statusLabel={order.payment_status_label}
-                  />
-                </TableCell>
-                <TableCell className="text-end font-medium">
-                  {tCommon("egpSymbol")} {order.total_amount.toFixed(2)}
-                </TableCell>
-                <TableCell className="text-muted-foreground text-sm">
-                  {new Date(order.created_at).toLocaleDateString(locale)}
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenuItem onClick={() => onOrderClick(order.id)}>
-                        <Eye className="h-4 w-4 me-2" />
-                        {t("viewOrder")}
-                      </DropdownMenuItem>
-                      {hasActions && <DropdownMenuSeparator />}
-                      {canAccept && onAccept && (
-                        <DropdownMenuItem onClick={() => onAccept(order.id)}>
-                          <CheckCircle className="h-4 w-4 me-2 text-green-600" />
-                          {t("acceptOrder")}
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </td>
+                  <td className="p-4 align-middle">
+                    {assignmentInfo ? (
+                      <div className="flex items-center gap-2">
+                        <UserCheck className="h-4 w-4 shrink-0 text-green-600" />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <Badge variant="outline" className="text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-300 dark:border-green-700 whitespace-nowrap">
+                              {assignmentInfo.label}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs whitespace-nowrap">
+                              {assignmentInfo.statusLabel}
+                            </Badge>
+                          </div>
+                          <p className="text-sm mt-0.5 whitespace-nowrap">
+                            {agentName || t("agentPending")}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground text-sm whitespace-nowrap">{t("notAssigned")}</span>
+                    )}
+                  </td>
+                  <td className="p-4 align-middle">
+                    <OrderStatusBadge
+                      status={order.status}
+                      statusLabel={order.status_label}
+                    />
+                  </td>
+                  <td className="p-4 align-middle">
+                    <PaymentStatusBadge
+                      status={order.payment_status}
+                      statusLabel={order.payment_status_label}
+                    />
+                  </td>
+                  <td className="p-4 align-middle text-end font-medium whitespace-nowrap">
+                    {tCommon("egpSymbol")} {order.total_amount.toFixed(2)}
+                  </td>
+                  <td className="p-4 align-middle text-muted-foreground text-sm whitespace-nowrap">
+                    {new Date(order.created_at).toLocaleDateString(locale)}
+                  </td>
+                  <td className="p-4 align-middle">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem onClick={() => onOrderClick(order.id)}>
+                          <Eye className="h-4 w-4 me-2" />
+                          {t("viewOrder")}
                         </DropdownMenuItem>
-                      )}
-                      {canReject && onReject && (
-                        <DropdownMenuItem onClick={() => onReject(order.id)}>
-                          <XCircle className="h-4 w-4 me-2 text-destructive" />
-                          {t("rejectOrder")}
-                        </DropdownMenuItem>
-                      )}
-                      {canAssignPickupAgent && onAssignAgent && (
-                        <DropdownMenuItem onClick={() => onAssignAgent(order.id)}>
-                          <Truck className="h-4 w-4 me-2 text-blue-600" />
-                          {t("assignPickupAgent")}
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+                        {hasActions && <DropdownMenuSeparator />}
+                        {canAccept && onAccept && (
+                          <DropdownMenuItem onClick={() => onAccept(order.id)}>
+                            <CheckCircle className="h-4 w-4 me-2 text-green-600" />
+                            {t("acceptOrder")}
+                          </DropdownMenuItem>
+                        )}
+                        {canReject && onReject && (
+                          <DropdownMenuItem onClick={() => onReject(order.id)}>
+                            <XCircle className="h-4 w-4 me-2 text-destructive" />
+                            {t("rejectOrder")}
+                          </DropdownMenuItem>
+                        )}
+                        {canAssignPickupAgent && onAssignAgent && (
+                          <DropdownMenuItem onClick={() => onAssignAgent(order.id)}>
+                            <Truck className="h-4 w-4 me-2 text-blue-600" />
+                            {t("assignPickupAgent")}
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );

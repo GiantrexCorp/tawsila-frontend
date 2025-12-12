@@ -13,6 +13,7 @@ export interface User {
   email: string;
   mobile: string;
   status: 'active' | 'inactive';
+  type?: string; // User type (e.g., 'vendor', 'admin', etc.)
   last_active: string | null;
   created_at: string;
   updated_at: string;

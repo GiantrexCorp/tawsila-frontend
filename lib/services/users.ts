@@ -35,6 +35,8 @@ export interface User {
   mobile: string;
   /** Account status */
   status: 'active' | 'inactive';
+  /** User type (e.g., 'vendor', 'admin', etc.) */
+  type?: string;
   /** Last activity timestamp */
   last_active: string | null;
   /** Account creation timestamp */

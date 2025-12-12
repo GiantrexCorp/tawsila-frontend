@@ -41,6 +41,7 @@ import type { Order } from "@/lib/services/orders";
 import { fetchInventories, type Inventory } from "@/lib/services/inventories";
 import { fetchGovernorates, fetchCities, type Governorate, type City } from "@/lib/services/vendors";
 import { fetchActiveAgents, type Agent } from "@/lib/services/agents";
+import { getCurrentUser } from "@/lib/auth";
 
 const ORDERS_PER_PAGE = 50;
 const VIEW_STORAGE_KEY = "orders-view-preference";
@@ -102,6 +103,10 @@ export default function OrdersPage() {
     ],
   });
   const { hasPermission: canCreateOrder } = useHasPermission(PERMISSIONS.CREATE_ORDER);
+  const currentUser = getCurrentUser();
+
+  // Only users with type 'vendor' and create-order permission can create orders
+  const canShowCreateOrder = canCreateOrder && currentUser?.type === 'vendor';
 
   // React Query
   const {
@@ -383,7 +388,7 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -405,7 +410,7 @@ export default function OrdersPage() {
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
             <span className="hidden sm:inline">{t("refreshData")}</span>
           </Button>
-          {canCreateOrder && (
+          {canShowCreateOrder && (
             <Button
               onClick={() => router.push("/dashboard/orders/new")}
               className="gap-2"
