@@ -29,11 +29,14 @@ export function LanguageSwitcher() {
     );
   };
 
+  const currentLanguageCode = locale.toUpperCase();
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-9 w-9">
+        <Button variant="ghost" size="sm" className="h-9 gap-2">
           <Languages className="h-4 w-4" />
+          <span className="hidden sm:inline text-sm font-medium">{currentLanguageCode}</span>
           <span className="sr-only">Switch language</span>
         </Button>
       </DropdownMenuTrigger>
