@@ -35,8 +35,9 @@ export function OrderCard({
   const canAssignPickupAgent = order.can_assign_pickup_agent === true;
 
   // Determine phase-based styling and location
-  const isPhase1 = order.is_in_phase1 === true;
-  const isPhase2 = order.is_in_phase2 === true;
+  // Use truthy check instead of strict boolean comparison to handle 1/true/"1" etc.
+  const isPhase1 = !!order.is_in_phase1;
+  const isPhase2 = !!order.is_in_phase2;
 
   // Get location name based on phase
   const getLocationName = () => {

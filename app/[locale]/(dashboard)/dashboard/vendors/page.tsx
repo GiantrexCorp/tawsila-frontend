@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
 import { fetchVendors, fetchGovernorates, fetchCities, type Vendor, type Governorate, type City } from "@/lib/services/vendors";
+import { ViewToggle, type ViewType } from "@/components/ui/view-toggle";
+import { VendorTable } from "@/components/vendors/vendor-table";
 
 export default function VendorsPage() {
   const t = useTranslations('organizations');
@@ -42,6 +44,7 @@ export default function VendorsPage() {
     location: false,
     status: false,
   });
+  const [viewType, setViewType] = useState<ViewType>("cards");
   
   // Governorates and Cities for filters
   const [governorates, setGovernorates] = useState<Governorate[]>([]);
@@ -510,7 +513,7 @@ export default function VendorsPage() {
         </CardContent>
       </Card>
 
-      {/* Results Count */}
+      {/* Results Count & View Toggle */}
       {!isLoadingVendors && filteredVendors.length > 0 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
@@ -519,6 +522,12 @@ export default function VendorsPage() {
               : `Showing ${filteredVendors.length} of ${vendors.length} vendors`
             }
           </p>
+          <ViewToggle
+            view={viewType}
+            onViewChange={setViewType}
+            cardLabel={t("cardView")}
+            tableLabel={t("tableView")}
+          />
         </div>
       )}
 
@@ -549,6 +558,11 @@ export default function VendorsPage() {
             )}
           </CardContent>
         </Card>
+      ) : viewType === "table" ? (
+        <VendorTable
+          vendors={filteredVendors}
+          canUpdateVendor={canUpdateVendor}
+        />
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filteredVendors.map((vendor) => (

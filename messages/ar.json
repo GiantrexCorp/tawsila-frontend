@@ -190,7 +190,9 @@
     "selectedUsers": "{count, plural, =0 {مفيش مستخدمين متحددين} =1 {مستخدم واحد متحدد} two {مستخدمين اتنين متحددين} few {# مستخدمين متحددين} many {# مستخدم متحدد} other {# مستخدم متحدد}}",
     "noUsersFound": "مفيش مستخدمين",
     "usersAssignedSuccess": "تم تعيين المستخدمين بنجاح",
-    "usersAssignedError": "فشل تعيين المستخدمين"
+    "usersAssignedError": "فشل تعيين المستخدمين",
+    "cardView": "عرض البطاقات",
+    "tableView": "عرض الجدول"
   },
   "orders": {
     "title": "إدارة الطلبات",
@@ -375,7 +377,10 @@
     "pickupAgent": "مندوب الاستلام",
     "deliveryAgent": "مندوب التوصيل",
     "agent": "المندوب",
-    "agentPending": "في انتظار قبول المندوب"
+    "agentPending": "في انتظار قبول المندوب",
+    "selectGovernorate": "اختار المحافظة",
+    "selectCity": "اختار المدينة",
+    "selectAgent": "اختار المندوب"
   },
   "orderCreate": {
     "title": "عمل طلب جديد",
@@ -561,7 +566,9 @@
     "details": "التفاصيل",
     "contactInfo": "التواصل",
     "location": "الموقع",
-    "businessDetails": "تفاصيل العمل"
+    "businessDetails": "تفاصيل العمل",
+    "cardView": "عرض البطاقات",
+    "tableView": "عرض الجدول"
   },
   "analyticsPage": {
     "title": "لوحة التحليلات",
@@ -647,7 +654,9 @@
     "errorLoadingRole": "فشل تحميل الدور",
     "searchPermissions": "دور على صلاحيات...",
     "noPermissionsFound": "مفيش صلاحيات",
-    "selectedCount": "{count} متحدد"
+    "selectedCount": "{count} متحدد",
+    "cardView": "عرض البطاقات",
+    "tableView": "عرض الجدول"
   },
   "tracking": {
     "title": "تتبع طلبك",
@@ -894,7 +903,9 @@
     "mobilePlaceholder": "اكتب رقم الموبايل",
     "vendor": "مورد",
     "nameEnRequired": "الاسم بالإنجليزي مطلوب",
-    "nameArRequired": "الاسم بالعربي مطلوب"
+    "nameArRequired": "الاسم بالعربي مطلوب",
+    "cardView": "عرض البطاقات",
+    "tableView": "عرض الجدول"
   },
   "unauthorized": {
     "title": "مش مسموحلك",

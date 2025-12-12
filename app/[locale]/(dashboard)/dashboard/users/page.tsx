@@ -252,6 +252,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ViewToggle, type ViewType } from "@/components/ui/view-toggle";
+import { UserTable } from "@/components/users/user-table";
 
 export default function UsersPage() {
   const t = useTranslations('users');
@@ -279,6 +281,7 @@ export default function UsersPage() {
     role: false,
     inventory: false,
   });
+  const [viewType, setViewType] = useState<ViewType>("cards");
 
   // Inventories for filter
   const [inventories, setInventories] = useState<Inventory[]>([]);
@@ -1033,6 +1036,24 @@ export default function UsersPage() {
         </div>
       )}
 
+      {/* Results Count & View Toggle */}
+      {!isLoading && users.length > 0 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {meta?.total === users.length
+              ? `${users.length} ${users.length === 1 ? 'user' : 'users'}`
+              : `Showing ${users.length} of ${meta?.total || 0} users`
+            }
+          </p>
+          <ViewToggle
+            view={viewType}
+            onViewChange={setViewType}
+            cardLabel={t("cardView")}
+            tableLabel={t("tableView")}
+          />
+        </div>
+      )}
+
       {/* Loading State */}
       {isLoading ? (
         <div className="flex items-center justify-center h-[40vh]">
@@ -1043,23 +1064,27 @@ export default function UsersPage() {
         </div>
       ) : (
         <>
-          {/* Users Grid - 3 Cards per row */}
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {users.map((user) => (
-              <UserCard
-                key={user.id}
-                user={user}
-                displayName={getDisplayName(user)}
-                currentUser={currentUser}
-                locale={locale}
-                router={router}
-                canUpdateUser={canUpdateUser}
-                t={t}
-                tCommon={tCommon}
-                getLocalizedRoleDisplay={getLocalizedRoleDisplay}
-              />
-            ))}
-          </div>
+          {/* Users Table or Grid */}
+          {viewType === "table" ? (
+            <UserTable users={users} canUpdateUser={canUpdateUser} />
+          ) : (
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {users.map((user) => (
+                <UserCard
+                  key={user.id}
+                  user={user}
+                  displayName={getDisplayName(user)}
+                  currentUser={currentUser}
+                  locale={locale}
+                  router={router}
+                  canUpdateUser={canUpdateUser}
+                  t={t}
+                  tCommon={tCommon}
+                  getLocalizedRoleDisplay={getLocalizedRoleDisplay}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Empty State */}
           {users.length === 0 && (

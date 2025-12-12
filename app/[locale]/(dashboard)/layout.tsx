@@ -77,7 +77,7 @@ export default function DashboardLayout({
           </div>
         </header>
 
-        <main className="flex flex-1 flex-col gap-4 p-4 md:p-6">
+        <main className="flex flex-1 flex-col gap-4 p-4 md:p-6 overflow-x-hidden">
           {children}
         </main>
       </SidebarInset>

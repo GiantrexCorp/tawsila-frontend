@@ -46,8 +46,9 @@ export function OrdersTable({
 
   // Helper to get location name based on phase
   const getLocationInfo = (order: Order) => {
-    const isPhase1 = order.is_in_phase1 === true;
-    const isPhase2 = order.is_in_phase2 === true;
+    // Use truthy check instead of strict boolean comparison to handle 1/true/"1" etc.
+    const isPhase1 = !!order.is_in_phase1;
+    const isPhase2 = !!order.is_in_phase2;
 
     if (isPhase1 && order.vendor) {
       return {
@@ -56,7 +57,7 @@ export function OrdersTable({
         icon: Store,
         badgeClass: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
         iconClass: "text-amber-600",
-        rowClass: "border-l-4 border-l-amber-500",
+        rowClass: "shadow-[inset_4px_0_0_0_rgb(245,158,11)]",
       };
     }
     if (isPhase2 && order.inventory) {
@@ -66,7 +67,7 @@ export function OrdersTable({
         icon: Warehouse,
         badgeClass: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
         iconClass: "text-blue-600",
-        rowClass: "border-l-4 border-l-blue-500",
+        rowClass: "shadow-[inset_4px_0_0_0_rgb(59,130,246)]",
       };
     }
     return null;
@@ -109,8 +110,9 @@ export function OrdersTable({
   };
 
   return (
-    <div className="rounded-md border overflow-x-auto">
-      <Table>
+    <div className="rounded-md border overflow-hidden">
+      <div className="overflow-x-auto">
+        <Table className="w-full">
         <TableHeader>
           <TableRow>
             <TableHead className="min-w-[140px]">{t("orderNumber")}</TableHead>
@@ -257,6 +259,7 @@ export function OrdersTable({
           })}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }

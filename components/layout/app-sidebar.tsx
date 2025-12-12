@@ -235,7 +235,12 @@ export function AppSidebar() {
               <SidebarGroupContent>
                 <SidebarMenu>
                   {visibleItems.map((item) => {
-                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                    // Remove locale prefix from pathname for comparison
+                    const pathnameWithoutLocale = pathname.replace(/^\/(en|ar)/, '');
+                    // For dashboard, only match exact path. For others, match path and sub-paths
+                    const isActive = item.href === '/dashboard'
+                      ? pathnameWithoutLocale === '/dashboard'
+                      : pathnameWithoutLocale === item.href || pathnameWithoutLocale.startsWith(item.href + '/');
                     return (
                       <SidebarMenuItem key={item.href}>
                         <SidebarMenuButton
