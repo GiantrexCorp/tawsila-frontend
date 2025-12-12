@@ -337,7 +337,15 @@
     "shipTo": "الشحن لـ",
     "trackingUrl": "لينك التتبع",
     "moreItems": "منتجات إضافية",
-    "handleWithCare": "التعامل بحرص"
+    "handleWithCare": "التعامل بحرص",
+    "currentLocation": "الموقع الحالي",
+    "atVendor": "عند البائع",
+    "atInventory": "في المخزن",
+    "assignedAgent": "المندوب المعين",
+    "pickupAgent": "مندوب الاستلام",
+    "deliveryAgent": "مندوب التوصيل",
+    "agent": "المندوب",
+    "agentPending": "في انتظار قبول المندوب"
   },
   "orderCreate": {
     "title": "عمل طلب جديد",

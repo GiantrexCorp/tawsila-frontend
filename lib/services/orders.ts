@@ -334,12 +334,14 @@ export async function createOrder(orderData: CreateOrderRequest): Promise<Order>
 
 /**
  * Available includes for orders API
+ * Note: assignments.assignedTo and assignments.assignedBy load nested relations
  */
 const ORDER_INCLUDES = [
   'vendor',
   'customer',
   'items',
-  'assignments',
+  'assignments.assignedTo',
+  'assignments.assignedBy',
   'statusLogs',
   'scans',
   'rejectedBy',

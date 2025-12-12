@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/ui/status-badge";
 import {
   DropdownMenu,
@@ -18,8 +19,9 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Eye, CheckCircle, XCircle, Truck } from "lucide-react";
-import type { Order } from "@/lib/services/orders";
+import { MoreHorizontal, Eye, CheckCircle, XCircle, Truck, Store, Warehouse, UserCheck } from "lucide-react";
+import type { Order, Assignment } from "@/lib/services/orders";
+import { cn } from "@/lib/utils";
 
 interface OrdersTableProps {
   orders: Order[];
@@ -42,6 +44,70 @@ export function OrdersTable({
 }: OrdersTableProps) {
   const locale = useLocale();
 
+  // Helper to get location name based on phase
+  const getLocationInfo = (order: Order) => {
+    const isPhase1 = order.is_in_phase1 === true;
+    const isPhase2 = order.is_in_phase2 === true;
+
+    if (isPhase1 && order.vendor) {
+      return {
+        label: t("atVendor"),
+        name: locale === "ar" ? order.vendor.name_ar : order.vendor.name_en || order.vendor.name,
+        icon: Store,
+        badgeClass: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+        iconClass: "text-amber-600",
+        rowClass: "border-l-4 border-l-amber-500",
+      };
+    }
+    if (isPhase2 && order.inventory) {
+      return {
+        label: t("atInventory"),
+        name: locale === "ar" ? order.inventory.name_ar : order.inventory.name_en || order.inventory.name,
+        icon: Warehouse,
+        badgeClass: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+        iconClass: "text-blue-600",
+        rowClass: "border-l-4 border-l-blue-500",
+      };
+    }
+    return null;
+  };
+
+  // Helper to get assignment type label
+  const getAssignmentTypeLabel = (type: string) => {
+    if (type === "inventory_to_customer") return t("deliveryAgent");
+    if (type === "vendor_to_inventory") return t("pickupAgent");
+    return t("agent");
+  };
+
+  // Helper to get active assignment info
+  const getAssignmentInfo = (order: Order) => {
+    if (!order.assignments || order.assignments.length === 0) return null;
+    // Find active assignment, prioritize delivery (inventory_to_customer) over pickup (vendor_to_inventory)
+    const deliveryAssignment = order.assignments.find(
+      (a: Assignment) => a.assignment_type === "inventory_to_customer" && a.is_active
+    );
+    if (deliveryAssignment) {
+      return {
+        type: "inventory_to_customer",
+        label: getAssignmentTypeLabel("inventory_to_customer"),
+        statusLabel: deliveryAssignment.status_label,
+        agent: deliveryAssignment.assigned_to,
+      };
+    }
+    const pickupAssignment = order.assignments.find(
+      (a: Assignment) => a.assignment_type === "vendor_to_inventory" && a.is_active
+    );
+    if (pickupAssignment) {
+      return {
+        type: "vendor_to_inventory",
+        label: getAssignmentTypeLabel("vendor_to_inventory"),
+        statusLabel: pickupAssignment.status_label,
+        agent: pickupAssignment.assigned_to,
+      };
+    }
+    return null;
+  };
+
   return (
     <div className="rounded-md border overflow-x-auto">
       <Table>
@@ -49,6 +115,8 @@ export function OrdersTable({
           <TableRow>
             <TableHead className="min-w-[140px]">{t("orderNumber")}</TableHead>
             <TableHead className="min-w-[180px]">{t("customer")}</TableHead>
+            <TableHead className="min-w-[160px]">{t("currentLocation")}</TableHead>
+            <TableHead className="min-w-[140px]">{t("assignedAgent")}</TableHead>
             <TableHead className="min-w-[120px]">{t("status")}</TableHead>
             <TableHead className="min-w-[100px]">{t("paymentStatus")}</TableHead>
             <TableHead className="min-w-[100px] text-end">{t("total")}</TableHead>
@@ -62,11 +130,21 @@ export function OrdersTable({
             const canReject = order.can_reject === true;
             const canAssignPickupAgent = order.can_assign_pickup_agent === true;
             const hasActions = canAccept || canReject || canAssignPickupAgent;
+            const locationInfo = getLocationInfo(order);
+            const assignmentInfo = getAssignmentInfo(order);
+            const agentName = assignmentInfo?.agent
+              ? locale === "ar"
+                ? assignmentInfo.agent.name_ar || assignmentInfo.agent.name
+                : assignmentInfo.agent.name_en || assignmentInfo.agent.name
+              : null;
 
             return (
               <TableRow
                 key={order.id}
-                className="cursor-pointer hover:bg-muted/50"
+                className={cn(
+                  "cursor-pointer hover:bg-muted/50",
+                  locationInfo?.rowClass
+                )}
                 onClick={() => onOrderClick(order.id)}
               >
                 <TableCell>
@@ -84,6 +162,43 @@ export function OrdersTable({
                       {order.customer?.mobile || "-"}
                     </p>
                   </div>
+                </TableCell>
+                <TableCell>
+                  {locationInfo ? (
+                    <div className="flex items-center gap-2">
+                      <locationInfo.icon className={cn("h-4 w-4 shrink-0", locationInfo.iconClass)} />
+                      <div className="min-w-0">
+                        <Badge variant="outline" className={cn("text-xs mb-0.5", locationInfo.badgeClass)}>
+                          {locationInfo.label}
+                        </Badge>
+                        <p className="text-sm truncate max-w-[140px]">{locationInfo.name || "-"}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {assignmentInfo ? (
+                    <div className="flex items-center gap-2">
+                      <UserCheck className="h-4 w-4 shrink-0 text-green-600" />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <Badge variant="outline" className="text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-300 dark:border-green-700">
+                            {assignmentInfo.label}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {assignmentInfo.statusLabel}
+                          </Badge>
+                        </div>
+                        <p className="text-sm truncate max-w-[120px] mt-0.5">
+                          {agentName || t("agentPending")}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground text-sm">{t("notAssigned")}</span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <OrderStatusBadge

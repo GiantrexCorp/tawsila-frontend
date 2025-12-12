@@ -338,7 +338,15 @@
     "shipTo": "Ship To",
     "trackingUrl": "Tracking URL",
     "moreItems": "more items",
-    "handleWithCare": "Handle with Care"
+    "handleWithCare": "Handle with Care",
+    "currentLocation": "Current Location",
+    "atVendor": "At Vendor",
+    "atInventory": "At Inventory",
+    "assignedAgent": "Assigned Agent",
+    "pickupAgent": "Pickup Agent",
+    "deliveryAgent": "Delivery Agent",
+    "agent": "Agent",
+    "agentPending": "Awaiting agent acceptance"
   },
   "orderCreate": {
     "title": "Create New Order",

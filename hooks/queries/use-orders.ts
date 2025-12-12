@@ -110,7 +110,22 @@ export function useAcceptOrder() {
     onSuccess: (updatedOrder, variables) => {
       // Update the specific order in cache
       queryClient.setQueryData(queryKeys.orders.detail(variables.id), updatedOrder);
-      // Invalidate order lists
+
+      // Update the order in all list caches immediately for instant UI update
+      queryClient.setQueriesData<OrdersResponse>(
+        { queryKey: queryKeys.orders.lists() },
+        (oldData) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            data: oldData.data.map((order) =>
+              order.id === variables.id ? { ...order, ...updatedOrder } : order
+            ),
+          };
+        }
+      );
+
+      // Also refetch to ensure we have the latest data from server
       queryClient.invalidateQueries({ queryKey: queryKeys.orders.lists() });
       // Invalidate stats
       queryClient.invalidateQueries({ queryKey: queryKeys.orders.stats() });
@@ -130,7 +145,22 @@ export function useRejectOrder() {
     onSuccess: (updatedOrder, variables) => {
       // Update the specific order in cache
       queryClient.setQueryData(queryKeys.orders.detail(variables.id), updatedOrder);
-      // Invalidate order lists
+
+      // Update the order in all list caches immediately for instant UI update
+      queryClient.setQueriesData<OrdersResponse>(
+        { queryKey: queryKeys.orders.lists() },
+        (oldData) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            data: oldData.data.map((order) =>
+              order.id === variables.id ? { ...order, ...updatedOrder } : order
+            ),
+          };
+        }
+      );
+
+      // Also refetch to ensure we have the latest data from server
       queryClient.invalidateQueries({ queryKey: queryKeys.orders.lists() });
       // Invalidate stats
       queryClient.invalidateQueries({ queryKey: queryKeys.orders.stats() });
@@ -154,10 +184,39 @@ export function useAssignPickupAgent() {
       agentId: number;
       notes?: string;
     }) => assignPickupAgent(orderId, agentId, notes),
-    onSuccess: (_, variables) => {
-      // Invalidate the specific order
+    onSuccess: async (newAssignment, variables) => {
+      // Update the order in all list caches with the new assignment immediately
+      queryClient.setQueriesData<OrdersResponse>(
+        { queryKey: queryKeys.orders.lists() },
+        (oldData) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            data: oldData.data.map((order) => {
+              if (order.id === variables.orderId) {
+                // Add or update the assignment in the order's assignments array
+                const existingAssignments = order.assignments || [];
+                const updatedAssignments = existingAssignments.some(
+                  (a) => a.id === newAssignment.id
+                )
+                  ? existingAssignments.map((a) =>
+                      a.id === newAssignment.id ? newAssignment : a
+                    )
+                  : [...existingAssignments, newAssignment];
+                return {
+                  ...order,
+                  assignments: updatedAssignments,
+                  can_assign_pickup_agent: false, // Typically can't assign again after assignment
+                };
+              }
+              return order;
+            }),
+          };
+        }
+      );
+
+      // Invalidate to refetch fresh data
       queryClient.invalidateQueries({ queryKey: queryKeys.orders.detail(variables.orderId) });
-      // Invalidate order lists
       queryClient.invalidateQueries({ queryKey: queryKeys.orders.lists() });
       // Invalidate my assigned orders
       queryClient.invalidateQueries({ queryKey: [...queryKeys.orders.all, "my-assigned"] });
