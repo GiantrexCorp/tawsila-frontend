@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/routing";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,7 +14,6 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 
 export default function LandingPage() {
   const t = useTranslations('landing');
-  const app = useTranslations('app');
   const router = useRouter();
   const [orderNumber, setOrderNumber] = useState("");
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -180,11 +180,12 @@ export default function LandingPage() {
                 className="group relative overflow-hidden border-2 bg-card hover:border-primary transition-all duration-300 hover:shadow-lg"
               >
                 <div className="aspect-video relative bg-muted/50 overflow-hidden">
-                  <img
+                  <Image
                     src={company.image}
                     alt={company.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
-                    loading="lazy"
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+                    sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/30 to-transparent group-hover:from-background/95 group-hover:via-background/40 transition-all duration-300"></div>
                 </div>

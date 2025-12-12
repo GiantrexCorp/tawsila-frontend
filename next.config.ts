@@ -19,6 +19,12 @@ const nextConfig: NextConfig = {
         hostname: 'tawsila-backend-odj7.onrender.com',
         pathname: '/storage/**',
       },
+      // Unsplash images
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        pathname: '/**',
+      },
     ],
   },
 };
