@@ -812,6 +812,8 @@
     "basicInformationDesc": "اكتب المعلومات الأساسية للمستخدم",
     "accountStatus": "حالة الحساب",
     "accountStatusDesc": "التحكم في وصول حساب المستخدم",
+    "assignedInventories": "المخازن المخصصة",
+    "noAssignedInventories": "لا توجد مخازن مخصصة",
     "backToUser": "رجوع للمستخدم",
     "editingUser": "تعديل {name}",
     "nameEnglishPlaceholder": "اكتب الاسم بالإنجليزي",
