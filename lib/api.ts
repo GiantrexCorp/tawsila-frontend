@@ -32,16 +32,16 @@ export interface ApiError {
  */
 export function getCurrentLocale(): string {
   if (typeof window === 'undefined') return 'en';
-  
+
   // Extract locale from pathname (e.g., /en/dashboard -> en, /ar/users -> ar)
   const pathSegments = window.location.pathname.split('/').filter(Boolean);
   const locale = pathSegments[0];
-  
+
   // Validate locale (should be 'en' or 'ar')
   if (locale === 'ar' || locale === 'en') {
     return locale;
   }
-  
+
   return 'en'; // Default to English
 }
 
@@ -57,16 +57,16 @@ export async function apiRequest<T>(
   options: ApiRequestOptions = {}
 ): Promise<ApiResponse<T>> {
   const url = `${API_BASE_URL}${endpoint}`;
-  
+
   // Check if body is FormData - if so, don't set Content-Type (browser will set it with boundary)
   const isFormData = options.body instanceof FormData;
-  
+
   const defaultHeaders: HeadersInit = {
     'Accept': 'application/json',
-    'Accept-Language': getCurrentLocale(), // Add locale to all requests
-    'X-Locale': getCurrentLocale(), // Also send as custom header for backend flexibility
+    'Accept-Language': getCurrentLocale(),
+    'X-Locale': getCurrentLocale(),
   };
-  
+
   // Only set Content-Type for JSON requests
   if (!isFormData) {
     defaultHeaders['Content-Type'] = 'application/json';
@@ -80,7 +80,7 @@ export async function apiRequest<T>(
 
   // Extract skipRedirectOn403 from options before passing to fetch
   const { skipRedirectOn403, ...fetchOptions } = options;
-  
+
   const config: RequestInit = {
     ...fetchOptions,
     headers: {
@@ -91,10 +91,10 @@ export async function apiRequest<T>(
 
   try {
     const response = await fetch(url, config);
-    
+
     // Get response text first to handle empty responses
     const responseText = await response.text();
-    
+
     // Parse JSON only if we have content
     let data;
     try {
@@ -161,23 +161,18 @@ export async function apiRequest<T>(
  */
 function handleUnauthorized(): void {
   if (typeof window === 'undefined') return;
-  
-  // Clear local storage
-  removeToken();
-  localStorage.removeItem('user');
-  
+
+  // Clear all auth data
+  clearAuthData();
+
   // Dispatch custom event to notify components
-  window.dispatchEvent(new CustomEvent('auth:logout', { 
-    detail: { reason: 'unauthorized' } 
+  window.dispatchEvent(new CustomEvent('auth:logout', {
+    detail: { reason: 'unauthorized' }
   }));
-  
+
   // Only redirect if not already on login page
   if (!window.location.pathname.includes('/login')) {
-    // Extract current locale from pathname (e.g., /en/dashboard -> en)
-    const pathSegments = window.location.pathname.split('/').filter(Boolean);
-    const locale = pathSegments[0] || 'en'; // Default to 'en' if no locale found
-    
-    // Redirect to login with proper locale
+    const locale = getCurrentLocale();
     window.location.href = `/${locale}/login`;
   }
 }
@@ -188,14 +183,10 @@ function handleUnauthorized(): void {
  */
 function handleForbidden(): void {
   if (typeof window === 'undefined') return;
-  
+
   // Only redirect if not already on 403 page
   if (!window.location.pathname.includes('/403')) {
-    // Extract current locale from pathname
-    const pathSegments = window.location.pathname.split('/').filter(Boolean);
-    const locale = pathSegments[0] || 'en';
-    
-    // Redirect to 403 page with proper locale
+    const locale = getCurrentLocale();
     window.location.href = `/${locale}/403`;
   }
 }
@@ -212,21 +203,18 @@ export function getToken(): string | null {
 const TOKEN_EXPIRY_DAYS = 7;
 
 /**
- * Store authentication token
- * Note: For production, consider moving cookie setting to server-side API routes
- * to enable HttpOnly flag which provides better XSS protection.
+ * Store authentication token in both localStorage and cookie
  */
 export function setToken(token: string): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem('access_token', token);
 
   // Store in cookie for middleware access
-  // Using Secure flag in production, SameSite=Strict for CSRF protection
   const expiryDate = new Date();
   expiryDate.setDate(expiryDate.getDate() + TOKEN_EXPIRY_DAYS);
   const isSecure = window.location.protocol === 'https:';
   const secureFlag = isSecure ? '; Secure' : '';
-  document.cookie = `token=${token}; path=/; expires=${expiryDate.toUTCString()}; SameSite=Strict${secureFlag}`;
+  document.cookie = `token=${token}; path=/; expires=${expiryDate.toUTCString()}; SameSite=Lax${secureFlag}`;
 }
 
 /**
@@ -236,9 +224,45 @@ export function removeToken(): void {
   if (typeof window === 'undefined') return;
   localStorage.removeItem('access_token');
 
-  // Remove cookie with same flags used when setting
+  // Remove cookie - must match the path used when setting
   const isSecure = window.location.protocol === 'https:';
   const secureFlag = isSecure ? '; Secure' : '';
-  document.cookie = `token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict${secureFlag}`;
+  document.cookie = `token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secureFlag}`;
 }
 
+/**
+ * Clear all authentication data (token, user, flags)
+ */
+export function clearAuthData(): void {
+  if (typeof window === 'undefined') return;
+
+  // Clear localStorage
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('user');
+  localStorage.removeItem('requires_password_change');
+
+  // Clear cookie
+  const isSecure = window.location.protocol === 'https:';
+  const secureFlag = isSecure ? '; Secure' : '';
+  document.cookie = `token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secureFlag}`;
+}
+
+/**
+ * Check if token cookie exists (for detecting stale auth state)
+ */
+export function hasTokenCookie(): boolean {
+  if (typeof window === 'undefined') return false;
+  return document.cookie.split(';').some(c => c.trim().startsWith('token='));
+}
+
+/**
+ * Sync token from localStorage to cookie if missing
+ */
+export function syncTokenToCookie(): void {
+  if (typeof window === 'undefined') return;
+
+  const token = localStorage.getItem('access_token');
+  if (token && !hasTokenCookie()) {
+    setToken(token);
+  }
+}

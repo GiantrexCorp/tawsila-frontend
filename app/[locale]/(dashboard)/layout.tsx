@@ -8,8 +8,9 @@ import { Separator } from "@/components/ui/separator";
 import { Bell, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSessionMonitor } from "@/hooks/use-session-monitor";
-import { useState, useEffect } from "react";
-import { isAuthenticated } from "@/lib/auth";
+import { useState, useEffect, useCallback } from "react";
+import { isAuthenticated, hasToken, validateSession, clearAuthData } from "@/lib/auth";
+import { useSearchParams } from "next/navigation";
 
 export default function DashboardLayout({
   children,
@@ -17,40 +18,54 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [isChecking, setIsChecking] = useState(true);
-  
+  const searchParams = useSearchParams();
+
   // Monitor session and handle automatic logout
   useSessionMonitor();
-  
+
+  // Redirect to login
+  const redirectToLogin = useCallback(() => {
+    clearAuthData();
+    const pathParts = window.location.pathname.split('/');
+    const locale = pathParts[1] || 'en';
+    window.location.href = `/${locale}/login`;
+  }, []);
+
   // Check authentication on mount
   useEffect(() => {
-    const checkAuth = () => {
-      if (!isAuthenticated()) {
-        // Use window.location for immediate redirect to avoid race conditions
-        // Extract locale from current path (e.g., /en/dashboard -> en)
-        const pathParts = window.location.pathname.split('/');
-        const locale = pathParts[1] || 'en';
-        window.location.href = `/${locale}/login`;
+    const checkAuth = async () => {
+      // Check if we need to validate session (redirected from login with stale cookie)
+      const needsValidation = searchParams.get('validate') === '1';
+
+      // If fully authenticated and no validation needed, proceed
+      if (isAuthenticated() && !needsValidation) {
+        setIsChecking(false);
         return;
       }
 
-      // Sync token to cookie if not already there (for existing users)
-      const token = localStorage.getItem('access_token');
-      if (token) {
-        // Check if cookie exists
-        const hasCookie = document.cookie.split(';').some(c => c.trim().startsWith('token='));
-        if (!hasCookie) {
-          // Sync to cookie
-          const expiryDate = new Date();
-          expiryDate.setDate(expiryDate.getDate() + 7);
-          document.cookie = `token=${token}; path=/; expires=${expiryDate.toUTCString()}; SameSite=Lax`;
+      // If token exists but user data missing, or validation requested
+      if (hasToken()) {
+        // Try to validate session with API
+        const user = await validateSession();
+        if (user) {
+          // Session is valid, remove validate param from URL
+          if (needsValidation) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('validate');
+            window.history.replaceState({}, '', url.toString());
+          }
+          setIsChecking(false);
+          return;
         }
       }
-      setIsChecking(false);
+
+      // No valid session - redirect to login
+      redirectToLogin();
     };
 
     checkAuth();
-  }, []);
-  
+  }, [searchParams, redirectToLogin]);
+
   // Show loading spinner while checking auth
   if (isChecking) {
     return (
@@ -59,7 +74,7 @@ export default function DashboardLayout({
       </div>
     );
   }
-  
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -87,6 +102,3 @@ export default function DashboardLayout({
     </SidebarProvider>
   );
 }
-
-
-
