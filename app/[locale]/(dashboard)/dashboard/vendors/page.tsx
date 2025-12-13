@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "@/i18n/routing";
-import Image from "next/image";
+import { BackendImage } from "@/components/ui/backend-image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
 import { fetchVendors, fetchGovernorates, fetchCities, type Vendor, type Governorate, type City } from "@/lib/services/vendors";
+import { ViewToggle, type ViewType } from "@/components/ui/view-toggle";
+import { VendorTable } from "@/components/vendors/vendor-table";
 
 export default function VendorsPage() {
   const t = useTranslations('organizations');
@@ -42,15 +44,20 @@ export default function VendorsPage() {
     location: false,
     status: false,
   });
+  const [viewType, setViewType] = useState<ViewType>("cards");
   
-  // Governorates and Cities for filters
+  // Governorates and Cities for filters (lazy loaded)
   const [governorates, setGovernorates] = useState<Governorate[]>([]);
   const [cities, setCities] = useState<City[]>([]);
   const [isLoadingCities, setIsLoadingCities] = useState(false);
+  const [hasLoadedFilterData, setHasLoadedFilterData] = useState(false);
 
-  // Load governorates on mount
+  // Load governorates only when filters are expanded
   useEffect(() => {
+    if (!isFiltersExpanded || hasLoadedFilterData) return;
+
     const loadGovernorates = async () => {
+      setHasLoadedFilterData(true);
       try {
         const fetchedGovernorates = await fetchGovernorates();
         setGovernorates(fetchedGovernorates);
@@ -59,24 +66,21 @@ export default function VendorsPage() {
       }
     };
     loadGovernorates();
-  }, [t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFiltersExpanded]);
 
   // Load cities when governorate is selected
   useEffect(() => {
-    const loadCities = async () => {
-      if (!filters.governorate_id) {
-        setCities([]);
-        return;
-      }
+    if (!filters.governorate_id) {
+      setCities([]);
+      return;
+    }
 
+    const loadCities = async () => {
       setIsLoadingCities(true);
       try {
         const fetchedCities = await fetchCities(parseInt(filters.governorate_id));
         setCities(fetchedCities);
-        // Clear city filter if governorate changes
-        if (filters.city_id) {
-          setFilters((prev) => ({ ...prev, city_id: "" }));
-        }
       } catch {
         toast.error(t('errorLoadingCities'));
       } finally {
@@ -85,11 +89,16 @@ export default function VendorsPage() {
     };
 
     loadCities();
-  }, [filters.governorate_id, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.governorate_id]);
 
-  // Load vendors on mount
+  // Load vendors on mount (ref persists across Strict Mode remounts)
+  const hasLoadedVendorsRef = useRef(false);
   useEffect(() => {
+    if (hasLoadedVendorsRef.current) return;
+
     const loadVendors = async () => {
+      hasLoadedVendorsRef.current = true;
       setIsLoadingVendors(true);
       try {
         const fetchedVendors = await fetchVendors();
@@ -102,7 +111,8 @@ export default function VendorsPage() {
     };
 
     loadVendors();
-  }, [t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Filter vendors based on search query and filters
   const filteredVendors = useMemo(() => {
@@ -510,7 +520,7 @@ export default function VendorsPage() {
         </CardContent>
       </Card>
 
-      {/* Results Count */}
+      {/* Results Count & View Toggle */}
       {!isLoadingVendors && filteredVendors.length > 0 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
@@ -519,6 +529,12 @@ export default function VendorsPage() {
               : `Showing ${filteredVendors.length} of ${vendors.length} vendors`
             }
           </p>
+          <ViewToggle
+            view={viewType}
+            onViewChange={setViewType}
+            cardLabel={t("cardView")}
+            tableLabel={t("tableView")}
+          />
         </div>
       )}
 
@@ -549,6 +565,11 @@ export default function VendorsPage() {
             )}
           </CardContent>
         </Card>
+      ) : viewType === "table" ? (
+        <VendorTable
+          vendors={filteredVendors}
+          canUpdateVendor={canUpdateVendor}
+        />
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filteredVendors.map((vendor) => (
@@ -570,7 +591,7 @@ export default function VendorsPage() {
                     <div className="relative flex-shrink-0">
                       <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-muted to-muted/50 overflow-hidden ring-1 ring-border/50 transition-transform duration-300 group-hover:scale-105">
                         {vendor.logo ? (
-                          <Image
+                          <BackendImage
                             src={vendor.logo}
                             alt={locale === 'ar' ? vendor.name_ar : vendor.name_en}
                             width={56}

@@ -31,11 +31,12 @@ export function useInventoryUsers(inventoryId: number) {
 /**
  * Hook to fetch all users available for assignment
  */
-export function useUsersForAssignment() {
+export function useUsersForAssignment(options?: { enabled?: boolean }) {
   return useQuery<InventoryUser[], Error>({
     queryKey: inventoryUsersKeys.availableUsers,
     queryFn: fetchUsersForAssignment,
     staleTime: 5 * 60 * 1000, // 5 minutes - users don't change often
+    enabled: options?.enabled !== false,
   });
 }
 

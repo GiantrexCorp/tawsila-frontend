@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Image from "next/image";
+import { BackendImage } from "@/components/ui/backend-image";
 import { ArrowLeft, Loader2, Building2, Upload, X } from "lucide-react";
 import {
   Select,
@@ -398,7 +398,7 @@ export default function EditVendorPage() {
                     {logoPreview ? (
                       <div className="relative">
                         <div className="h-32 w-32 rounded-lg border-2 border-muted overflow-hidden bg-muted/30">
-                          <Image
+                          <BackendImage
                             src={logoPreview}
                             alt="Logo preview"
                             width={128}
@@ -462,7 +462,7 @@ export default function EditVendorPage() {
                     {coverPreview ? (
                       <div className="relative">
                         <div className="h-32 w-32 rounded-lg border-2 border-muted overflow-hidden bg-muted/30">
-                          <Image
+                          <BackendImage
                             src={coverPreview}
                             alt="Cover preview"
                             width={128}

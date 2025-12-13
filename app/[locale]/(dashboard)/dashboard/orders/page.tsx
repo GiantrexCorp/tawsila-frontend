@@ -41,6 +41,7 @@ import type { Order } from "@/lib/services/orders";
 import { fetchInventories, type Inventory } from "@/lib/services/inventories";
 import { fetchGovernorates, fetchCities, type Governorate, type City } from "@/lib/services/vendors";
 import { fetchActiveAgents, type Agent } from "@/lib/services/agents";
+import { getCurrentUser } from "@/lib/auth";
 
 const ORDERS_PER_PAGE = 50;
 const VIEW_STORAGE_KEY = "orders-view-preference";
@@ -72,8 +73,8 @@ export default function OrdersPage() {
     status: true,
   });
 
-  // Data for filters
-  const { data: vendors = [] } = useVendors();
+  // Data for filters (lazy loaded when filters expanded)
+  const { data: vendors = [] } = useVendors({ enabled: isFiltersExpanded });
   const [inventories, setInventories] = useState<Inventory[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [governorates, setGovernorates] = useState<Governorate[]>([]);
@@ -102,6 +103,10 @@ export default function OrdersPage() {
     ],
   });
   const { hasPermission: canCreateOrder } = useHasPermission(PERMISSIONS.CREATE_ORDER);
+  const currentUser = getCurrentUser();
+
+  // Only users with type 'vendor' and create-order permission can create orders
+  const canShowCreateOrder = canCreateOrder && currentUser?.type === 'vendor';
 
   // React Query
   const {
@@ -115,9 +120,15 @@ export default function OrdersPage() {
   const rejectOrderMutation = useRejectOrder();
   const assignAgentMutation = useAssignPickupAgent();
 
-  // Load data for filters
+  // Track if filter data has been loaded
+  const [hasLoadedFilterData, setHasLoadedFilterData] = useState(false);
+
+  // Load data for filters (only when filters are expanded)
   useEffect(() => {
+    if (!hasPermission || !isFiltersExpanded || hasLoadedFilterData) return;
+
     const loadData = async () => {
+      setHasLoadedFilterData(true);
       try {
         const [inventoriesData, agentsData, governoratesData] = await Promise.all([
           fetchInventories(),
@@ -131,27 +142,23 @@ export default function OrdersPage() {
         toast.error(tCommon("errorLoadingData"));
       }
     };
-    if (hasPermission) {
-      loadData();
-    }
-  }, [hasPermission, tCommon]);
+
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasPermission, isFiltersExpanded]);
 
   // Load cities when governorate is selected
   useEffect(() => {
-    const loadCities = async () => {
-      if (!filters.governorate_id) {
-        setCities([]);
-        return;
-      }
+    if (!filters.governorate_id) {
+      setCities([]);
+      return;
+    }
 
+    const loadCities = async () => {
       setIsLoadingCities(true);
       try {
         const fetchedCities = await fetchCities(parseInt(filters.governorate_id));
         setCities(fetchedCities);
-        // Clear city filter if governorate changes
-        if (filters.city_id) {
-          setFilters((prev) => ({ ...prev, city_id: "" }));
-        }
       } catch {
         toast.error(t("errorLoadingCities"));
       } finally {
@@ -160,7 +167,8 @@ export default function OrdersPage() {
     };
 
     loadCities();
-  }, [filters.governorate_id, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.governorate_id]);
 
   // Initialize view from localStorage
   useEffect(() => {
@@ -383,7 +391,7 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -405,7 +413,7 @@ export default function OrdersPage() {
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
             <span className="hidden sm:inline">{t("refreshData")}</span>
           </Button>
-          {canCreateOrder && (
+          {canShowCreateOrder && (
             <Button
               onClick={() => router.push("/dashboard/orders/new")}
               className="gap-2"

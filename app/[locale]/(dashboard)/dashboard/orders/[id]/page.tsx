@@ -1,18 +1,17 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useParams } from "next/navigation";
 import { useRouter } from "@/i18n/routing";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/ui/status-badge";
-import { 
-  ArrowLeft, 
-  Loader2, 
-  CheckCircle, 
-  Copy, 
+import {
+  ArrowLeft,
+  Loader2,
+  CheckCircle,
+  Copy,
   ExternalLink,
   Package,
   User,
@@ -22,11 +21,27 @@ import {
   Printer,
   XCircle,
   Truck,
-  UserPlus
+  UserPlus,
+  MapPin,
+  Phone,
+  Mail,
+  Building2,
+  Clock,
+  QrCode,
+  Scan,
+  ChevronRight,
+  Store,
+  Warehouse,
+  CircleDot,
+  CheckCircle2,
+  Circle,
+  Wallet,
+  ArrowUpRight,
+  ArrowDownLeft,
 } from "lucide-react";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { PERMISSIONS } from "@/hooks/use-permissions";
-import { fetchOrder, acceptOrder, rejectOrder, assignPickupAgent, fetchOrderAssignments, type Order, type OrderItem, type Customer, type Assignment } from "@/lib/services/orders";
+import { fetchOrder, acceptOrder, rejectOrder, assignPickupAgent, type Order, type OrderItem, type Customer, type Assignment, type StatusLog, type Scan as ScanType, type Vendor, type OrderTransaction } from "@/lib/services/orders";
 import { fetchInventories, fetchCurrentInventory, type Inventory } from "@/lib/services/inventories";
 import { fetchPickupAgents, type Agent } from "@/lib/services/agents";
 import { toast } from "sonner";
@@ -43,11 +58,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { QRCodeSVG } from "qrcode.react";
+import { cn } from "@/lib/utils";
+import { BackendImage } from "@/components/ui/backend-image";
 
 export default function OrderDetailPage() {
   const t = useTranslations('orders');
   const tCommon = useTranslations('common');
-  const tApp = useTranslations('app');
   const locale = useLocale();
   const router = useRouter();
   const params = useParams();
@@ -55,8 +71,6 @@ export default function OrderDetailPage() {
   const currentUser = getCurrentUser();
   const isVendor = currentUser?.roles?.some(r => r.name === 'vendor');
 
-  // Check if user has permission to access order detail page
-  // Allow access if user has ANY order-related permission
   const hasPermission = usePagePermission({
     requiredPermissions: [
       PERMISSIONS.LIST_ORDERS,
@@ -71,7 +85,6 @@ export default function OrderDetailPage() {
       PERMISSIONS.VERIFY_ORDER_OTP,
     ]
   });
-
 
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -90,8 +103,12 @@ export default function OrderDetailPage() {
   const [assignmentNotes, setAssignmentNotes] = useState("");
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
+    // Only load once when permission is granted (ref persists across Strict Mode remounts)
+    if (!hasPermission || hasLoadedRef.current) return;
+
     const loadOrder = async () => {
       if (!orderId || isNaN(orderId)) {
         toast.error(t('errorLoadingOrder'), {
@@ -101,14 +118,15 @@ export default function OrderDetailPage() {
         return;
       }
 
+      hasLoadedRef.current = true;
       setIsLoading(true);
       try {
-        const [fetchedOrder, fetchedAssignments] = await Promise.all([
-          fetchOrder(orderId),
-          fetchOrderAssignments(orderId)
-        ]);
+        const fetchedOrder = await fetchOrder(orderId);
         setOrder(fetchedOrder);
-        setAssignments(fetchedAssignments);
+        // Assignments are already included in the order response
+        if (fetchedOrder.assignments) {
+          setAssignments(fetchedOrder.assignments);
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : tCommon('tryAgain');
         toast.error(t('errorLoadingOrder'), { description: message });
@@ -118,21 +136,18 @@ export default function OrderDetailPage() {
       }
     };
 
-    if (hasPermission) {
-      loadOrder();
-    }
-  }, [orderId, hasPermission, t, tCommon, router]);
+    loadOrder();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderId, hasPermission]);
 
   const loadInventories = useCallback(async () => {
     setIsLoadingInventories(true);
     try {
-      // Try to get current user's inventory first
       try {
         const currentInventory = await fetchCurrentInventory();
         setInventories([currentInventory]);
         setSelectedInventoryId(currentInventory.id);
       } catch {
-        // If /inventories/me doesn't exist, fetch all inventories
         const allInventories = await fetchInventories();
         setInventories(allInventories);
         if (allInventories.length > 0) {
@@ -185,7 +200,6 @@ export default function OrderDetailPage() {
   }, [t]);
 
   const handleAssignClick = useCallback(() => {
-    // Check if there are active assignments
     const hasActiveAssignment = assignments.some(assignment => assignment.is_active && !assignment.is_finished);
     if (hasActiveAssignment) {
       toast.warning(t('orderAlreadyAssigned'), {
@@ -193,7 +207,6 @@ export default function OrderDetailPage() {
       });
       return;
     }
-    // Get inventory ID from either inventory_id or inventory.id
     const inventoryId = order?.inventory_id || order?.inventory?.id;
     if (!inventoryId) {
       toast.error(t('noInventoryAssigned'));
@@ -211,21 +224,18 @@ export default function OrderDetailPage() {
 
     setIsAssigning(true);
     try {
-      const assignment = await assignPickupAgent(orderId, selectedAgentId, assignmentNotes.trim() || undefined);
-      setAssignments(prev => [...prev, assignment]);
+      await assignPickupAgent(orderId, selectedAgentId, assignmentNotes.trim() || undefined);
       setShowAssignDialog(false);
       setSelectedAgentId(null);
       setAssignmentNotes("");
       toast.success(t('agentAssignedSuccess'));
-      // Reload order and assignments to get updated info
-      const [updatedOrder, updatedAssignments] = await Promise.all([
-        fetchOrder(orderId),
-        fetchOrderAssignments(orderId)
-      ]);
+      // Refresh order data (assignments included)
+      const updatedOrder = await fetchOrder(orderId);
       setOrder(updatedOrder);
-      setAssignments(updatedAssignments);
+      if (updatedOrder.assignments) {
+        setAssignments(updatedOrder.assignments);
+      }
     } catch (error) {
-      // Handle 403 Forbidden specifically (order already assigned)
       const err = error as { status?: number };
       if (err?.status === 403) {
         toast.error(t('agentAssignedFailed'), {
@@ -262,31 +272,44 @@ export default function OrderDetailPage() {
 
   const copyToClipboard = useCallback((text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    toast.success(t('copied'), {
-      description: label,
-    });
+    toast.success(t('copied'), { description: label });
   }, [t]);
-
 
   if (hasPermission === null || hasPermission === false || isLoading || !order) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="h-16 w-16 rounded-2xl bg-primary/10 animate-pulse" />
+            <Loader2 className="h-8 w-8 animate-spin text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+          </div>
+          <p className="text-muted-foreground animate-pulse">{t('loadingOrder')}</p>
+        </div>
       </div>
     );
   }
 
   interface OrderWithRelations extends Order {
     items?: OrderItem[];
-    vendor?: { id: number; name_en?: string; name_ar?: string; name?: string; [key: string]: unknown };
+    status_logs?: StatusLog[];
+    scans?: ScanType[];
+    transactions?: OrderTransaction[];
   }
   const orderWithRelations = order as OrderWithRelations;
   const customer: Customer = orderWithRelations.customer || { name: '', mobile: '', address: '' };
   const items = orderWithRelations.items || [];
-  const vendor: { id?: number; name_en?: string; name_ar?: string; name?: string; [key: string]: unknown } = orderWithRelations.vendor || {};
+  const vendor: Vendor | undefined = orderWithRelations.vendor;
+  const statusLogs = orderWithRelations.status_logs || [];
+  const scans = orderWithRelations.scans || [];
+  const inventory = orderWithRelations.inventory;
+  const transactions = orderWithRelations.transactions || [];
   const canAccept = order.can_accept === true;
   const canReject = order.can_reject === true;
   const canAssignPickupAgent = order.can_assign_pickup_agent === true;
+
+  // Phase indicator
+  const isPhase1 = !!order.is_in_phase1;
+  const isPhase2 = !!order.is_in_phase2;
 
   return (
     <div className="space-y-6 pb-8">
@@ -295,609 +318,659 @@ export default function OrderDetailPage() {
         variant="ghost"
         size="sm"
         onClick={() => router.push('/dashboard/orders')}
-        className="gap-2 text-muted-foreground hover:text-foreground"
+        className="gap-2 text-muted-foreground hover:text-foreground -ms-2"
       >
         <ArrowLeft className="h-4 w-4" />
-        {t('title')}
+        {t('backToOrders')}
       </Button>
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{order.order_number}</h1>
-          <p className="text-sm text-muted-foreground mt-1">{t('orderDetails')}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Print label button - only show if pickup agent is assigned (any active assignment) */}
-          {assignments.some(assignment => 
-            assignment.is_active && 
-            !assignment.is_finished
-          ) && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => window.print()}
-              className="gap-2"
-            >
-              <Printer className="h-4 w-4" />
-              {t('printLabel')}
-            </Button>
-          )}
-          <OrderStatusBadge status={order.status} statusLabel={order.status_label} />
-          <PaymentStatusBadge status={order.payment_status} statusLabel={order.payment_status_label} />
+      {/* Hero Header Card */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-card via-card to-muted/30 border shadow-sm">
+        {/* Phase Indicator Strip */}
+        <div className={cn(
+          "absolute top-0 left-0 right-0 h-1",
+          isPhase1 && "bg-gradient-to-r from-amber-500 to-orange-500",
+          isPhase2 && "bg-gradient-to-r from-blue-500 to-cyan-500",
+          !isPhase1 && !isPhase2 && "bg-gradient-to-r from-gray-300 to-gray-400"
+        )} />
+
+        <div className="p-6 md:p-8">
+          <div className="flex flex-col lg:flex-row lg:items-start gap-6">
+            {/* Left: Order Info */}
+            <div className="flex-1 space-y-4">
+              {/* Order Number & Status */}
+              <div className="flex flex-wrap items-start gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{t('orderNumber')}</p>
+                  <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-mono">{order.order_number}</h1>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  <OrderStatusBadge status={order.status} statusLabel={order.status_label} />
+                  <PaymentStatusBadge status={order.payment_status} statusLabel={order.payment_status_label} />
+                </div>
+              </div>
+
+              {/* Quick Info Row */}
+              <div className="flex flex-wrap items-center gap-4 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  <span>{new Date(order.created_at).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Clock className="h-4 w-4" />
+                  <span>{new Date(order.created_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                {order.track_number && (
+                  <button
+                    onClick={() => copyToClipboard(order.track_number, t('trackingNumber'))}
+                    className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Package className="h-4 w-4" />
+                    <span className="font-mono text-xs">{order.track_number}</span>
+                    <Copy className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+
+              {/* Phase Indicator Pills */}
+              <div className="flex items-center gap-2 pt-2">
+                <div className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                  isPhase1 ? "bg-amber-500/20 text-amber-700 dark:text-amber-400" : "bg-muted text-muted-foreground"
+                )}>
+                  <Store className="h-3.5 w-3.5" />
+                  <span>{t('phase1')}</span>
+                  {isPhase1 && <CircleDot className="h-3 w-3 animate-pulse" />}
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <div className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                  isPhase2 ? "bg-blue-500/20 text-blue-700 dark:text-blue-400" : "bg-muted text-muted-foreground"
+                )}>
+                  <Warehouse className="h-3.5 w-3.5" />
+                  <span>{t('phase2')}</span>
+                  {isPhase2 && <CircleDot className="h-3 w-3 animate-pulse" />}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              {(canAccept || canReject || canAssignPickupAgent) && (
+                <div className="flex flex-wrap gap-2 pt-4">
+                  {canAccept && (
+                    <Button onClick={handleAcceptClick} disabled={isAccepting} className="gap-2">
+                      <CheckCircle className="h-4 w-4" />
+                      {t('acceptOrder')}
+                    </Button>
+                  )}
+                  {canReject && (
+                    <Button variant="destructive" onClick={handleRejectClick} disabled={isRejecting} className="gap-2">
+                      <XCircle className="h-4 w-4" />
+                      {t('rejectOrder')}
+                    </Button>
+                  )}
+                  {canAssignPickupAgent && (
+                    <Button
+                      variant="outline"
+                      onClick={handleAssignClick}
+                      disabled={isAssigning || assignments.some(a => a.is_active && !a.is_finished)}
+                      className="gap-2"
+                    >
+                      <Truck className="h-4 w-4" />
+                      {t('assignPickupAgent')}
+                    </Button>
+                  )}
+                  <Button variant="outline" onClick={() => window.print()} className="gap-2">
+                    <Printer className="h-4 w-4" />
+                    {t('printLabel')}
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Right: QR Code */}
+            {order.qr_code && (
+              <div className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-white dark:bg-zinc-900 border shadow-sm">
+                <QRCodeSVG value={order.qr_code} size={120} level="M" includeMargin={false} />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push(`/track/${order.track_number}`)}
+                  className="text-xs gap-1.5 h-8"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  {t('viewTracking')}
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Action Buttons */}
-      {(canAccept || canReject || canAssignPickupAgent) && (
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      {/* Bento Grid Layout */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+
+        {/* Customer Card */}
+        <div className="group relative overflow-hidden rounded-2xl bg-card border p-5 hover:shadow-lg hover:border-primary/20 transition-all duration-300">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="relative space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                <User className="h-5 w-5 text-blue-500" />
+              </div>
               <div>
-                <p className="font-medium">{t('orderActions')}</p>
-                <p className="text-sm text-muted-foreground">{t('orderActionsDesc')}</p>
-              </div>
-              <div className="flex gap-2 w-full sm:w-auto flex-wrap">
-                {canAccept && (
-                  <Button
-                    onClick={handleAcceptClick}
-                    disabled={isAccepting}
-                    className="gap-2 flex-1 sm:flex-initial"
-                  >
-                    <CheckCircle className="h-4 w-4" />
-                    {t('acceptOrder')}
-                  </Button>
-                )}
-                {canReject && (
-                  <Button
-                    variant="destructive"
-                    onClick={handleRejectClick}
-                    disabled={isRejecting}
-                    className="gap-2 flex-1 sm:flex-initial"
-                  >
-                    <XCircle className="h-4 w-4" />
-                    {t('rejectOrder')}
-                  </Button>
-                )}
-                {canAssignPickupAgent && (
-                  <Button
-                    variant="outline"
-                    onClick={handleAssignClick}
-                    disabled={isAssigning || assignments.some(a => a.is_active && !a.is_finished)}
-                    className="gap-2 flex-1 sm:flex-initial"
-                  >
-                    <Truck className="h-4 w-4" />
-                    {assignments.some(a => a.is_active && !a.is_finished)
-                      ? t('reassignPickupAgent')
-                      : t('assignPickupAgent')}
-                  </Button>
-                )}
+                <h3 className="font-semibold">{t('customerInformation')}</h3>
+                <p className="text-xs text-muted-foreground">{t('deliveryDetails')}</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Assignments - Show at top if exists */}
-      {assignments.length > 0 && (
-        <Card className="md:col-span-2 lg:col-span-3">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
-                <Truck className="h-4 w-4 text-indigo-500" />
-              </div>
-              <CardTitle>{t('assignments')}</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {assignments.map((assignment) => (
-                  <div key={assignment.id} className="p-4 border rounded-lg space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{assignment.assignment_type_label}</p>
-                        <p className="text-xs text-muted-foreground">{assignment.status_label}</p>
-                      </div>
-                      <Badge variant={assignment.is_active ? "default" : "secondary"}>
-                        {assignment.is_active ? t('active') : t('inactive')}
-                      </Badge>
-                    </div>
-                    
-                    <div className="grid md:grid-cols-2 gap-4 pt-2 border-t">
-                    {/* Assigned To (Agent) */}
-                    {assignment.assigned_to && Object.keys(assignment.assigned_to).length > 0 ? (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <UserPlus className="h-4 w-4 text-muted-foreground" />
-                          <p className="text-xs font-medium text-muted-foreground">{t('assignedTo')}</p>
-                        </div>
-                        <div className="ps-6 space-y-1">
-                          <p className="font-medium">
-                            {locale === 'ar' && assignment.assigned_to.name_ar
-                              ? assignment.assigned_to.name_ar
-                              : assignment.assigned_to.name_en || assignment.assigned_to.name || 'N/A'}
-                          </p>
-                          {assignment.assigned_to.mobile && (
-                            <div className="flex items-center gap-2">
-                              <p className="text-sm text-muted-foreground" dir="ltr">{assignment.assigned_to.mobile}</p>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => copyToClipboard(assignment.assigned_to!.mobile || '', t('mobileNumber'))}
-                              >
-                                <Copy className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          )}
-                          {assignment.assigned_to.email && (
-                            <div className="flex items-center gap-2">
-                              <p className="text-xs text-muted-foreground">{assignment.assigned_to.email}</p>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => copyToClipboard(assignment.assigned_to!.email || '', t('customerEmail'))}
-                              >
-                                <Copy className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <UserPlus className="h-4 w-4 text-muted-foreground" />
-                          <p className="text-xs font-medium text-muted-foreground">{t('assignedTo')}</p>
-                        </div>
-                        <div className="ps-6">
-                          <p className="text-sm text-muted-foreground italic">{t('notAssigned')}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Assigned By */}
-                    {assignment.assigned_by && Object.keys(assignment.assigned_by).length > 0 ? (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <p className="text-xs font-medium text-muted-foreground">{t('assignedBy')}</p>
-                        </div>
-                        <div className="ps-6 space-y-1">
-                          <p className="font-medium">
-                            {locale === 'ar' && assignment.assigned_by.name_ar
-                              ? assignment.assigned_by.name_ar
-                              : assignment.assigned_by.name_en || assignment.assigned_by.name || 'N/A'}
-                          </p>
-                          {assignment.assigned_by.mobile && (
-                            <p className="text-xs text-muted-foreground" dir="ltr">{assignment.assigned_by.mobile}</p>
-                          )}
-                          {assignment.assigned_by.email && (
-                            <p className="text-xs text-muted-foreground">{assignment.assigned_by.email}</p>
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <p className="text-xs font-medium text-muted-foreground">{t('assignedBy')}</p>
-                        </div>
-                        <div className="ps-6">
-                          <p className="text-sm text-muted-foreground italic">{t('notAssigned')}</p>
-                        </div>
-                      </div>
-                    )}
+            <div className="space-y-3">
+              {customer.name && (
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
+                    {customer.name.charAt(0).toUpperCase()}
                   </div>
-
-                  {assignment.notes && (
-                    <div className="pt-2 border-t">
-                      <p className="text-xs text-muted-foreground mb-1">{t('notes')}</p>
-                      <p className="text-sm bg-muted/50 p-2 rounded">{assignment.notes}</p>
-                    </div>
-                  )}
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-muted-foreground pt-2 border-t">
-                    {assignment.assigned_at && (
-                      <div>
-                        <p className="font-medium mb-1">{t('assignedAt')}</p>
-                        <p className="text-foreground">{new Date(assignment.assigned_at).toLocaleString(locale)}</p>
-                      </div>
-                    )}
-                    {assignment.accepted_at && (
-                      <div>
-                        <p className="font-medium mb-1">{t('acceptedAt')}</p>
-                        <p className="text-foreground">{new Date(assignment.accepted_at).toLocaleString(locale)}</p>
-                      </div>
-                    )}
-                    {assignment.picked_up_at && (
-                      <div>
-                        <p className="font-medium mb-1">{t('pickedUpAt')}</p>
-                        <p className="text-foreground">{new Date(assignment.picked_up_at).toLocaleString(locale)}</p>
-                      </div>
-                    )}
-                    {assignment.completed_at && (
-                      <div>
-                        <p className="font-medium mb-1">{t('completedAt')}</p>
-                        <p className="text-foreground">{new Date(assignment.completed_at).toLocaleString(locale)}</p>
-                      </div>
-                    )}
+                  <div>
+                    <p className="font-medium">{customer.name}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              )}
 
-      {/* Order Information Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Customer Information */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <User className="h-4 w-4 text-blue-500" />
-              </div>
-              <CardTitle>{t('customerInformation')}</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {customer.name && (
-              <div>
-                <p className="text-xs text-muted-foreground">{t('customerName')}</p>
-                <p className="font-medium">{customer.name}</p>
-              </div>
-            )}
-            {customer.mobile && (
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">{t('customerMobile')}</p>
-                  <p className="font-medium" dir="ltr">{customer.mobile}</p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
+              {customer.mobile && (
+                <button
                   onClick={() => copyToClipboard(customer.mobile, t('customerMobile'))}
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full"
                 >
-                  <Copy className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            )}
-            {customer.email && (
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">{t('customerEmail')}</p>
-                  <p className="font-medium text-sm">{customer.email}</p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
+                  <Phone className="h-4 w-4" />
+                  <span dir="ltr" className="flex-1 text-start">{customer.mobile}</span>
+                  <Copy className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+              )}
+
+              {customer.email && (
+                <button
                   onClick={() => copyToClipboard(customer.email || '', t('customerEmail'))}
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full"
                 >
-                  <Copy className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            )}
-            {customer.full_address && (
-              <div>
-                <p className="text-xs text-muted-foreground">{t('deliveryAddress')}</p>
-                <p className="font-medium text-sm">{customer.full_address}</p>
-              </div>
-            )}
-            {!customer.full_address && customer.address && (
-              <div>
-                <p className="text-xs text-muted-foreground">{t('deliveryAddress')}</p>
-                <p className="font-medium text-sm">{customer.address}</p>
-              </div>
-            )}
-            {customer.address_notes && (
-              <div>
-                <p className="text-xs text-muted-foreground">{t('addressNotes')}</p>
-                <p className="font-medium text-sm text-muted-foreground">{customer.address_notes}</p>
-              </div>
-            )}
-            {(customer.governorate || customer.city) && (
-              <div className="flex items-center gap-4 text-xs">
-                {customer.governorate && (
+                  <Mail className="h-4 w-4" />
+                  <span className="flex-1 text-start truncate">{customer.email}</span>
+                  <Copy className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+              )}
+
+              {(customer.full_address || customer.address) && (
+                <div className="flex items-start gap-2 text-sm">
+                  <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-muted-foreground">{t('governorate')}</p>
-                    <p className="font-medium">
-                      {typeof customer.governorate === 'object'
-                        ? (locale === 'ar' ? (customer.governorate as { name_ar?: string }).name_ar : (customer.governorate as { name_en?: string }).name_en)
-                        : customer.governorate}
-                    </p>
+                    <p className="text-muted-foreground">{customer.full_address || customer.address}</p>
+                    {customer.address_notes && (
+                      <p className="text-xs text-muted-foreground/70 mt-1 italic">{customer.address_notes}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Vendor Card */}
+        <div className="group relative overflow-hidden rounded-2xl bg-card border p-5 hover:shadow-lg hover:border-primary/20 transition-all duration-300">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="relative space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                <Store className="h-5 w-5 text-amber-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold">{t('vendorInformation')}</h3>
+                <p className="text-xs text-muted-foreground">{t('orderSource')}</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                {vendor?.logo ? (
+                  <BackendImage src={vendor.logo} alt="" width={40} height={40} className="h-10 w-10 rounded-lg object-cover" />
+                ) : (
+                  <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                    <Building2 className="h-5 w-5 text-muted-foreground" />
                   </div>
                 )}
-                {customer.city && (
-                  <div>
-                    <p className="text-muted-foreground">{t('city')}</p>
-                    <p className="font-medium">
-                      {typeof customer.city === 'object'
-                        ? (locale === 'ar' ? (customer.city as { name_ar?: string }).name_ar : (customer.city as { name_en?: string }).name_en)
-                        : customer.city}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-            {customer.has_coordinates && customer.latitude && customer.longitude && (
-              <div>
-                <p className="text-xs text-muted-foreground">{t('coordinates')}</p>
-                <p className="font-medium text-sm font-mono">
-                  {customer.latitude.toFixed(6)}, {customer.longitude.toFixed(6)}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Order Details */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-green-500/10 flex items-center justify-center">
-                <Package className="h-4 w-4 text-green-500" />
-              </div>
-              <CardTitle>{t('orderDetails')}</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">{t('orderNumber')}</p>
-                <p className="font-medium font-mono">{order.order_number}</p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => copyToClipboard(order.order_number, t('orderNumber'))}
-              >
-                <Copy className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">{t('trackingNumber')}</p>
-                <p className="font-medium font-mono">{order.track_number}</p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => copyToClipboard(order.track_number, t('trackingNumber'))}
-              >
-                <Copy className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-            <div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push(`/track/${order.track_number}`)}
-                className="h-auto p-0 text-xs text-primary hover:underline gap-1.5"
-              >
-                <ExternalLink className="h-3 w-3" />
-                {t('viewTracking')}
-              </Button>
-            </div>
-            {order.qr_code && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground">{t('qrCode')}</p>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => copyToClipboard(order.qr_code, t('qrCode'))}
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                <div className="flex items-center justify-center p-3 bg-white rounded-lg border">
-                  <QRCodeSVG
-                    value={order.qr_code}
-                    size={128}
-                    level="M"
-                    includeMargin={false}
-                  />
+                <div>
+                  <p className="font-medium">{locale === 'ar' ? vendor?.name_ar : vendor?.name_en || vendor?.name}</p>
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
 
-        {/* Payment Information */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                <CreditCard className="h-4 w-4 text-purple-500" />
-              </div>
-              <CardTitle>{t('paymentInformation')}</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <p className="text-xs text-muted-foreground">{t('paymentMethod')}</p>
-              <p className="font-medium">
-                {order.payment_method === 'cod' ? t('cashOnDelivery') : t('paid')}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">{t('paymentStatus')}</p>
-              <p className="font-medium">{order.payment_status_label}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Order Items */}
-        {items.length > 0 && (
-          <Card className="md:col-span-2 lg:col-span-3">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                  <Package className="h-4 w-4 text-orange-500" />
+              {vendor?.mobile && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Phone className="h-4 w-4" />
+                  <span dir="ltr">{vendor.mobile}</span>
                 </div>
-                <CardTitle>{t('orderItems')}</CardTitle>
+              )}
+
+              {vendor?.email && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Mail className="h-4 w-4" />
+                  <span className="truncate">{vendor.email}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Payment Card */}
+        <div className="group relative overflow-hidden rounded-2xl bg-card border p-5 hover:shadow-lg hover:border-primary/20 transition-all duration-300">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="relative space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                <CreditCard className="h-5 w-5 text-emerald-500" />
               </div>
-            </CardHeader>
-            <CardContent>
+              <div>
+                <h3 className="font-semibold">{t('paymentInformation')}</h3>
+                <p className="text-xs text-muted-foreground">{order.payment_method === 'cod' ? t('cashOnDelivery') : t('paid')}</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">{t('subtotal')}</span>
+                <span className="font-medium">{tCommon('egpSymbol')} {order.subtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">{t('shippingCost')}</span>
+                <span className="font-medium">{tCommon('egpSymbol')} {order.shipping_cost.toFixed(2)}</span>
+              </div>
+              <div className="h-px bg-border" />
+              <div className="flex justify-between items-center">
+                <span className="font-semibold">{t('total')}</span>
+                <span className="text-xl font-bold text-primary">{tCommon('egpSymbol')} {order.total_amount.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Transactions Card */}
+        {transactions.length > 0 && (
+          <div className="md:col-span-2 lg:col-span-3 group relative overflow-hidden rounded-2xl bg-card border p-5 hover:shadow-lg transition-all duration-300">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
+                  <Wallet className="h-5 w-5 text-violet-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">{t('transactions') || 'Transactions'}</h3>
+                  <p className="text-xs text-muted-foreground">{transactions.length} {transactions.length === 1 ? 'transaction' : 'transactions'}</p>
+                </div>
+              </div>
+
               <div className="space-y-3">
-                {items.map((item: OrderItem, index: number) => (
-                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex-1">
-                      <p className="font-medium">{item.product_name || t('product')} #{index + 1}</p>
-                      <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                        <span>{t('quantity')}: {item.quantity}</span>
-                        {item.unit_price && (
-                          <span>{t('pricePerUnit')}: {tCommon('egpSymbol')} {item.unit_price.toFixed(2)}</span>
+                {transactions.map((transaction) => (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center justify-between p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        "h-10 w-10 rounded-xl flex items-center justify-center",
+                        transaction.type === 'credit' ? 'bg-emerald-500/10' : 'bg-red-500/10'
+                      )}>
+                        {transaction.type === 'credit' ? (
+                          <ArrowDownLeft className="h-5 w-5 text-emerald-500" />
+                        ) : (
+                          <ArrowUpRight className="h-5 w-5 text-red-500" />
                         )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{transaction.category_label}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                          <span>#{transaction.reference_number}</span>
+                          <span>•</span>
+                          <span>{new Date(transaction.created_at).toLocaleString(locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                          {transaction.created_by && (
+                            <>
+                              <span>•</span>
+                              <span>{locale === 'ar' ? transaction.created_by.name_ar : transaction.created_by.name_en}</span>
+                            </>
+                          )}
+                        </div>
+                        {transaction.description && (
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{transaction.description}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-end">
+                      <p className={cn(
+                        "font-semibold",
+                        transaction.type === 'credit' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                      )}>
+                        {transaction.type === 'credit' ? '+' : '-'}{tCommon('egpSymbol')} {transaction.amount.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {t('balanceAfter') || 'Balance'}: {tCommon('egpSymbol')} {transaction.balance_after.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Order Items - Full Width */}
+        {items.length > 0 && (
+          <div className="md:col-span-2 lg:col-span-3 group relative overflow-hidden rounded-2xl bg-card border p-5 hover:shadow-lg transition-all duration-300">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-orange-500/10 flex items-center justify-center">
+                    <Package className="h-5 w-5 text-orange-500" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">{t('orderItems')}</h3>
+                    <p className="text-xs text-muted-foreground">{items.length} {items.length === 1 ? t('item') : t('items')}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-3">
+                {items.map((item: OrderItem, index: number) => (
+                  <div key={index} className="flex items-center justify-between p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-lg bg-background border flex items-center justify-center">
+                        <Package className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{item.product_name || `${t('product')} #${index + 1}`}</p>
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground mt-0.5">
+                          <span>{t('quantity')}: {item.quantity}</span>
+                          {item.unit_price && (
+                            <>
+                              <span>•</span>
+                              <span>{tCommon('egpSymbol')} {item.unit_price.toFixed(2)} / {t('unit')}</span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                     {item.unit_price && (
                       <div className="text-end">
-                        <p className="text-xs text-muted-foreground">{t('itemTotal')}</p>
                         <p className="font-semibold">{tCommon('egpSymbol')} {(item.quantity * item.unit_price).toFixed(2)}</p>
                       </div>
                     )}
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
-        {/* Order Summary */}
-        <Card className="md:col-span-2 lg:col-span-3">
-          <CardHeader>
-            <CardTitle>{t('orderSummary')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {order.subtotal > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t('subtotal')}</span>
-                  <span className="font-medium">{tCommon('egpSymbol')} {order.subtotal.toFixed(2)}</span>
+        {/* Inventory Location */}
+        {inventory && (
+          <div className="group relative overflow-hidden rounded-2xl bg-card border p-5 hover:shadow-lg hover:border-primary/20 transition-all duration-300">
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="relative space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-cyan-500/10 flex items-center justify-center">
+                  <Warehouse className="h-5 w-5 text-cyan-500" />
                 </div>
-              )}
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{t('shippingCost')}</span>
-                <span className="font-medium">{tCommon('egpSymbol')} {order.shipping_cost.toFixed(2)}</span>
+                <div>
+                  <h3 className="font-semibold">{t('inventoryLocation')}</h3>
+                  <p className="text-xs text-muted-foreground">{t('currentLocation')}</p>
+                </div>
               </div>
-              <div className="border-t pt-3 flex justify-between">
-                <span className="font-semibold">{t('total')}</span>
-                <span className="font-bold text-lg">{tCommon('egpSymbol')} {order.total_amount.toFixed(2)}</span>
+
+              <div className="space-y-3">
+                <p className="font-medium">{locale === 'ar' ? inventory.name_ar : inventory.name_en || inventory.name}</p>
+                {inventory.code && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <QrCode className="h-4 w-4" />
+                    <span className="font-mono">{inventory.code}</span>
+                  </div>
+                )}
+                {inventory.phone && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Phone className="h-4 w-4" />
+                    <span dir="ltr">{inventory.phone}</span>
+                  </div>
+                )}
+                {(inventory.full_address || inventory.address) && (
+                  <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                    <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
+                    <span>{inventory.full_address || inventory.address}</span>
+                  </div>
+                )}
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        )}
+
+        {/* Assignments */}
+        {assignments.length > 0 && (
+          <div className="md:col-span-2 group relative overflow-hidden rounded-2xl bg-card border p-5 hover:shadow-lg transition-all duration-300">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+                  <Truck className="h-5 w-5 text-indigo-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">{t('assignments')}</h3>
+                  <p className="text-xs text-muted-foreground">{assignments.length} {t('assignmentsCount')}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {assignments.map((assignment) => (
+                  <div key={assignment.id} className="p-4 rounded-xl bg-muted/50 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge variant={assignment.is_active ? "default" : "secondary"} className="rounded-full">
+                          {assignment.is_active ? t('active') : t('completed')}
+                        </Badge>
+                        <span className="text-sm font-medium">{assignment.assignment_type_label}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{assignment.status_label}</span>
+                    </div>
+
+                    {assignment.assigned_to && (
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-background border flex items-center justify-center">
+                          <UserPlus className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">
+                            {locale === 'ar' && assignment.assigned_to.name_ar
+                              ? assignment.assigned_to.name_ar
+                              : assignment.assigned_to.name_en || assignment.assigned_to.name || 'N/A'}
+                          </p>
+                          {assignment.assigned_to.mobile && (
+                            <p className="text-xs text-muted-foreground" dir="ltr">{assignment.assigned_to.mobile}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-4 text-xs text-muted-foreground pt-2">
+                      {assignment.assigned_at && (
+                        <div>
+                          <span className="font-medium">{t('assignedAt')}:</span>{' '}
+                          {new Date(assignment.assigned_at).toLocaleString(locale)}
+                        </div>
+                      )}
+                      {assignment.completed_at && (
+                        <div>
+                          <span className="font-medium">{t('completedAt')}:</span>{' '}
+                          {new Date(assignment.completed_at).toLocaleString(locale)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Status Timeline - Full Width */}
+        {statusLogs.length > 0 && (
+          <div className="md:col-span-2 lg:col-span-3 group relative overflow-hidden rounded-2xl bg-card border p-5 hover:shadow-lg transition-all duration-300">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                  <Clock className="h-5 w-5 text-purple-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">{t('orderTimeline')}</h3>
+                  <p className="text-xs text-muted-foreground">{t('statusHistory')}</p>
+                </div>
+              </div>
+
+              <div className="relative">
+                <div className="absolute start-4 top-0 bottom-0 w-px bg-border" />
+                <div className="space-y-4">
+                  {statusLogs.map((log, index) => (
+                    <div key={log.id} className="relative flex gap-4 ps-10">
+                      <div className={cn(
+                        "absolute start-0 top-1 h-8 w-8 rounded-full flex items-center justify-center",
+                        index === 0 ? "bg-primary text-primary-foreground" : "bg-muted"
+                      )}>
+                        {index === 0 ? (
+                          <CheckCircle2 className="h-4 w-4" />
+                        ) : (
+                          <Circle className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1 pb-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-medium">{log.to_status_label || log.status_label || log.to_status || log.status || t('statusChanged')}</p>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(log.created_at).toLocaleString(locale)}
+                          </span>
+                        </div>
+                        {(log.from_status_label || log.from_status) && (
+                          <p className="text-sm text-muted-foreground mt-0.5">
+                            {t('from')}: {log.from_status_label || log.from_status}
+                          </p>
+                        )}
+                        {log.created_by && (
+                          <p className="text-sm text-muted-foreground mt-0.5">
+                            {t('by')}: {log.created_by.name || log.created_by.name_en}
+                          </p>
+                        )}
+                        {(log.notes || log.reason) && (
+                          <p className="text-sm text-muted-foreground mt-1 p-2 bg-muted rounded">
+                            {log.notes || log.reason}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Scans */}
+        {scans.length > 0 && (
+          <div className="md:col-span-2 lg:col-span-3 group relative overflow-hidden rounded-2xl bg-card border p-5 hover:shadow-lg transition-all duration-300">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-rose-500/10 flex items-center justify-center">
+                  <Scan className="h-5 w-5 text-rose-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">{t('scanHistory')}</h3>
+                  <p className="text-xs text-muted-foreground">{scans.length} {t('scansRecorded')}</p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                {scans.map((scan) => (
+                  <div key={scan.id} className="p-4 rounded-xl bg-muted/50 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline" className="rounded-full">{scan.scan_type_label || scan.scan_type}</Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(scan.scanned_at).toLocaleString(locale)}
+                      </span>
+                    </div>
+                    {scan.scanned_by && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <User className="h-3 w-3" />
+                        <span>{scan.scanned_by.name || scan.scanned_by.name_en}</span>
+                      </div>
+                    )}
+                    {scan.has_coordinates && scan.coordinates && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3" />
+                        <span className="font-mono">{scan.coordinates}</span>
+                      </div>
+                    )}
+                    {scan.device_info && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Phone className="h-3 w-3" />
+                        <span>{scan.device_info}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Notes */}
         {(order.vendor_notes || (!isVendor && order.internal_notes)) && (
-          <Card className="md:col-span-2 lg:col-span-3">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                  <FileText className="h-4 w-4 text-amber-500" />
+          <div className="md:col-span-2 lg:col-span-3 group relative overflow-hidden rounded-2xl bg-card border p-5 hover:shadow-lg transition-all duration-300">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                  <FileText className="h-5 w-5 text-amber-500" />
                 </div>
-                <CardTitle>{t('notes')}</CardTitle>
+                <div>
+                  <h3 className="font-semibold">{t('notes')}</h3>
+                </div>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {order.vendor_notes && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">{t('vendorNotes')}</p>
-                  <p className="text-sm bg-muted/50 p-3 rounded-lg">{order.vendor_notes}</p>
-                </div>
-              )}
-              {!isVendor && order.internal_notes && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">{t('internalNotes')}</p>
-                  <p className="text-sm bg-muted/50 p-3 rounded-lg">{order.internal_notes}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {order.vendor_notes && (
+                  <div className="p-4 rounded-xl bg-muted/50">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">{t('vendorNotes')}</p>
+                    <p className="text-sm">{order.vendor_notes}</p>
+                  </div>
+                )}
+                {!isVendor && order.internal_notes && (
+                  <div className="p-4 rounded-xl bg-muted/50">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">{t('internalNotes')}</p>
+                    <p className="text-sm">{order.internal_notes}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         )}
 
-
-        {/* Order Status & Dates */}
-        <Card className="md:col-span-2 lg:col-span-3">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-gray-500/10 flex items-center justify-center">
-                <Calendar className="h-4 w-4 text-gray-500" />
-              </div>
-              <CardTitle>{t('orderTimeline')}</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">{t('createdAt')}</p>
-                <p className="font-medium text-sm">
-                  {new Date(order.created_at).toLocaleString(locale, {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </p>
+        {/* Rejection Info */}
+        {order.rejection_reason && (
+          <div className="md:col-span-2 lg:col-span-3 rounded-2xl bg-destructive/10 border border-destructive/20 p-5">
+            <div className="flex items-start gap-4">
+              <div className="h-10 w-10 rounded-xl bg-destructive/20 flex items-center justify-center shrink-0">
+                <XCircle className="h-5 w-5 text-destructive" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground mb-1">{tCommon('lastUpdated')}</p>
-                <p className="font-medium text-sm">
-                  {new Date(order.updated_at).toLocaleString(locale, {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </p>
-              </div>
-              {order.rejected_at && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">{t('rejectedAt')}</p>
-                  <p className="font-medium text-sm">
-                    {new Date(order.rejected_at).toLocaleString(locale, {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                <h3 className="font-semibold text-destructive">{t('orderRejected')}</h3>
+                {order.rejected_at && (
+                  <p className="text-xs text-destructive/70 mt-1">
+                    {new Date(order.rejected_at).toLocaleString(locale)}
                   </p>
-                </div>
-              )}
-              {order.rejection_reason && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">{t('rejectionReason')}</p>
-                  <p className="font-medium text-sm text-destructive">{order.rejection_reason}</p>
-                </div>
-              )}
-            </div>
-            <div className="mt-4 pt-4 border-t flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className={`h-2 w-2 rounded-full ${order.is_in_phase1 ? 'bg-green-500' : 'bg-gray-300'}`} />
-                <span className="text-xs text-muted-foreground">{t('phase1')}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={`h-2 w-2 rounded-full ${order.is_in_phase2 ? 'bg-green-500' : 'bg-gray-300'}`} />
-                <span className="text-xs text-muted-foreground">{t('phase2')}</span>
+                )}
+                <p className="text-sm mt-2">{order.rejection_reason}</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        )}
       </div>
 
-      {/* Assign Pickup Agent Dialog */}
+      {/* Dialogs */}
       <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
         <DialogContent>
           <DialogHeader>
@@ -912,10 +985,7 @@ export default function OrderDetailPage() {
                   <Loader2 className="h-4 w-4 animate-spin text-primary" />
                 </div>
               ) : (
-                <Select
-                  value={selectedAgentId?.toString() || ''}
-                  onValueChange={(value) => setSelectedAgentId(parseInt(value))}
-                >
+                <Select value={selectedAgentId?.toString() || ''} onValueChange={(value) => setSelectedAgentId(parseInt(value))}>
                   <SelectTrigger id="agent_id">
                     <SelectValue placeholder={t('selectAgentPlaceholder')} />
                   </SelectTrigger>
@@ -929,9 +999,6 @@ export default function OrderDetailPage() {
                   </SelectContent>
                 </Select>
               )}
-              {agents.length === 0 && !isLoadingAgents && (
-                <p className="text-xs text-destructive">{t('noAgentsAvailable')}</p>
-              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="assignment_notes">{t('assignmentNotes')} ({t('optional')})</Label>
@@ -942,43 +1009,20 @@ export default function OrderDetailPage() {
                 onChange={(e) => setAssignmentNotes(e.target.value)}
                 rows={3}
               />
-              <p className="text-xs text-muted-foreground">{t('assignmentNotesHelp')}</p>
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowAssignDialog(false);
-                setSelectedAgentId(null);
-                setAssignmentNotes("");
-              }}
-              disabled={isAssigning}
-            >
+            <Button variant="outline" onClick={() => { setShowAssignDialog(false); setSelectedAgentId(null); setAssignmentNotes(""); }} disabled={isAssigning}>
               {tCommon('cancel')}
             </Button>
-            <Button
-              onClick={handleAssignPickupAgent}
-              disabled={isAssigning || !selectedAgentId}
-              className="gap-2"
-            >
-              {isAssigning ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {t('assigning')}
-                </>
-              ) : (
-                <>
-                  <Truck className="h-4 w-4" />
-                  {t('assignPickupAgent')}
-                </>
-              )}
+            <Button onClick={handleAssignPickupAgent} disabled={isAssigning || !selectedAgentId} className="gap-2">
+              {isAssigning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />}
+              {isAssigning ? t('assigning') : t('assignPickupAgent')}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Reject Order Dialog */}
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
         <DialogContent>
           <DialogHeader>
@@ -995,43 +1039,20 @@ export default function OrderDetailPage() {
                 onChange={(e) => setRejectionReason(e.target.value)}
                 rows={4}
               />
-              <p className="text-xs text-muted-foreground">{t('rejectionReasonHelp')}</p>
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowRejectDialog(false);
-                setRejectionReason("");
-              }}
-              disabled={isRejecting}
-            >
+            <Button variant="outline" onClick={() => { setShowRejectDialog(false); setRejectionReason(""); }} disabled={isRejecting}>
               {tCommon('cancel')}
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleRejectOrder}
-              disabled={isRejecting}
-              className="gap-2"
-            >
-              {isRejecting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {t('rejecting')}
-                </>
-              ) : (
-                <>
-                  <XCircle className="h-4 w-4" />
-                  {t('rejectOrder')}
-                </>
-              )}
+            <Button variant="destructive" onClick={handleRejectOrder} disabled={isRejecting} className="gap-2">
+              {isRejecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+              {isRejecting ? t('rejecting') : t('rejectOrder')}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Accept Order Dialog */}
       <Dialog open={showAcceptDialog} onOpenChange={setShowAcceptDialog}>
         <DialogContent>
           <DialogHeader>
@@ -1046,212 +1067,81 @@ export default function OrderDetailPage() {
                   <Loader2 className="h-4 w-4 animate-spin text-primary" />
                 </div>
               ) : (
-                <Select
-                  value={selectedInventoryId?.toString() || ''}
-                  onValueChange={(value) => setSelectedInventoryId(parseInt(value))}
-                >
+                <Select value={selectedInventoryId?.toString() || ''} onValueChange={(value) => setSelectedInventoryId(parseInt(value))}>
                   <SelectTrigger id="inventory">
                     <SelectValue placeholder={t('selectInventoryPlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {inventories.map((inventory) => (
-                      <SelectItem key={inventory.id} value={inventory.id.toString()}>
-                        {inventory.name_en || inventory.name_ar || inventory.name}
+                    {inventories.map((inv) => (
+                      <SelectItem key={inv.id} value={inv.id.toString()}>
+                        {inv.name_en || inv.name_ar || inv.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               )}
-              {inventories.length === 0 && !isLoadingInventories && (
-                <p className="text-xs text-destructive">{t('noInventoriesAvailable')}</p>
-              )}
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowAcceptDialog(false)}
-              disabled={isAccepting}
-            >
+            <Button variant="outline" onClick={() => setShowAcceptDialog(false)} disabled={isAccepting}>
               {tCommon('cancel')}
             </Button>
-            <Button
-              onClick={handleAcceptOrder}
-              disabled={isAccepting || !selectedInventoryId || isLoadingInventories}
-              className="gap-2"
-            >
-              {isAccepting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {t('accepting')}
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-4 w-4" />
-                  {t('acceptOrder')}
-                </>
-              )}
+            <Button onClick={handleAcceptOrder} disabled={isAccepting || !selectedInventoryId} className="gap-2">
+              {isAccepting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+              {isAccepting ? t('accepting') : t('acceptOrder')}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Print-Only Shipping Label */}
+      {/* Print Label - Hidden, shown only when printing */}
       <style jsx global>{`
         @media print {
-          /* Hide everything except the print label */
-          body * {
-            visibility: hidden;
-          }
-          
-          /* Show only the print label */
-          .print-label,
-          .print-label * {
-            visibility: visible;
-          }
-          
-          /* Position the label */
+          body * { visibility: hidden; }
+          .print-label, .print-label * { visibility: visible; }
           .print-label {
             position: absolute;
             left: 0;
             top: 0;
             width: 100%;
-            height: 100%;
-            padding: 0;
-            margin: 0;
           }
-          
-          /* Hide navigation and other dashboard elements */
-          nav,
-          aside,
-          header,
-          .sidebar,
-          .app-sidebar,
-          button:not(.print-label button),
-          .no-print {
-            display: none !important;
-            visibility: hidden !important;
-          }
-          
-          /* Ensure only one page */
-          @page {
-            size: A4;
-            margin: 0;
-          }
-          
-          body {
-            margin: 0;
-            padding: 0;
-          }
+          @page { size: A4; margin: 0; }
         }
       `}</style>
-      
+
       <div className="hidden print:block print-label">
-        <div className="w-full h-full p-4 bg-white">
-          <div className="max-w-lg mx-auto border-2 border-gray-900 bg-white relative" style={{ pageBreakAfter: 'avoid', pageBreakInside: 'avoid' }}>
-            {/* Vertical line on the left */}
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gray-900"></div>
-            
-            <div className="p-6 ps-8 space-y-4">
-              {/* Header with LABEL, ORDER NUMBER, QR Code, and Tawsila */}
+        <div className="w-full p-4 bg-white">
+          <div className="max-w-lg mx-auto border-2 border-gray-900 bg-white">
+            <div className="p-6 space-y-4">
               <div className="flex items-start justify-between border-b-2 border-gray-900 pb-3">
-                <div className="flex-1">
-                  <h2 className="text-2xl font-bold mb-2 uppercase tracking-wide text-gray-900" style={{ fontFamily: 'sans-serif' }}>{t('label')}</h2>
-                  <div className="mt-2">
-                    <p className="text-xs text-gray-600 uppercase mb-1">{t('orderNumber')}</p>
-                    <div className="font-bold text-3xl font-mono tracking-wider text-gray-900 leading-tight">
-                      {order.order_number.split('-').map((part, idx) => (
-                        <div key={idx} className="break-all">{part}</div>
-                      ))}
-                    </div>
-                  </div>
+                <div>
+                  <h2 className="text-2xl font-bold uppercase">{t('label')}</h2>
+                  <p className="text-xs text-gray-600 mt-2">{t('orderNumber')}</p>
+                  <p className="font-bold text-2xl font-mono">{order.order_number}</p>
                 </div>
-                <div className="flex flex-col items-end gap-3 ms-4">
-                  {order.qr_code && (
-                    <div className="flex-shrink-0">
-                      <QRCodeSVG
-                        value={order.qr_code}
-                        size={100}
-                        level="M"
-                        includeMargin={true}
-                      />
-                    </div>
-                  )}
-                  <div className="flex flex-col items-end text-end">
-                    <div className="text-gray-400 text-lg font-semibold opacity-60" style={{ fontFamily: 'sans-serif' }}>{tApp('name')}</div>
-                    <div className="text-gray-400 text-xs opacity-60 leading-tight" style={{ maxWidth: '140px', wordWrap: 'break-word', fontFamily: 'sans-serif' }}>
-                      {tApp('tagline')}
-                    </div>
-                  </div>
-                </div>
+                {order.qr_code && <QRCodeSVG value={order.qr_code} size={100} level="M" />}
               </div>
-
-              {/* Ship To Section */}
-              <div className="space-y-2 border-b border-gray-300 pb-3">
-                <h3 className="font-bold text-base uppercase tracking-wide text-gray-900" style={{ fontFamily: 'sans-serif' }}>{t('shipTo')}</h3>
-                <div className="space-y-1">
-                  {customer.name && (
-                    <p className="font-bold text-base text-gray-900">{customer.name}</p>
-                  )}
-                  {customer.mobile && (
-                    <p className="text-sm font-mono" dir="ltr">{customer.mobile}</p>
-                  )}
-                  {(customer.full_address || customer.address) && (
-                    <div className="mt-2">
-                      <p className="text-sm leading-relaxed text-gray-900">
-                        {customer.full_address || customer.address}
-                      </p>
-                      {customer.address_notes && (
-                        <p className="text-xs mt-1 text-gray-600 italic">{customer.address_notes}</p>
-                      )}
-                    </div>
-                  )}
-                  {(customer.governorate || customer.city) && (
-                    <p className="text-sm text-gray-700 font-medium">
-                      {[
-                        customer.city && (typeof customer.city === 'object'
-                          ? (locale === 'ar' ? (customer.city as { name_ar?: string }).name_ar : (customer.city as { name_en?: string }).name_en)
-                          : customer.city),
-                        customer.governorate && (typeof customer.governorate === 'object'
-                          ? (locale === 'ar' ? (customer.governorate as { name_ar?: string }).name_ar : (customer.governorate as { name_en?: string }).name_en)
-                          : customer.governorate)
-                      ].filter(Boolean).join(', ')}
-                    </p>
-                  )}
-                </div>
+              <div className="space-y-2 border-b pb-3">
+                <h3 className="font-bold text-base uppercase">{t('shipTo')}</h3>
+                {customer.name && <p className="font-bold">{customer.name}</p>}
+                {customer.mobile && <p className="font-mono" dir="ltr">{customer.mobile}</p>}
+                {(customer.full_address || customer.address) && (
+                  <p className="text-sm">{customer.full_address || customer.address}</p>
+                )}
               </div>
-
-              {/* Order Items Summary */}
               {items.length > 0 && (
-                <div className="border-b border-gray-300 pb-3">
-                  <h3 className="font-bold text-sm uppercase tracking-wide text-gray-900 mb-2" style={{ fontFamily: 'sans-serif' }}>{t('items')}: {items.length}</h3>
-                  <div className="space-y-1 text-xs">
-                    {items.slice(0, 5).map((item: OrderItem, index: number) => (
-                      <div key={index} className="flex justify-between text-gray-700">
-                        <span className="flex-1">{item.product_name || `${t('product')} ${index + 1}`}</span>
-                        <span className="font-semibold ms-2">{tCommon('qty')}: {item.quantity}</span>
-                      </div>
-                    ))}
-                    {items.length > 5 && (
-                      <p className="text-xs text-gray-600 italic mt-1">+{items.length - 5} {t('moreItems')}</p>
-                    )}
-                  </div>
+                <div className="border-b pb-3">
+                  <h3 className="font-bold text-sm uppercase mb-2">{t('items')}: {items.length}</h3>
+                  {items.slice(0, 5).map((item, i) => (
+                    <div key={i} className="flex justify-between text-xs">
+                      <span>{item.product_name || `${t('product')} ${i + 1}`}</span>
+                      <span>{tCommon('qty')}: {item.quantity}</span>
+                    </div>
+                  ))}
                 </div>
               )}
-
-              {/* Footer */}
-              <div className="pt-2">
-                {(vendor.name_en || vendor.name_ar || vendor.name) && (
-                  <div className="mb-2">
-                    <p className="text-xs font-semibold text-gray-900 uppercase" style={{ fontFamily: 'sans-serif' }}>{t('vendor')}</p>
-                    <p className="text-xs text-gray-700 mt-1 font-medium">
-                      {locale === 'ar' && vendor.name_ar ? vendor.name_ar : vendor.name_en || vendor.name}
-                    </p>
-                  </div>
-                )}
-                <div className="text-center pt-2 border-t border-gray-300">
-                  <p className="text-xs font-semibold text-gray-900" style={{ fontFamily: 'sans-serif' }}>{t('handleWithCare')}</p>
-                </div>
+              <div className="text-center pt-2">
+                <p className="text-xs font-semibold">{t('handleWithCare')}</p>
               </div>
             </div>
           </div>

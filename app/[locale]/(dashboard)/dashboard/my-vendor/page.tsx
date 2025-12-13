@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "@/i18n/routing";
-import Image from "next/image";
+import { BackendImage } from "@/components/ui/backend-image";
 import { Button } from "@/components/ui/button";
 import {
   Loader2,
@@ -90,7 +90,7 @@ export default function MyVendorProfilePage() {
         {/* Background Gradient */}
         <div className="absolute inset-0 h-48 rounded-3xl bg-gradient-to-br from-primary/20 via-primary/10 to-muted overflow-hidden">
           {vendor.cover_image && (
-            <Image
+            <BackendImage
               src={vendor.cover_image}
               alt={displayName}
               fill
@@ -107,7 +107,7 @@ export default function MyVendorProfilePage() {
             <div className="relative">
               <div className="h-28 w-28 rounded-2xl bg-background shadow-xl ring-4 ring-background overflow-hidden flex items-center justify-center">
                 {vendor.logo ? (
-                  <Image
+                  <BackendImage
                     src={vendor.logo}
                     alt={displayName}
                     width={112}

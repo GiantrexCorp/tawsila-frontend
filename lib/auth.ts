@@ -2,7 +2,7 @@
  * Authentication Service
  */
 
-import { apiRequest, setToken, removeToken, getToken } from './api';
+import { apiRequest, setToken, getToken, clearAuthData } from './api';
 import { UserRoleObject } from './services/users';
 
 export interface User {
@@ -13,14 +13,14 @@ export interface User {
   email: string;
   mobile: string;
   status: 'active' | 'inactive';
+  type?: string;
   last_active: string | null;
   created_at: string;
   updated_at: string;
   roles: UserRoleObject[];
-  roles_permissions: string[]; // Permissions from all assigned roles
-  // For vendor users, the backend should include vendor_id in the login response
+  roles_permissions: string[];
   vendor_id?: number;
-  organization_id?: number; // Alternative field name some backends use
+  organization_id?: number;
 }
 
 export interface LoginCredentials {
@@ -64,12 +64,11 @@ export async function login(credentials: LoginCredentials): Promise<LoginRespons
     body: JSON.stringify(credentials),
   });
 
-  // Check status_code 203 for password change requirement (from response body)
+  // Check status_code 203 for password change requirement
   if (response.status_code === 203 || response.requires_password_change) {
     // Store temporary token for set-password endpoint
     if (response.meta?.access_token) {
       setToken(response.meta.access_token);
-      // Set flag to indicate this is a first-time login requiring password change
       if (typeof window !== 'undefined') {
         localStorage.setItem('requires_password_change', 'true');
       }
@@ -86,7 +85,6 @@ export async function login(credentials: LoginCredentials): Promise<LoginRespons
     };
   }
 
-  // Normal login (status_code 200)
   // Check if user is inactive BEFORE storing any data
   if (response.data && response.data.status === 'inactive') {
     throw new Error('ACCOUNT_INACTIVE');
@@ -114,7 +112,6 @@ export async function setPassword(data: SetPasswordRequest): Promise<SetPassword
   if (response.meta?.access_token && response.data) {
     setToken(response.meta.access_token);
     setUser(response.data);
-    // Clear the password change flag
     if (typeof window !== 'undefined') {
       localStorage.removeItem('requires_password_change');
     }
@@ -140,7 +137,7 @@ export function clearPasswordChangeFlag(): void {
 }
 
 /**
- * Logout user
+ * Logout user - clears all auth state
  */
 export async function logout(): Promise<void> {
   try {
@@ -150,18 +147,17 @@ export async function logout(): Promise<void> {
   } catch (error) {
     console.error('Logout error:', error);
   } finally {
-    removeToken();
-    removeUser();
-    clearPasswordChangeFlag();
+    // Always clear auth data even if API call fails
+    clearAuthData();
   }
 }
 
 /**
- * Get current user
+ * Get current user from localStorage
  */
 export function getCurrentUser(): User | null {
   if (typeof window === 'undefined') return null;
-  
+
   const userStr = localStorage.getItem('user');
   if (!userStr) return null;
 
@@ -173,7 +169,7 @@ export function getCurrentUser(): User | null {
 }
 
 /**
- * Store user data
+ * Store user data in localStorage
  */
 export function setUser(user: User): void {
   if (typeof window === 'undefined') return;
@@ -181,7 +177,7 @@ export function setUser(user: User): void {
 }
 
 /**
- * Remove user data
+ * Remove user data from localStorage
  */
 export function removeUser(): void {
   if (typeof window === 'undefined') return;
@@ -189,16 +185,54 @@ export function removeUser(): void {
 }
 
 /**
- * Check if user is authenticated
+ * Check if user is fully authenticated (has both token and user data)
  */
 export function isAuthenticated(): boolean {
   return !!getToken() && !!getCurrentUser();
 }
 
 /**
- * Export getToken for public use
+ * Check if only token exists (possibly stale session)
  */
-export { getToken } from './api';
+export function hasToken(): boolean {
+  return !!getToken();
+}
+
+/**
+ * Validate session by making API call to get current user
+ * Returns user data if valid, null if invalid
+ */
+export async function validateSession(): Promise<User | null> {
+  const token = getToken();
+  if (!token) {
+    clearAuthData();
+    return null;
+  }
+
+  try {
+    // Call the /me endpoint to validate token and get user data
+    const response = await apiRequest<User>('/me', {
+      method: 'GET',
+    });
+
+    if (response.data) {
+      // Update stored user data
+      setUser(response.data);
+      return response.data;
+    }
+
+    // No user data returned - clear auth
+    clearAuthData();
+    return null;
+  } catch {
+    // Token is invalid - clear auth data
+    clearAuthData();
+    return null;
+  }
+}
+
+// Re-export for convenience
+export { getToken, clearAuthData } from './api';
 
 /**
  * Helper to check if current user has a specific role

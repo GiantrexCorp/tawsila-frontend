@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,6 +23,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ViewToggle, type ViewType } from "@/components/ui/view-toggle";
+import { InventoryTable } from "@/components/inventory/inventory-table";
 
 export default function InventoryPage() {
   const t = useTranslations('inventory');
@@ -49,15 +51,20 @@ export default function InventoryPage() {
     inventoryInfo: true,
     location: false,
   });
+  const [viewType, setViewType] = useState<ViewType>("cards");
   
-  // Governorates and Cities for filters
+  // Governorates and Cities for filters (lazy loaded)
   const [governorates, setGovernorates] = useState<Governorate[]>([]);
   const [cities, setCities] = useState<City[]>([]);
   const [isLoadingCities, setIsLoadingCities] = useState(false);
+  const [hasLoadedFilterData, setHasLoadedFilterData] = useState(false);
 
-  // Load governorates on mount
+  // Load governorates only when filters are expanded
   useEffect(() => {
+    if (!isFiltersExpanded || hasLoadedFilterData) return;
+
     const loadGovernorates = async () => {
+      setHasLoadedFilterData(true);
       try {
         const fetchedGovernorates = await fetchGovernorates();
         setGovernorates(fetchedGovernorates);
@@ -66,12 +73,17 @@ export default function InventoryPage() {
       }
     };
     loadGovernorates();
-  }, [t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFiltersExpanded]);
 
 
-  // Load inventories on mount
+  // Load inventories on mount (ref persists across Strict Mode remounts)
+  const hasLoadedInventoriesRef = useRef(false);
   useEffect(() => {
+    if (!hasPermission || hasLoadedInventoriesRef.current) return;
+
     const loadInventories = async () => {
+      hasLoadedInventoriesRef.current = true;
       setIsLoading(true);
       try {
         const fetchedInventories = await fetchInventories();
@@ -83,10 +95,9 @@ export default function InventoryPage() {
       }
     };
 
-    if (hasPermission) {
-      loadInventories();
-    }
-  }, [hasPermission, t]);
+    loadInventories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasPermission]);
 
   // Filter inventories based on search query and filters
   const filteredInventories = useMemo(() => {
@@ -558,7 +569,7 @@ export default function InventoryPage() {
         </CardContent>
       </Card>
 
-      {/* Results Count */}
+      {/* Results Count & View Toggle */}
       {!isLoading && filteredInventories.length > 0 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
@@ -567,6 +578,12 @@ export default function InventoryPage() {
               : `Showing ${filteredInventories.length} of ${inventories.length} inventories`
             }
           </p>
+          <ViewToggle
+            view={viewType}
+            onViewChange={setViewType}
+            cardLabel={t("cardView")}
+            tableLabel={t("tableView")}
+          />
         </div>
       )}
 
@@ -612,13 +629,18 @@ export default function InventoryPage() {
             </div>
           </CardContent>
         </Card>
+      ) : viewType === "table" ? (
+        <InventoryTable
+          inventories={filteredInventories}
+          canUpdateInventory={canUpdateInventory}
+        />
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filteredInventories.map((inventory) => {
-            const displayName = locale === 'ar' && inventory.name_ar 
-              ? inventory.name_ar 
+            const displayName = locale === 'ar' && inventory.name_ar
+              ? inventory.name_ar
               : inventory.name_en || inventory.name || t('unnamedInventory');
-            
+
             return (
               <div
                 key={inventory.id}

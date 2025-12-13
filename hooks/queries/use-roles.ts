@@ -17,12 +17,13 @@ import { CURRENT_USER_QUERY_KEY } from "@/hooks/use-permissions";
  * Hook to fetch all roles with caching
  * Roles are static data - cached for 30 minutes
  */
-export function useRoles() {
+export function useRoles(options?: { enabled?: boolean }) {
   return useQuery<RolesResponse, Error>({
     queryKey: queryKeys.roles.list(),
     queryFn: fetchRoles,
     staleTime: STALE_TIMES.STATIC,
     gcTime: CACHE_TIMES.STATIC,
+    enabled: options?.enabled !== false,
   });
 }
 

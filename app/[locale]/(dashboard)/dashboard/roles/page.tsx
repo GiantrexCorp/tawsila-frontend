@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,8 @@ import { useRoles } from "@/hooks/queries";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
 import { useRouter } from "@/i18n/routing";
+import { ViewToggle, type ViewType } from "@/components/ui/view-toggle";
+import { RoleTable } from "@/components/roles/role-table";
 
 export default function RolesPage() {
   const t = useTranslations('roles');
@@ -41,6 +43,9 @@ export default function RolesPage() {
     isFetching,
     refetch: refetchRoles,
   } = useRoles();
+
+  // View toggle state
+  const [viewType, setViewType] = useState<ViewType>("cards");
 
   // Derived data
   const roles = useMemo(() => rolesResponse?.data || [], [rolesResponse?.data]);
@@ -141,6 +146,21 @@ export default function RolesPage() {
         </Card>
       </div>
 
+      {/* Results Count & View Toggle */}
+      {!isLoading && roles.length > 0 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {roles.length} {roles.length === 1 ? 'role' : 'roles'}
+          </p>
+          <ViewToggle
+            view={viewType}
+            onViewChange={setViewType}
+            cardLabel={t("cardView")}
+            tableLabel={t("tableView")}
+          />
+        </div>
+      )}
+
       {/* Loading State */}
       {isLoading ? (
         <div className="flex items-center justify-center h-[40vh]">
@@ -151,7 +171,10 @@ export default function RolesPage() {
         </div>
       ) : (
         <>
-          {/* Roles Grid - 3 Cards per row */}
+          {/* Roles Table or Grid */}
+          {viewType === "table" ? (
+            <RoleTable roles={roles} canUpdateRole={canUpdateRole} />
+          ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {roles.map((role) => {
               const displayName = getRoleDisplayName(role);
@@ -254,6 +277,7 @@ export default function RolesPage() {
               );
             })}
           </div>
+          )}
 
           {/* Empty State */}
           {roles.length === 0 && (

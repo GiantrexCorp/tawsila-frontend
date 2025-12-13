@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useParams } from "next/navigation";
 import { useRouter } from "@/i18n/routing";
-import Image from "next/image";
+import { BackendImage } from "@/components/ui/backend-image";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
@@ -47,9 +47,13 @@ export default function ViewVendorPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [showSecretKey, setShowSecretKey] = useState(false);
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
+    if (!hasPermission || hasLoadedRef.current) return;
+
     const loadVendor = async () => {
+      hasLoadedRef.current = true;
       setIsLoading(true);
       try {
         const fetchedVendor = await fetchVendor(vendorId);
@@ -62,10 +66,9 @@ export default function ViewVendorPage() {
       }
     };
 
-    if (hasPermission) {
-      loadVendor();
-    }
-  }, [vendorId, t, router, hasPermission]);
+    loadVendor();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vendorId, hasPermission]);
 
   const copySecretKey = (key: string) => {
     navigator.clipboard.writeText(key);
@@ -101,7 +104,7 @@ export default function ViewVendorPage() {
         {/* Background Gradient */}
         <div className="absolute inset-0 h-48 rounded-3xl bg-gradient-to-br from-primary/20 via-primary/10 to-muted overflow-hidden">
           {vendor.cover_image && (
-            <Image
+            <BackendImage
               src={vendor.cover_image}
               alt={displayName}
               fill
@@ -118,7 +121,7 @@ export default function ViewVendorPage() {
             <div className="relative">
               <div className="h-28 w-28 rounded-2xl bg-background shadow-xl ring-4 ring-background overflow-hidden flex items-center justify-center">
                 {vendor.logo ? (
-                  <Image
+                  <BackendImage
                     src={vendor.logo}
                     alt={displayName}
                     width={112}

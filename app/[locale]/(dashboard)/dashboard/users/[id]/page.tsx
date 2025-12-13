@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useParams } from "next/navigation";
 import { useRouter } from "@/i18n/routing";
@@ -18,7 +18,8 @@ import {
   Shield,
   Edit,
   Key,
-  UserCog
+  UserCog,
+  Warehouse,
 } from "lucide-react";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
@@ -26,9 +27,6 @@ import { fetchUser, changeUserPassword, assignUserRole, User, getRoleDisplayName
 import { fetchRoles, Role } from "@/lib/services/roles";
 import { toast } from "sonner";
 import { getCurrentUser, logout } from "@/lib/auth";
-import { fetchUserInventories, type Inventory } from "@/lib/services/inventories";
-import { useQuery } from "@tanstack/react-query";
-import { Warehouse } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -66,17 +64,13 @@ export default function ViewUserPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
+  const [isLoadingRoles, setIsLoadingRoles] = useState(false);
 
-  // Check if user is a shipping agent or inventory manager and fetch their inventories
+  // Get inventories from user object (included in the response)
   const isShippingAgent = user ? userHasRole(user, 'shipping-agent') : false;
   const isInventoryManager = user ? userHasRole(user, 'inventory-manager') : false;
   const shouldShowInventories = isShippingAgent || isInventoryManager;
-  const { data: userInventories = [], isLoading: isLoadingInventories } = useQuery<Inventory[]>({
-    queryKey: ['user-inventories', userId],
-    queryFn: () => fetchUserInventories(userId),
-    enabled: shouldShowInventories && !!userId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+  const userInventories = user?.inventories || [];
 
   // Change password dialog
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
@@ -91,7 +85,10 @@ export default function ViewUserPage() {
   const [isAssigningRole, setIsAssigningRole] = useState(false);
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
 
+  const hasLoadedRef = useRef(false);
   useEffect(() => {
+    if (!hasPermission || hasLoadedRef.current) return;
+
     const loadData = async () => {
       if (!userId || isNaN(userId)) {
         toast.error(t('failedToLoad'), {
@@ -101,24 +98,15 @@ export default function ViewUserPage() {
         return;
       }
 
+      hasLoadedRef.current = true;
       setIsLoading(true);
       try {
-        const [fetchedUser, rolesResponse] = await Promise.all([
-          fetchUser(userId),
-          fetchRoles()
-        ]);
+        const fetchedUser = await fetchUser(userId);
         setUser(fetchedUser);
-        setAvailableRoles(rolesResponse.data);
 
-        // Set initial role selection
+        // Set initial role selection from user's current role
         if (fetchedUser.roles && fetchedUser.roles.length > 0) {
-          const userRole = fetchedUser.roles[0];
-          const currentRole = rolesResponse.data.find(r =>
-            r.name === userRole?.name || r.id === userRole?.id
-          );
-          if (currentRole) {
-            setSelectedRoleId(currentRole.id);
-          }
+          setSelectedRoleId(fetchedUser.roles[0].id);
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : tCommon('tryAgain');
@@ -129,10 +117,9 @@ export default function ViewUserPage() {
       }
     };
 
-    if (hasPermission) {
-      loadData();
-    }
-  }, [userId, hasPermission, t, tCommon, router]);
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, hasPermission]);
 
   const getDisplayName = (u: User) => {
     return locale === 'ar' ? u.name_ar : u.name_en;
@@ -207,6 +194,22 @@ export default function ViewUserPage() {
       }
     } finally {
       setIsChangingPassword(false);
+    }
+  };
+
+  // Load roles lazily when dialog opens
+  const handleOpenRoleDialog = async () => {
+    setShowRoleDialog(true);
+    if (availableRoles.length === 0) {
+      setIsLoadingRoles(true);
+      try {
+        const rolesResponse = await fetchRoles();
+        setAvailableRoles(rolesResponse.data);
+      } catch {
+        toast.error(t('failedToLoadRoles'));
+      } finally {
+        setIsLoadingRoles(false);
+      }
     }
   };
 
@@ -296,7 +299,7 @@ export default function ViewUserPage() {
                     {canAssignRole && (
                       <Button
                         variant="outline"
-                        onClick={() => setShowRoleDialog(true)}
+                        onClick={handleOpenRoleDialog}
                         className="gap-2"
                       >
                         <UserCog className="h-4 w-4" />
@@ -450,11 +453,7 @@ export default function ViewUserPage() {
               </div>
             </CardHeader>
             <CardContent>
-              {isLoadingInventories ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                </div>
-              ) : userInventories.length > 0 ? (
+              {userInventories.length > 0 ? (
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {userInventories.map((inventory) => (
                     <div
@@ -573,29 +572,35 @@ export default function ViewUserPage() {
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="role">{t('role')} *</Label>
-              <Select
-                value={selectedRoleId?.toString() || ''}
-                onValueChange={(value) => setSelectedRoleId(Number(value))}
-                disabled={isAssigningRole}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={tCommon('select')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableRoles.map(role => (
-                    <SelectItem key={role.id} value={role.id.toString()}>
-                      {getRoleSelectDisplay(role)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {isLoadingRoles ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <Select
+                  value={selectedRoleId?.toString() || ''}
+                  onValueChange={(value) => setSelectedRoleId(Number(value))}
+                  disabled={isAssigningRole}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={tCommon('select')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableRoles.map(role => (
+                      <SelectItem key={role.id} value={role.id.toString()}>
+                        {getRoleSelectDisplay(role)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRoleDialog(false)} disabled={isAssigningRole}>
               {tCommon('cancel')}
             </Button>
-            <Button onClick={handleAssignRole} disabled={isAssigningRole || !selectedRoleId}>
+            <Button onClick={handleAssignRole} disabled={isAssigningRole || isLoadingRoles || !selectedRoleId}>
               {isAssigningRole ? (
                 <>
                   <Loader2 className="me-2 h-4 w-4 animate-spin" />

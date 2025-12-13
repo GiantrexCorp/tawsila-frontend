@@ -18,6 +18,22 @@ export interface UserRoleObject {
 }
 
 /**
+ * User inventory (simplified for includes)
+ */
+export interface UserInventory {
+  id: number;
+  name?: string;
+  name_en?: string;
+  name_ar?: string;
+  code?: string;
+  city?: {
+    id: number;
+    name_en: string;
+    name_ar: string;
+  };
+}
+
+/**
  * User entity representing a system user
  */
 export interface User {
@@ -35,6 +51,8 @@ export interface User {
   mobile: string;
   /** Account status */
   status: 'active' | 'inactive';
+  /** User type (e.g., 'vendor', 'admin', etc.) */
+  type?: string;
   /** Last activity timestamp */
   last_active: string | null;
   /** Account creation timestamp */
@@ -45,6 +63,8 @@ export interface User {
   roles: UserRoleObject[];
   /** Aggregated permissions from assigned roles */
   roles_permissions?: string[];
+  /** Assigned inventories (when included) */
+  inventories?: UserInventory[];
 }
 
 /**
@@ -159,7 +179,7 @@ export async function fetchUsers(
   filters: UserFilters = {}
 ): Promise<UsersResponse> {
   const filterQuery = buildFilterQuery(filters);
-  const response = await apiRequest<UsersResponse>(`/users?page=${page}&per_page=${perPage}${filterQuery}`, {
+  const response = await apiRequest<UsersResponse>(`/users?page=${page}&per_page=${perPage}&include=inventories${filterQuery}`, {
     method: 'GET',
   });
 
@@ -187,7 +207,7 @@ export async function fetchUsers(
  * Fetch a single user by ID
  */
 export async function fetchUser(id: number): Promise<User> {
-  const response = await apiRequest<User>(`/users/${id}`, {
+  const response = await apiRequest<User>(`/users/${id}?include=inventories`, {
     method: 'GET',
   });
 

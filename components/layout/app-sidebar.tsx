@@ -15,6 +15,9 @@ import {
   LogOut,
   User as UserIcon,
   Shield,
+  Wallet,
+  Receipt,
+  PieChart,
   LucideIcon,
 } from "lucide-react";
 import { getCurrentUser, logout, User } from "@/lib/auth";
@@ -175,6 +178,26 @@ export function AppSidebar() {
         },
       ],
     },
+    // Finance section - permission-based
+    {
+      title: t('finance'),
+      items: [
+        {
+          title: t('wallets'),
+          href: "/dashboard/wallets",
+          icon: Wallet,
+          // Show if user has ANY wallet permission
+          requiredPermissions: [...PERMISSION_MODULES.WALLETS],
+        },
+        {
+          title: t('allTransactions'),
+          href: "/dashboard/finance/transactions",
+          icon: Receipt,
+          // Show if user has ANY transaction permission
+          requiredPermissions: [...PERMISSION_MODULES.TRANSACTIONS],
+        },
+      ],
+    },
     // Analytics section - accessible to all authenticated users (uses dummy data)
     {
       title: t('analyticsSection'),
@@ -235,7 +258,12 @@ export function AppSidebar() {
               <SidebarGroupContent>
                 <SidebarMenu>
                   {visibleItems.map((item) => {
-                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                    // Remove locale prefix from pathname for comparison
+                    const pathnameWithoutLocale = pathname.replace(/^\/(en|ar)/, '');
+                    // For dashboard, only match exact path. For others, match path and sub-paths
+                    const isActive = item.href === '/dashboard'
+                      ? pathnameWithoutLocale === '/dashboard'
+                      : pathnameWithoutLocale === item.href || pathnameWithoutLocale.startsWith(item.href + '/');
                     return (
                       <SidebarMenuItem key={item.href}>
                         <SidebarMenuButton
@@ -287,6 +315,24 @@ export function AppSidebar() {
               <Link href="/dashboard/profile">
                 <UserIcon className="me-2 h-4 w-4" />
                 {t('profile')}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/wallet">
+                <Wallet className="me-2 h-4 w-4" />
+                {t('wallet')}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/transactions">
+                <Receipt className="me-2 h-4 w-4" />
+                {t('transactions')}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/summary">
+                <PieChart className="me-2 h-4 w-4" />
+                {t('summary')}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
