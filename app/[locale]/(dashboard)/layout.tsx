@@ -26,7 +26,10 @@ export default function DashboardLayout({
     const checkAuth = () => {
       if (!isAuthenticated()) {
         // Use window.location for immediate redirect to avoid race conditions
-        window.location.href = '/login';
+        // Extract locale from current path (e.g., /en/dashboard -> en)
+        const pathParts = window.location.pathname.split('/');
+        const locale = pathParts[1] || 'en';
+        window.location.href = `/${locale}/login`;
         return;
       }
 
@@ -84,5 +87,6 @@ export default function DashboardLayout({
     </SidebarProvider>
   );
 }
+
 
 

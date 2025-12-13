@@ -387,3 +387,4 @@ To add a new language (e.g., French):
 **Status:** ✅ Fully functional with proper localization, routing, and RTL support!
 
 
+
