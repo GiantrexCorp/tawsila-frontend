@@ -58,6 +58,14 @@ export const PERMISSIONS = {
   SHOW_INVENTORY: 'show-inventory',
   DELETE_INVENTORY: 'delete-inventory',
   ASSIGN_INVENTORY_USERS: 'assign-inventory-users',
+
+  // Wallets
+  LIST_WALLETS: 'list-wallets',
+  SHOW_WALLET: 'show-wallet',
+
+  // Transactions
+  LIST_TRANSACTIONS: 'list-transactions',
+  SHOW_TRANSACTION: 'show-transaction',
 } as const;
 
 /**
@@ -105,6 +113,14 @@ export const PERMISSION_MODULES = {
     PERMISSIONS.SHOW_INVENTORY,
     PERMISSIONS.DELETE_INVENTORY,
     PERMISSIONS.ASSIGN_INVENTORY_USERS,
+  ],
+  WALLETS: [
+    PERMISSIONS.LIST_WALLETS,
+    PERMISSIONS.SHOW_WALLET,
+  ],
+  TRANSACTIONS: [
+    PERMISSIONS.LIST_TRANSACTIONS,
+    PERMISSIONS.SHOW_TRANSACTION,
   ],
 } as const;
 

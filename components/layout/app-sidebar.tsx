@@ -16,6 +16,7 @@ import {
   User as UserIcon,
   Shield,
   Wallet,
+  Receipt,
   LucideIcon,
 } from "lucide-react";
 import { getCurrentUser, logout, User } from "@/lib/auth";
@@ -176,6 +177,26 @@ export function AppSidebar() {
         },
       ],
     },
+    // Finance section - permission-based
+    {
+      title: t('finance'),
+      items: [
+        {
+          title: t('wallets'),
+          href: "/dashboard/wallets",
+          icon: Wallet,
+          // Show if user has ANY wallet permission
+          requiredPermissions: [...PERMISSION_MODULES.WALLETS],
+        },
+        {
+          title: t('allTransactions'),
+          href: "/dashboard/finance/transactions",
+          icon: Receipt,
+          // Show if user has ANY transaction permission
+          requiredPermissions: [...PERMISSION_MODULES.TRANSACTIONS],
+        },
+      ],
+    },
     // Analytics section - accessible to all authenticated users (uses dummy data)
     {
       title: t('analyticsSection'),
@@ -299,6 +320,12 @@ export function AppSidebar() {
               <Link href="/dashboard/wallet">
                 <Wallet className="me-2 h-4 w-4" />
                 {t('wallet')}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/transactions">
+                <Receipt className="me-2 h-4 w-4" />
+                {t('transactions')}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
