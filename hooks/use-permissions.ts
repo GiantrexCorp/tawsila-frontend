@@ -69,6 +69,13 @@ export const PERMISSIONS = {
 
   // Adjustments
   CREATE_ADJUSTMENT: 'create-adjustment',
+
+  // Settlements
+  LIST_SETTLEMENTS: 'list-settlements',
+  SHOW_SETTLEMENT: 'show-settlement',
+  CREATE_SETTLEMENT: 'create-settlement',
+  CONFIRM_SETTLEMENT: 'confirm-settlement',
+  CANCEL_SETTLEMENT: 'cancel-settlement',
 } as const;
 
 /**
@@ -124,6 +131,13 @@ export const PERMISSION_MODULES = {
   TRANSACTIONS: [
     PERMISSIONS.LIST_TRANSACTIONS,
     PERMISSIONS.SHOW_TRANSACTION,
+  ],
+  SETTLEMENTS: [
+    PERMISSIONS.LIST_SETTLEMENTS,
+    PERMISSIONS.SHOW_SETTLEMENT,
+    PERMISSIONS.CREATE_SETTLEMENT,
+    PERMISSIONS.CONFIRM_SETTLEMENT,
+    PERMISSIONS.CANCEL_SETTLEMENT,
   ],
 } as const;
 

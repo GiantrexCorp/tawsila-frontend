@@ -41,15 +41,20 @@ import {
   Plus,
   Minus,
   Scale,
+  Calendar,
+  FileText,
 } from "lucide-react";
 import {
   fetchWallet,
   fetchWalletTransactions,
   createAdjustment,
+  createSettlement,
   getWalletOwnerType,
   getWalletOwnerName,
   type Wallet as WalletType,
   type Transaction,
+  type Settlement,
+  type WalletSettlement,
 } from "@/lib/services/wallet";
 import { getCurrentUser } from "@/lib/auth";
 import { toast } from "sonner";
@@ -72,6 +77,9 @@ export default function WalletDetailPage() {
   // Check if user can create adjustments
   const { hasPermission: canCreateAdjustment } = useHasPermission(PERMISSIONS.CREATE_ADJUSTMENT);
 
+  // Check if user can create settlements
+  const { hasPermission: canCreateSettlement } = useHasPermission(PERMISSIONS.CREATE_SETTLEMENT);
+
   // Get current user to check if this is their own wallet
   const currentUser = getCurrentUser();
 
@@ -88,6 +96,14 @@ export default function WalletDetailPage() {
   const [adjustmentDescription, setAdjustmentDescription] = useState('');
   const [isSubmittingAdjustment, setIsSubmittingAdjustment] = useState(false);
 
+  // Settlement dialog state
+  const [isSettlementDialogOpen, setIsSettlementDialogOpen] = useState(false);
+  const [settlementPeriodFrom, setSettlementPeriodFrom] = useState('');
+  const [settlementPeriodTo, setSettlementPeriodTo] = useState('');
+  const [settlementNotes, setSettlementNotes] = useState('');
+  const [isSubmittingSettlement, setIsSubmittingSettlement] = useState(false);
+  const [createdSettlement, setCreatedSettlement] = useState<Settlement | null>(null);
+
   const hasLoadedRef = useRef(false);
 
   // Check if this is the user's own wallet (cannot adjust own wallet)
@@ -96,6 +112,9 @@ export default function WalletDetailPage() {
 
   // Can show adjustment button if has permission and not own wallet
   const showAdjustmentButton = canCreateAdjustment && !isOwnWallet;
+
+  // Can show settlement button if has permission and wallet has unsettled transactions
+  const showSettlementButton = canCreateSettlement && wallet?.has_unsettled_transactions;
 
   useEffect(() => {
     if (hasLoadedRef.current || !walletId) return;
@@ -107,8 +126,8 @@ export default function WalletDetailPage() {
       setError(null);
 
       try {
-        // Fetch wallet with walletable info
-        const walletData = await fetchWallet(walletId, ['walletable']);
+        // Fetch wallet with walletable info and settlements
+        const walletData = await fetchWallet(walletId, ['walletable', 'settlements']);
         setWallet(walletData);
         setIsLoading(false);
 
@@ -166,17 +185,98 @@ export default function WalletDetailPage() {
 
       // Reload wallet and transactions
       hasLoadedRef.current = false;
-      const walletData = await fetchWallet(walletId, ['walletable']);
+      const walletData = await fetchWallet(walletId, ['walletable', 'settlements']);
       setWallet(walletData);
 
       const transactionsData = await fetchWalletTransactions(walletId, { per_page: 10 });
       setTransactions(transactionsData.data);
     } catch (err) {
-      console.error('Error creating adjustment:', err);
-      toast.error(t('adjustmentFailed'));
+      // Extract error message from API error response
+      if (err && typeof err === 'object') {
+        const apiError = err as { message?: string; errors?: Record<string, string[]> };
+        if (apiError.errors) {
+          const firstError = Object.values(apiError.errors)[0]?.[0];
+          toast.error(firstError || apiError.message || t('adjustmentFailed'));
+        } else if (apiError.message) {
+          toast.error(apiError.message);
+        } else {
+          toast.error(t('adjustmentFailed'));
+        }
+      } else {
+        toast.error(t('adjustmentFailed'));
+      }
     } finally {
       setIsSubmittingAdjustment(false);
     }
+  };
+
+  // Handle settlement form submission
+  const handleSettlementSubmit = async () => {
+    if (!settlementPeriodFrom || !settlementPeriodTo) {
+      toast.error(t('periodRequired'));
+      return;
+    }
+
+    // Validate period_from is before or equal to period_to
+    if (new Date(settlementPeriodFrom) > new Date(settlementPeriodTo)) {
+      toast.error(t('periodFromBeforeTo'));
+      return;
+    }
+
+    // Validate period_to is not in the future
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    if (new Date(settlementPeriodTo) > today) {
+      toast.error(t('periodToNotFuture'));
+      return;
+    }
+
+    setIsSubmittingSettlement(true);
+    try {
+      const settlement = await createSettlement(walletId, {
+        period_from: settlementPeriodFrom,
+        period_to: settlementPeriodTo,
+        notes: settlementNotes.trim() || undefined,
+      });
+
+      setCreatedSettlement(settlement);
+      toast.success(t('settlementSuccess'));
+
+      // Reload wallet and transactions after settlement
+      hasLoadedRef.current = false;
+      const walletData = await fetchWallet(walletId, ['walletable', 'settlements']);
+      setWallet(walletData);
+
+      const transactionsData = await fetchWalletTransactions(walletId, { per_page: 10 });
+      setTransactions(transactionsData.data);
+    } catch (err: unknown) {
+      // Extract error message from API error response
+      if (err && typeof err === 'object') {
+        const apiError = err as { message?: string; errors?: Record<string, string[]> };
+        // Check for validation errors (422)
+        if (apiError.errors) {
+          const firstError = Object.values(apiError.errors)[0]?.[0];
+          toast.error(firstError || apiError.message || t('settlementFailed'));
+        } else if (apiError.message) {
+          toast.error(apiError.message);
+        } else {
+          toast.error(t('settlementFailed'));
+        }
+      } else {
+        toast.error(t('settlementFailed'));
+      }
+    } finally {
+      setIsSubmittingSettlement(false);
+    }
+  };
+
+  // Reset settlement dialog
+  const resetSettlementDialog = () => {
+    setSettlementPeriodFrom('');
+    setSettlementPeriodTo('');
+    setSettlementNotes('');
+    setCreatedSettlement(null);
+    setIsSettlementDialogOpen(false);
   };
 
   const formatCurrency = (amount: number) => {
@@ -326,16 +426,28 @@ export default function WalletDetailPage() {
           </div>
         </div>
 
-        {/* Adjustment Button */}
-        {showAdjustmentButton && (
-          <Button
-            onClick={() => setIsAdjustmentDialogOpen(true)}
-            className="gap-2"
-          >
-            <Scale className="h-4 w-4" />
-            {t('createAdjustment')}
-          </Button>
-        )}
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          {showSettlementButton && (
+            <Button
+              variant="outline"
+              onClick={() => setIsSettlementDialogOpen(true)}
+              className="gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              {t('createSettlement')}
+            </Button>
+          )}
+          {showAdjustmentButton && (
+            <Button
+              onClick={() => setIsAdjustmentDialogOpen(true)}
+              className="gap-2"
+            >
+              <Scale className="h-4 w-4" />
+              {t('createAdjustment')}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
@@ -634,6 +746,72 @@ export default function WalletDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Settlements Section */}
+      {wallet.settlements && wallet.settlements.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-base">{t('settlements')}</CardTitle>
+                <CardDescription>{t('settlementsDescription')}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {wallet.settlements.map((settlement) => (
+                <div
+                  key={settlement.id}
+                  className="flex items-center justify-between p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={cn(
+                      "h-10 w-10 rounded-xl flex items-center justify-center",
+                      settlement.type === 'payout' ? 'bg-purple-500/10' : 'bg-cyan-500/10'
+                    )}>
+                      {settlement.type === 'payout' ? (
+                        <ArrowUpRight className="h-5 w-5 text-purple-500" />
+                      ) : (
+                        <ArrowDownLeft className="h-5 w-5 text-cyan-500" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">{settlement.settlement_number}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(settlement.period_from).toLocaleDateString(locale)} - {new Date(settlement.period_to).toLocaleDateString(locale)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <Badge className={cn(
+                      settlement.status === 'pending' && 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+                      settlement.status === 'confirmed' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+                      settlement.status === 'cancelled' && 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                    )}>
+                      {settlement.status_label}
+                    </Badge>
+                    <div className="text-end">
+                      <p className={cn(
+                        "font-semibold",
+                        settlement.type === 'payout' ? 'text-purple-600 dark:text-purple-400' : 'text-cyan-600 dark:text-cyan-400'
+                      )}>
+                        {formatCurrency(settlement.amount)} {tCommon('egp')}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {settlement.type_label}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Negative Balance Warning */}
       {wallet.balance < 0 && (
         <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
@@ -843,6 +1021,169 @@ export default function WalletDetailPage() {
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Settlement Dialog */}
+      <Dialog open={isSettlementDialogOpen} onOpenChange={(open) => {
+        if (!open) resetSettlementDialog();
+        else setIsSettlementDialogOpen(true);
+      }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              {t('createSettlement')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('settlementDescription')}
+            </DialogDescription>
+          </DialogHeader>
+
+          {createdSettlement ? (
+            // Success State
+            <div className="py-6 space-y-6">
+              <div className="text-center">
+                <div className="h-16 w-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle2 className="h-8 w-8 text-emerald-500" />
+                </div>
+                <h3 className="text-lg font-semibold mb-1">{t('settlementCreated')}</h3>
+                <p className="text-sm text-muted-foreground">{createdSettlement.settlement_number}</p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-muted/50 space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('settlementType')}</span>
+                  <Badge className={createdSettlement.type === 'payout'
+                    ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                    : 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400'
+                  }>
+                    {createdSettlement.type_label}
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('settlementAmount')}</span>
+                  <span className="font-bold">{formatCurrency(createdSettlement.amount)} {tCommon('egp')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('settlementStatus')}</span>
+                  <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                    {createdSettlement.status_label}
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('settlementPeriod')}</span>
+                  <span className="text-sm">
+                    {new Date(createdSettlement.period_from).toLocaleDateString(locale)} - {new Date(createdSettlement.period_to).toLocaleDateString(locale)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('transactionsIncluded')}</span>
+                  <span className="font-medium">{createdSettlement.items.length}</span>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button onClick={resetSettlementDialog} className="w-full">
+                  {tCommon('close')}
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            // Form State
+            <div className="space-y-6 py-4">
+              {/* Period From */}
+              <div className="space-y-2">
+                <Label htmlFor="period_from" className="text-sm font-medium">
+                  {t('periodFrom')} <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="period_from"
+                    type="date"
+                    value={settlementPeriodFrom}
+                    onChange={(e) => setSettlementPeriodFrom(e.target.value)}
+                    max={settlementPeriodTo || new Date().toISOString().split('T')[0]}
+                    className="ps-10"
+                  />
+                  <Calendar className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
+
+              {/* Period To */}
+              <div className="space-y-2">
+                <Label htmlFor="period_to" className="text-sm font-medium">
+                  {t('periodTo')} <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="period_to"
+                    type="date"
+                    value={settlementPeriodTo}
+                    onChange={(e) => setSettlementPeriodTo(e.target.value)}
+                    min={settlementPeriodFrom}
+                    max={new Date().toISOString().split('T')[0]}
+                    className="ps-10"
+                  />
+                  <Calendar className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t('periodToHelp')}
+                </p>
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-2">
+                <Label htmlFor="settlement_notes" className="text-sm font-medium">
+                  {t('settlementNotes')} <span className="text-muted-foreground text-xs">({t('optional')})</span>
+                </Label>
+                <Textarea
+                  id="settlement_notes"
+                  placeholder={t('settlementNotesPlaceholder')}
+                  value={settlementNotes}
+                  onChange={(e) => setSettlementNotes(e.target.value)}
+                  rows={3}
+                  maxLength={1000}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('settlementNotesHelp')}
+                </p>
+              </div>
+
+              {/* Info Box */}
+              <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  {t('settlementInfo')}
+                </p>
+              </div>
+
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button
+                  variant="outline"
+                  onClick={resetSettlementDialog}
+                  disabled={isSubmittingSettlement}
+                >
+                  {tCommon('cancel')}
+                </Button>
+                <Button
+                  onClick={handleSettlementSubmit}
+                  disabled={isSubmittingSettlement || !settlementPeriodFrom || !settlementPeriodTo}
+                >
+                  {isSubmittingSettlement ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin me-2" />
+                      {t('submitting')}
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-4 w-4 me-2" />
+                      {t('confirmSettlement')}
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
