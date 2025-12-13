@@ -58,6 +58,24 @@ export const PERMISSIONS = {
   SHOW_INVENTORY: 'show-inventory',
   DELETE_INVENTORY: 'delete-inventory',
   ASSIGN_INVENTORY_USERS: 'assign-inventory-users',
+
+  // Wallets
+  LIST_WALLETS: 'list-wallets',
+  SHOW_WALLET: 'show-wallet',
+
+  // Transactions
+  LIST_TRANSACTIONS: 'list-transactions',
+  SHOW_TRANSACTION: 'show-transaction',
+
+  // Adjustments
+  CREATE_ADJUSTMENT: 'create-adjustment',
+
+  // Settlements
+  LIST_SETTLEMENTS: 'list-settlements',
+  SHOW_SETTLEMENT: 'show-settlement',
+  CREATE_SETTLEMENT: 'create-settlement',
+  CONFIRM_SETTLEMENT: 'confirm-settlement',
+  CANCEL_SETTLEMENT: 'cancel-settlement',
 } as const;
 
 /**
@@ -105,6 +123,21 @@ export const PERMISSION_MODULES = {
     PERMISSIONS.SHOW_INVENTORY,
     PERMISSIONS.DELETE_INVENTORY,
     PERMISSIONS.ASSIGN_INVENTORY_USERS,
+  ],
+  WALLETS: [
+    PERMISSIONS.LIST_WALLETS,
+    PERMISSIONS.SHOW_WALLET,
+  ],
+  TRANSACTIONS: [
+    PERMISSIONS.LIST_TRANSACTIONS,
+    PERMISSIONS.SHOW_TRANSACTION,
+  ],
+  SETTLEMENTS: [
+    PERMISSIONS.LIST_SETTLEMENTS,
+    PERMISSIONS.SHOW_SETTLEMENT,
+    PERMISSIONS.CREATE_SETTLEMENT,
+    PERMISSIONS.CONFIRM_SETTLEMENT,
+    PERMISSIONS.CANCEL_SETTLEMENT,
   ],
 } as const;
 

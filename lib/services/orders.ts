@@ -233,6 +233,8 @@ export interface Order {
   rejected_by?: AssignedUser;
   /** Assigned inventory location */
   inventory?: Inventory;
+  /** Financial transactions related to this order */
+  transactions?: OrderTransaction[];
 
   // Permission flags
   /** Whether current user can accept this order */
@@ -258,6 +260,47 @@ export interface Order {
   inventory_id?: number;
   /** Vendor ID */
   vendor_id?: number;
+}
+
+/**
+ * User who created a transaction
+ */
+export interface TransactionCreator {
+  id: number;
+  name_en: string;
+  name_ar: string;
+  email?: string;
+  mobile?: string;
+}
+
+/**
+ * Financial transaction related to an order
+ */
+export interface OrderTransaction {
+  /** Unique transaction identifier */
+  id: number;
+  /** Unique reference number */
+  reference_number: string;
+  /** Transaction type */
+  type: 'credit' | 'debit';
+  /** Localized type label */
+  type_label: string;
+  /** Transaction category */
+  category: string;
+  /** Localized category label */
+  category_label: string;
+  /** Transaction amount (always positive) */
+  amount: number;
+  /** Signed amount (negative for debit) */
+  signed_amount: number;
+  /** Balance after this transaction */
+  balance_after: number;
+  /** Transaction description */
+  description: string;
+  /** Transaction timestamp */
+  created_at: string;
+  /** User who created the transaction */
+  created_by?: TransactionCreator;
 }
 
 /**
@@ -450,7 +493,7 @@ export async function fetchMyAssignedOrders(): Promise<Order[]> {
  * Fetch a single order by ID
  */
 export async function fetchOrder(id: number): Promise<Order> {
-  const includeParams = 'customer,vendor,items,assignments,statusLogs,scans,rejectedBy,inventory,assignments.assignedBy,assignments.assignedTo,scans.scannedBy';
+  const includeParams = 'customer,vendor,items,assignments,statusLogs,scans,rejectedBy,inventory,assignments.assignedBy,assignments.assignedTo,scans.scannedBy,transactions,transactions.createdBy';
   const response = await apiRequest<Order>(`/orders/${id}?include=${includeParams}`, {
     method: 'GET',
   });
