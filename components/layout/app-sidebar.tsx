@@ -17,6 +17,7 @@ import {
   Shield,
   Wallet,
   Receipt,
+  PieChart,
   LucideIcon,
 } from "lucide-react";
 import { getCurrentUser, logout, User } from "@/lib/auth";
@@ -326,6 +327,12 @@ export function AppSidebar() {
               <Link href="/dashboard/transactions">
                 <Receipt className="me-2 h-4 w-4" />
                 {t('transactions')}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/summary">
+                <PieChart className="me-2 h-4 w-4" />
+                {t('summary')}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />

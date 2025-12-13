@@ -233,6 +233,41 @@ export async function fetchMyTransactions(filters?: TransactionFilters): Promise
   };
 }
 
+/**
+ * Financial summary for current user
+ */
+export interface MySummary {
+  /** Current wallet balance */
+  current_balance: string;
+  /** Total amount credited */
+  total_credited: string;
+  /** Total amount debited */
+  total_debited: string;
+  /** Unsettled balance (pending to be settled) */
+  unsettled_balance: number;
+  /** Number of pending settlements */
+  pending_settlements: number;
+  /** Total payouts made */
+  total_payouts: number;
+  /** Total collections received */
+  total_collections: number;
+}
+
+/**
+ * Fetch current user's financial summary
+ */
+export async function fetchMySummary(): Promise<MySummary> {
+  const response = await apiRequest<MySummary>('/finance/my/summary', {
+    method: 'GET',
+  });
+
+  if (!response.data) {
+    throw new Error('No summary data returned');
+  }
+
+  return response.data;
+}
+
 // ============================================
 // Admin Wallets Management
 // ============================================
