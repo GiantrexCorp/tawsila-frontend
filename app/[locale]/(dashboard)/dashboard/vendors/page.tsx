@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "@/i18n/routing";
-import Image from "next/image";
+import { BackendImage } from "@/components/ui/backend-image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -591,7 +591,7 @@ export default function VendorsPage() {
                     <div className="relative flex-shrink-0">
                       <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-muted to-muted/50 overflow-hidden ring-1 ring-border/50 transition-transform duration-300 group-hover:scale-105">
                         {vendor.logo ? (
-                          <Image
+                          <BackendImage
                             src={vendor.logo}
                             alt={locale === 'ar' ? vendor.name_ar : vendor.name_en}
                             width={56}

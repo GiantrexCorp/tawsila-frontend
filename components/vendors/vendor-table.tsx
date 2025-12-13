@@ -2,7 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/routing";
-import Image from "next/image";
+import { BackendImage } from "@/components/ui/backend-image";
 import {
   Table,
   TableBody,
@@ -51,7 +51,7 @@ export function VendorTable({ vendors, canUpdateVendor }: VendorTableProps) {
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg bg-muted overflow-hidden flex-shrink-0">
                     {vendor.logo ? (
-                      <Image
+                      <BackendImage
                         src={vendor.logo}
                         alt={locale === "ar" ? vendor.name_ar : vendor.name_en}
                         width={40}

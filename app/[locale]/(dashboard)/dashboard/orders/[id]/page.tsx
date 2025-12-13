@@ -56,7 +56,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { QRCodeSVG } from "qrcode.react";
 import { cn } from "@/lib/utils";
-import Image from "next/image";
+import { BackendImage } from "@/components/ui/backend-image";
 
 export default function OrderDetailPage() {
   const t = useTranslations('orders');
@@ -524,7 +524,7 @@ export default function OrderDetailPage() {
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 {vendor?.logo ? (
-                  <Image src={vendor.logo} alt="" width={40} height={40} className="h-10 w-10 rounded-lg object-cover" />
+                  <BackendImage src={vendor.logo} alt="" width={40} height={40} className="h-10 w-10 rounded-lg object-cover" />
                 ) : (
                   <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
                     <Building2 className="h-5 w-5 text-muted-foreground" />

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import Image from "next/image";
+import { BackendImage } from "@/components/ui/backend-image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -118,7 +118,7 @@ export function VendorDashboard({ userName }: VendorDashboardProps) {
         {/* Cover Image */}
         <div className="h-48 md:h-56 rounded-2xl overflow-hidden bg-gradient-to-br from-primary/20 via-primary/10 to-muted">
           {vendor?.cover_image ? (
-            <Image
+            <BackendImage
               src={vendor.cover_image}
               alt=""
               fill
@@ -140,7 +140,7 @@ export function VendorDashboard({ userName }: VendorDashboardProps) {
                 {isLoading ? (
                   <Skeleton className="h-full w-full" />
                 ) : vendor?.logo ? (
-                  <Image
+                  <BackendImage
                     src={vendor.logo}
                     alt={displayName}
                     width={112}
