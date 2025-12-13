@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { useSessionMonitor } from "@/hooks/use-session-monitor";
 import { useState, useEffect } from "react";
 import { isAuthenticated } from "@/lib/auth";
-import { useRouter } from "@/i18n/routing";
 
 export default function DashboardLayout({
   children,
@@ -18,7 +17,6 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [isChecking, setIsChecking] = useState(true);
-  const router = useRouter();
   
   // Monitor session and handle automatic logout
   useSessionMonitor();
@@ -27,26 +25,28 @@ export default function DashboardLayout({
   useEffect(() => {
     const checkAuth = () => {
       if (!isAuthenticated()) {
-        router.push('/login');
-      } else {
-        // Sync token to cookie if not already there (for existing users)
-        const token = localStorage.getItem('access_token');
-        if (token) {
-          // Check if cookie exists
-          const hasCookie = document.cookie.split(';').some(c => c.trim().startsWith('token='));
-          if (!hasCookie) {
-            // Sync to cookie
-            const expiryDate = new Date();
-            expiryDate.setDate(expiryDate.getDate() + 7);
-            document.cookie = `token=${token}; path=/; expires=${expiryDate.toUTCString()}; SameSite=Lax`;
-          }
-        }
-        setIsChecking(false);
+        // Use window.location for immediate redirect to avoid race conditions
+        window.location.href = '/login';
+        return;
       }
+
+      // Sync token to cookie if not already there (for existing users)
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        // Check if cookie exists
+        const hasCookie = document.cookie.split(';').some(c => c.trim().startsWith('token='));
+        if (!hasCookie) {
+          // Sync to cookie
+          const expiryDate = new Date();
+          expiryDate.setDate(expiryDate.getDate() + 7);
+          document.cookie = `token=${token}; path=/; expires=${expiryDate.toUTCString()}; SameSite=Lax`;
+        }
+      }
+      setIsChecking(false);
     };
-    
+
     checkAuth();
-  }, [router]);
+  }, []);
   
   // Show loading spinner while checking auth
   if (isChecking) {
