@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useParams } from "next/navigation";
 import { useRouter } from "@/i18n/routing";
@@ -38,7 +38,7 @@ import {
 } from "lucide-react";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { PERMISSIONS } from "@/hooks/use-permissions";
-import { fetchOrder, acceptOrder, rejectOrder, assignPickupAgent, fetchOrderAssignments, type Order, type OrderItem, type Customer, type Assignment, type StatusLog, type Scan as ScanType, type Vendor } from "@/lib/services/orders";
+import { fetchOrder, acceptOrder, rejectOrder, assignPickupAgent, type Order, type OrderItem, type Customer, type Assignment, type StatusLog, type Scan as ScanType, type Vendor } from "@/lib/services/orders";
 import { fetchInventories, fetchCurrentInventory, type Inventory } from "@/lib/services/inventories";
 import { fetchPickupAgents, type Agent } from "@/lib/services/agents";
 import { toast } from "sonner";
@@ -100,8 +100,12 @@ export default function OrderDetailPage() {
   const [assignmentNotes, setAssignmentNotes] = useState("");
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
+    // Only load once when permission is granted (ref persists across Strict Mode remounts)
+    if (!hasPermission || hasLoadedRef.current) return;
+
     const loadOrder = async () => {
       if (!orderId || isNaN(orderId)) {
         toast.error(t('errorLoadingOrder'), {
@@ -111,14 +115,15 @@ export default function OrderDetailPage() {
         return;
       }
 
+      hasLoadedRef.current = true;
       setIsLoading(true);
       try {
-        const [fetchedOrder, fetchedAssignments] = await Promise.all([
-          fetchOrder(orderId),
-          fetchOrderAssignments(orderId)
-        ]);
+        const fetchedOrder = await fetchOrder(orderId);
         setOrder(fetchedOrder);
-        setAssignments(fetchedAssignments);
+        // Assignments are already included in the order response
+        if (fetchedOrder.assignments) {
+          setAssignments(fetchedOrder.assignments);
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : tCommon('tryAgain');
         toast.error(t('errorLoadingOrder'), { description: message });
@@ -128,10 +133,9 @@ export default function OrderDetailPage() {
       }
     };
 
-    if (hasPermission) {
-      loadOrder();
-    }
-  }, [orderId, hasPermission, t, tCommon, router]);
+    loadOrder();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderId, hasPermission]);
 
   const loadInventories = useCallback(async () => {
     setIsLoadingInventories(true);
@@ -217,18 +221,17 @@ export default function OrderDetailPage() {
 
     setIsAssigning(true);
     try {
-      const assignment = await assignPickupAgent(orderId, selectedAgentId, assignmentNotes.trim() || undefined);
-      setAssignments(prev => [...prev, assignment]);
+      await assignPickupAgent(orderId, selectedAgentId, assignmentNotes.trim() || undefined);
       setShowAssignDialog(false);
       setSelectedAgentId(null);
       setAssignmentNotes("");
       toast.success(t('agentAssignedSuccess'));
-      const [updatedOrder, updatedAssignments] = await Promise.all([
-        fetchOrder(orderId),
-        fetchOrderAssignments(orderId)
-      ]);
+      // Refresh order data (assignments included)
+      const updatedOrder = await fetchOrder(orderId);
       setOrder(updatedOrder);
-      setAssignments(updatedAssignments);
+      if (updatedOrder.assignments) {
+        setAssignments(updatedOrder.assignments);
+      }
     } catch (error) {
       const err = error as { status?: number };
       if (err?.status === 403) {
@@ -658,10 +661,10 @@ export default function OrderDetailPage() {
                     <span dir="ltr">{inventory.phone}</span>
                   </div>
                 )}
-                {inventory.address && (
+                {(inventory.full_address || inventory.address) && (
                   <div className="flex items-start gap-2 text-sm text-muted-foreground">
                     <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
-                    <span>{inventory.address}</span>
+                    <span>{inventory.full_address || inventory.address}</span>
                   </div>
                 )}
               </div>
@@ -766,19 +769,24 @@ export default function OrderDetailPage() {
                       </div>
                       <div className="flex-1 pb-4">
                         <div className="flex items-center justify-between gap-2">
-                          <p className="font-medium">{log.status_label || log.status}</p>
+                          <p className="font-medium">{log.to_status_label || log.status_label || log.to_status || log.status || t('statusChanged')}</p>
                           <span className="text-xs text-muted-foreground">
                             {new Date(log.created_at).toLocaleString(locale)}
                           </span>
                         </div>
+                        {(log.from_status_label || log.from_status) && (
+                          <p className="text-sm text-muted-foreground mt-0.5">
+                            {t('from')}: {log.from_status_label || log.from_status}
+                          </p>
+                        )}
                         {log.created_by && (
                           <p className="text-sm text-muted-foreground mt-0.5">
                             {t('by')}: {log.created_by.name || log.created_by.name_en}
                           </p>
                         )}
-                        {log.notes && (
+                        {(log.notes || log.reason) && (
                           <p className="text-sm text-muted-foreground mt-1 p-2 bg-muted rounded">
-                            {log.notes}
+                            {log.notes || log.reason}
                           </p>
                         )}
                       </div>
@@ -813,16 +821,22 @@ export default function OrderDetailPage() {
                         {new Date(scan.scanned_at).toLocaleString(locale)}
                       </span>
                     </div>
-                    {scan.location && (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <MapPin className="h-3 w-3" />
-                        <span>{scan.location}</span>
-                      </div>
-                    )}
                     {scan.scanned_by && (
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <User className="h-3 w-3" />
                         <span>{scan.scanned_by.name || scan.scanned_by.name_en}</span>
+                      </div>
+                    )}
+                    {scan.has_coordinates && scan.coordinates && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3" />
+                        <span className="font-mono">{scan.coordinates}</span>
+                      </div>
+                    )}
+                    {scan.device_info && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Phone className="h-3 w-3" />
+                        <span>{scan.device_info}</span>
                       </div>
                     )}
                   </div>

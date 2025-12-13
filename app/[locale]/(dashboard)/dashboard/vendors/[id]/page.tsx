@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useParams } from "next/navigation";
 import { useRouter } from "@/i18n/routing";
@@ -47,9 +47,13 @@ export default function ViewVendorPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [showSecretKey, setShowSecretKey] = useState(false);
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
+    if (!hasPermission || hasLoadedRef.current) return;
+
     const loadVendor = async () => {
+      hasLoadedRef.current = true;
       setIsLoading(true);
       try {
         const fetchedVendor = await fetchVendor(vendorId);
@@ -62,10 +66,9 @@ export default function ViewVendorPage() {
       }
     };
 
-    if (hasPermission) {
-      loadVendor();
-    }
-  }, [vendorId, t, router, hasPermission]);
+    loadVendor();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vendorId, hasPermission]);
 
   const copySecretKey = (key: string) => {
     navigator.clipboard.writeText(key);

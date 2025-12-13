@@ -6,6 +6,24 @@
  */
 
 import { apiRequest } from '../api';
+import { UserRoleObject } from './users';
+
+/**
+ * User type for inventory assignment (from /inventories/{id}/users endpoint)
+ * Note: API may return 'role' or 'roles' depending on the endpoint
+ */
+export interface InventoryUser {
+  id: number;
+  name?: string;
+  name_en: string;
+  name_ar: string;
+  email: string;
+  mobile: string;
+  type?: string;
+  role?: UserRoleObject[];
+  roles?: UserRoleObject[];  // Some endpoints return 'roles' instead of 'role'
+  assigned_at?: string;
+}
 
 /**
  * Governorate (province/state) entity
@@ -76,6 +94,8 @@ export interface Inventory {
   governorate?: Governorate;
   /** Associated city details */
   city?: City;
+  /** Assigned users (when included) */
+  users?: InventoryUser[];
 }
 
 /**
@@ -162,7 +182,7 @@ export async function createInventory(inventoryData: CreateInventoryRequest): Pr
  * For single inventory, we take the first item from the data array
  */
 export async function fetchInventory(id: number): Promise<Inventory> {
-  const response = await apiRequest<{ data: Inventory[] | Inventory }>(`/inventories/${id}`, {
+  const response = await apiRequest<{ data: Inventory[] | Inventory }>(`/inventories/${id}?include=users`, {
     method: 'GET',
   });
 
@@ -219,25 +239,6 @@ export async function deleteInventory(id: number): Promise<void> {
       (responseData.deleted === false ? 'Deletion was not successful' : 'Invalid response from server')
     );
   }
-}
-
-import { UserRoleObject } from './users';
-
-/**
- * User type for inventory assignment (from /inventories/{id}/users endpoint)
- * Note: API may return 'role' or 'roles' depending on the endpoint
- */
-export interface InventoryUser {
-  id: number;
-  name?: string;
-  name_en: string;
-  name_ar: string;
-  email: string;
-  mobile: string;
-  type?: string;
-  role?: UserRoleObject[];
-  roles?: UserRoleObject[];  // Some endpoints return 'roles' instead of 'role'
-  assigned_at?: string;
 }
 
 /**

@@ -395,7 +395,9 @@
     "scanHistory": "سجل المسح",
     "scansRecorded": "عمليات مسح مسجلة",
     "by": "بواسطة",
-    "completed": "مكتمل"
+    "completed": "مكتمل",
+    "from": "من",
+    "statusChanged": "تم تغيير الحالة"
   },
   "orderCreate": {
     "title": "عمل طلب جديد",

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Package, CreditCard, FileText, ShoppingCart, Plus, Trash2, Truck, User, CheckCircle2, X } from "lucide-react";
+import { Loader2, Package, CreditCard, FileText, ShoppingCart, Plus, Trash2, User, CheckCircle2, X } from "lucide-react";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { PERMISSIONS } from "@/hooks/use-permissions";
@@ -28,7 +28,6 @@ export default function CreateOrderPage() {
     vendor_notes: '',
     internal_notes: '',
     payment_method: 'cod',
-    shipping_cost: 70, // Fixed shipping cost for Cairo/Giza
     customer: {
       name: '',
       mobile: '',
@@ -44,15 +43,8 @@ export default function CreateOrderPage() {
     return items.reduce((sum, item) => sum + (item.quantity * (item.price || item.unit_price || 0)), 0);
   }, [items]);
 
-  // Calculate total amount
-  // If payment method is "paid", total is only shipping cost
-  // Otherwise, total is subtotal + shipping cost
-  const totalAmount = useMemo(() => {
-    if (formData.payment_method === 'paid') {
-      return formData.shipping_cost || 0;
-    }
-    return subtotal + (formData.shipping_cost || 0);
-  }, [subtotal, formData.shipping_cost, formData.payment_method]);
+  // Total amount is subtotal (shipping is calculated by backend)
+  const totalAmount = subtotal;
 
   // Scroll to success banner when it appears
   useEffect(() => {
@@ -137,7 +129,6 @@ export default function CreateOrderPage() {
         items: transformedItems,
         subtotal: subtotal,
         total_amount: totalAmount,
-        shipping_cost: formData.shipping_cost || 0,
       };
 
       // Internal notes are now allowed for anyone who can create orders
@@ -157,7 +148,6 @@ export default function CreateOrderPage() {
         vendor_notes: '',
         internal_notes: '',
         payment_method: 'cod',
-        shipping_cost: 70,
         customer: {
           name: '',
           mobile: '',
@@ -422,73 +412,37 @@ export default function CreateOrderPage() {
           </CardContent>
         </Card>
 
-        {/* Payment & Shipping */}
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Payment Information */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                  <CreditCard className="h-4 w-4 text-blue-500" />
-                </div>
-                <div>
-                  <CardTitle>{t('paymentInformation')}</CardTitle>
-                  <CardDescription>{t('paymentInformationDesc')}</CardDescription>
-                </div>
+        {/* Payment Information */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <CreditCard className="h-4 w-4 text-blue-500" />
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="payment_method">{t('paymentMethod')}</Label>
-                <Select
-                  value={formData.payment_method}
-                  onValueChange={(value) => handleInputChange('payment_method', value)}
-                >
-                  <SelectTrigger id="payment_method">
-                    <SelectValue placeholder={t('selectPaymentMethod')} />
-                  </SelectTrigger>
-                  <SelectContent>
+              <div>
+                <CardTitle>{t('paymentInformation')}</CardTitle>
+                <CardDescription>{t('paymentInformationDesc')}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="payment_method">{t('paymentMethod')}</Label>
+              <Select
+                value={formData.payment_method}
+                onValueChange={(value) => handleInputChange('payment_method', value)}
+              >
+                <SelectTrigger id="payment_method">
+                  <SelectValue placeholder={t('selectPaymentMethod')} />
+                </SelectTrigger>
+                <SelectContent>
                   <SelectItem value="cod">{t('cashOnDelivery')}</SelectItem>
                   <SelectItem value="paid">{t('paid')}</SelectItem>
                 </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Shipping Cost */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                  <Truck className="h-4 w-4 text-orange-500" />
-                </div>
-                <div>
-                  <CardTitle>{t('shippingCost')}</CardTitle>
-                  <CardDescription>{t('shippingCostDesc')}</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="shipping_cost">{t('shippingCost')}</Label>
-                <div className="relative">
-                  <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{tCommon('egpSymbol')}</span>
-                  <Input
-                    id="shipping_cost"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.shipping_cost}
-                    readOnly
-                    className="ps-10 bg-muted"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">{t('shippingCostFixed')}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Order Summary */}
         <Card>
@@ -496,22 +450,7 @@ export default function CreateOrderPage() {
             <CardTitle>{t('orderSummary')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {formData.payment_method !== 'paid' && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{t('subtotal')}</span>
-                <span className="font-medium">{tCommon('egpSymbol')} {subtotal.toFixed(2)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">{t('shippingCost')}</span>
-              <span className="font-medium">{tCommon('egpSymbol')} {(formData.shipping_cost || 0).toFixed(2)}</span>
-            </div>
-            {formData.payment_method === 'paid' && (
-              <div className="text-xs text-muted-foreground italic">
-                {t('paidOrderNote')}
-              </div>
-            )}
-            <div className="border-t pt-3 flex justify-between">
+            <div className="flex justify-between">
               <span className="font-semibold">{t('totalAmount')}</span>
               <span className="font-bold text-lg">{tCommon('egpSymbol')} {totalAmount.toFixed(2)}</span>
             </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useParams } from "next/navigation";
 import { useRouter } from "@/i18n/routing";
@@ -33,7 +33,6 @@ import {
   type InventoryUser,
 } from "@/lib/services/inventories";
 import {
-  useInventoryUsers,
   useUsersForAssignment,
   useSyncInventoryUsers,
 } from "@/hooks/queries";
@@ -68,13 +67,19 @@ export default function ViewInventoryPage() {
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   const [userSearchQuery, setUserSearchQuery] = useState("");
 
-  // React Query hooks for inventory users
-  const { data: assignedUsers = [], isLoading: isLoadingAssignedUsers } = useInventoryUsers(inventoryId);
-  const { data: availableUsers = [], isLoading: isLoadingAvailableUsers } = useUsersForAssignment();
+  // React Query hooks for inventory users (lazy load availableUsers only when dialog is open)
+  const { data: availableUsers = [], isLoading: isLoadingAvailableUsers } = useUsersForAssignment({ enabled: showAssignDialog });
   const syncUsersMutation = useSyncInventoryUsers();
 
+  // Get assigned users from the inventory (included in the response)
+  const assignedUsers = inventory?.users || [];
+
+  const hasLoadedRef = useRef(false);
   useEffect(() => {
+    if (!hasPermission || hasLoadedRef.current) return;
+
     const loadInventory = async () => {
+      hasLoadedRef.current = true;
       setIsLoading(true);
       try {
         const fetchedInventory = await fetchInventory(inventoryId);
@@ -87,10 +92,9 @@ export default function ViewInventoryPage() {
       }
     };
 
-    if (hasPermission) {
-      loadInventory();
-    }
-  }, [inventoryId, t, router, hasPermission]);
+    loadInventory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inventoryId, hasPermission]);
 
   // Open assign dialog and pre-select currently assigned users
   const handleOpenAssignDialog = () => {
@@ -115,6 +119,9 @@ export default function ViewInventoryPage() {
         inventoryId,
         userIds: selectedUserIds,
       });
+      // Refetch inventory to get updated users list
+      const updatedInventory = await fetchInventory(inventoryId);
+      setInventory(updatedInventory);
       toast.success(t('usersAssignedSuccess'));
       setShowAssignDialog(false);
     } catch {
@@ -407,11 +414,7 @@ export default function ViewInventoryPage() {
           )}
         </div>
 
-        {isLoadingAssignedUsers ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          </div>
-        ) : assignedUsers.length === 0 ? (
+        {assignedUsers.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Users className="h-10 w-10 mx-auto mb-2 opacity-50" />
             <p className="text-sm">{t('noAssignedUsers')}</p>

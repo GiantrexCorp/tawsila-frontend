@@ -26,7 +26,7 @@ import {
   ChevronUp,
   Hash,
   CheckCircle2,
-  Warehouse
+  Warehouse,
 } from "lucide-react";
 import { User, UserFilters, getRoleDisplayName, userHasRole } from "@/lib/services/users";
 import {
@@ -43,8 +43,7 @@ import {
   useAssignUserRole,
   useRoles,
 } from "@/hooks/queries";
-import { fetchInventories, fetchUserInventories, type Inventory } from "@/lib/services/inventories";
-import { useQuery } from "@tanstack/react-query";
+import { fetchInventories, type Inventory } from "@/lib/services/inventories";
 
 // User Card Component
 interface UserCardProps {
@@ -73,14 +72,7 @@ function UserCard({
   const isDeliveryAgent = userHasRole(user, 'shipping-agent');
   const isInventoryManager = userHasRole(user, 'inventory-manager');
   const shouldShowInventories = isDeliveryAgent || isInventoryManager;
-  
-  // Fetch inventories for delivery agents and inventory managers
-  const { data: userInventories = [] } = useQuery<Inventory[]>({
-    queryKey: ['user-inventories', user.id],
-    queryFn: () => fetchUserInventories(user.id),
-    enabled: shouldShowInventories,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+  const userInventories = user.inventories || [];
 
   return (
     <div
@@ -153,7 +145,7 @@ function UserCard({
             <Phone className="h-4 w-4 shrink-0 text-muted-foreground/60" />
             <span dir="ltr">{user.mobile}</span>
           </div>
-          
+
           {/* Inventories for Delivery Agents and Inventory Managers */}
           {shouldShowInventories && userInventories.length > 0 && (
             <div className="flex items-start gap-2.5 text-sm text-muted-foreground pt-1">
@@ -283,9 +275,10 @@ export default function UsersPage() {
   });
   const [viewType, setViewType] = useState<ViewType>("cards");
 
-  // Inventories for filter
+  // Inventories for filter (lazy loaded)
   const [inventories, setInventories] = useState<Inventory[]>([]);
   const [isLoadingInventories, setIsLoadingInventories] = useState(false);
+  const [hasLoadedFilterData, setHasLoadedFilterData] = useState(false);
 
   // React Query hooks - data is automatically cached!
   const {
@@ -295,11 +288,15 @@ export default function UsersPage() {
     refetch: refetchUsers,
   } = useUsers(currentPage, 50, appliedFilters);
 
-  const { data: rolesResponse } = useRoles();
+  // Only load roles when filters are expanded
+  const { data: rolesResponse } = useRoles({ enabled: isFiltersExpanded });
 
-  // Load inventories for filter
+  // Load inventories for filter (only when filters expanded)
   useEffect(() => {
+    if (!isFiltersExpanded || hasLoadedFilterData) return;
+
     const loadInventories = async () => {
+      setHasLoadedFilterData(true);
       setIsLoadingInventories(true);
       try {
         const fetchedInventories = await fetchInventories();
@@ -311,7 +308,7 @@ export default function UsersPage() {
       }
     };
     loadInventories();
-  }, []);
+  }, [isFiltersExpanded, hasLoadedFilterData]);
 
   // Mutations with automatic cache invalidation
   const createUserMutation = useCreateUser();

@@ -118,9 +118,14 @@ export interface AssignedUser {
 export interface StatusLog {
   id: number;
   order_id: number;
-  status: string;
+  status?: string;
   status_label?: string;
+  to_status?: string;
+  to_status_label?: string;
+  from_status?: string;
+  from_status_label?: string;
   notes?: string | null;
+  reason?: string | null;
   created_at: string;
   created_by?: AssignedUser;
 }
@@ -136,6 +141,11 @@ export interface Scan {
   scanned_at: string;
   scanned_by?: AssignedUser;
   location?: string;
+  latitude?: number;
+  longitude?: number;
+  has_coordinates?: boolean;
+  coordinates?: string;
+  device_info?: string;
   notes?: string | null;
 }
 
@@ -150,11 +160,13 @@ export interface Inventory {
   code?: string;
   phone?: string;
   address?: string;
-  governorate?: string;
-  city?: string;
-  latitude?: number;
-  longitude?: number;
+  full_address?: string;
+  governorate?: string | { id: number; name_en: string; name_ar: string };
+  city?: string | { id: number; name_en: string; name_ar: string; governorate?: { id: number; name_en: string; name_ar: string } };
+  latitude?: number | string;
+  longitude?: number | string;
   status?: string;
+  is_active?: boolean;
 }
 
 /**
@@ -438,7 +450,7 @@ export async function fetchMyAssignedOrders(): Promise<Order[]> {
  * Fetch a single order by ID
  */
 export async function fetchOrder(id: number): Promise<Order> {
-  const includeParams = 'customer,vendor,items,assignments,statusLogs,scans,rejectedBy,inventory';
+  const includeParams = 'customer,vendor,items,assignments,statusLogs,scans,rejectedBy,inventory,assignments.assignedBy,assignments.assignedTo,scans.scannedBy';
   const response = await apiRequest<Order>(`/orders/${id}?include=${includeParams}`, {
     method: 'GET',
   });

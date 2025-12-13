@@ -396,7 +396,9 @@
     "scanHistory": "Scan History",
     "scansRecorded": "scans recorded",
     "by": "By",
-    "completed": "Completed"
+    "completed": "Completed",
+    "from": "From",
+    "statusChanged": "Status Changed"
   },
   "orderCreate": {
     "title": "Create New Order",

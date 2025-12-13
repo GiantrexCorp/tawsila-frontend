@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import Image from "next/image";
@@ -46,14 +46,18 @@ export default function VendorsPage() {
   });
   const [viewType, setViewType] = useState<ViewType>("cards");
   
-  // Governorates and Cities for filters
+  // Governorates and Cities for filters (lazy loaded)
   const [governorates, setGovernorates] = useState<Governorate[]>([]);
   const [cities, setCities] = useState<City[]>([]);
   const [isLoadingCities, setIsLoadingCities] = useState(false);
+  const [hasLoadedFilterData, setHasLoadedFilterData] = useState(false);
 
-  // Load governorates on mount
+  // Load governorates only when filters are expanded
   useEffect(() => {
+    if (!isFiltersExpanded || hasLoadedFilterData) return;
+
     const loadGovernorates = async () => {
+      setHasLoadedFilterData(true);
       try {
         const fetchedGovernorates = await fetchGovernorates();
         setGovernorates(fetchedGovernorates);
@@ -62,24 +66,21 @@ export default function VendorsPage() {
       }
     };
     loadGovernorates();
-  }, [t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFiltersExpanded]);
 
   // Load cities when governorate is selected
   useEffect(() => {
-    const loadCities = async () => {
-      if (!filters.governorate_id) {
-        setCities([]);
-        return;
-      }
+    if (!filters.governorate_id) {
+      setCities([]);
+      return;
+    }
 
+    const loadCities = async () => {
       setIsLoadingCities(true);
       try {
         const fetchedCities = await fetchCities(parseInt(filters.governorate_id));
         setCities(fetchedCities);
-        // Clear city filter if governorate changes
-        if (filters.city_id) {
-          setFilters((prev) => ({ ...prev, city_id: "" }));
-        }
       } catch {
         toast.error(t('errorLoadingCities'));
       } finally {
@@ -88,11 +89,16 @@ export default function VendorsPage() {
     };
 
     loadCities();
-  }, [filters.governorate_id, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.governorate_id]);
 
-  // Load vendors on mount
+  // Load vendors on mount (ref persists across Strict Mode remounts)
+  const hasLoadedVendorsRef = useRef(false);
   useEffect(() => {
+    if (hasLoadedVendorsRef.current) return;
+
     const loadVendors = async () => {
+      hasLoadedVendorsRef.current = true;
       setIsLoadingVendors(true);
       try {
         const fetchedVendors = await fetchVendors();
@@ -105,7 +111,8 @@ export default function VendorsPage() {
     };
 
     loadVendors();
-  }, [t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Filter vendors based on search query and filters
   const filteredVendors = useMemo(() => {
