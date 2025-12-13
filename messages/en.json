@@ -33,7 +33,8 @@
     "logoutFailed": "Logout failed",
     "finance": "Finance",
     "wallets": "Wallets",
-    "allTransactions": "All Transactions"
+    "allTransactions": "All Transactions",
+    "settlements": "Settlements"
   },
   "dashboard": {
     "welcome": "Welcome back to Tawsila",
@@ -1223,8 +1224,16 @@
     "totalCollections": "Total Collections",
     "searchPlaceholder": "Search by settlement number, owner name...",
     "filters": "Filters",
+    "settlementId": "Settlement ID",
+    "enterSettlementId": "Enter settlement ID",
     "settlementType": "Settlement Type",
     "settlementStatus": "Settlement Status",
+    "settlebleFilter": "Owner",
+    "settlebleType": "Owner Type",
+    "settlebleId": "Enter owner ID",
+    "allSettlebleTypes": "All Owner Types",
+    "user": "User",
+    "vendor": "Vendor",
     "allTypes": "All Types",
     "allStatuses": "All Statuses",
     "payout": "Payout",

@@ -18,6 +18,7 @@ import {
   Wallet,
   Receipt,
   PieChart,
+  FileText,
   LucideIcon,
 } from "lucide-react";
 import { getCurrentUser, logout, User } from "@/lib/auth";
@@ -195,6 +196,13 @@ export function AppSidebar() {
           icon: Receipt,
           // Show if user has ANY transaction permission
           requiredPermissions: [...PERMISSION_MODULES.TRANSACTIONS],
+        },
+        {
+          title: t('settlements'),
+          href: "/dashboard/finance/settlements",
+          icon: FileText,
+          // Show if user has ANY settlement permission
+          requiredPermissions: [...PERMISSION_MODULES.SETTLEMENTS],
         },
       ],
     },

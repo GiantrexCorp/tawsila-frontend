@@ -17,12 +17,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  FileText,
   ArrowLeft,
   ArrowUpRight,
   ArrowDownLeft,
   Clock,
-  CircleDollarSign,
   AlertTriangle,
   CheckCircle2,
   XCircle,
@@ -30,7 +28,6 @@ import {
   Building2,
   Loader2,
   Calendar,
-  Hash,
   Receipt,
   Sparkles,
   Package,
@@ -41,6 +38,7 @@ import {
   cancelSettlement,
   getSettlementSettlebleName,
   getSettlementSettlebleType,
+  getSettlementSettlebleRole,
   type Settlement,
 } from "@/lib/services/wallet";
 import { toast } from "sonner";
@@ -466,7 +464,14 @@ export default function SettlementDetailPage() {
                     getSettlementSettlebleType(settlement.settleble_type) === 'user' ? 'text-blue-500' : 'text-purple-500'
                   )} />
                 </div>
-                <span className="text-sm font-medium">{getSettlementSettlebleName(settlement, locale)}</span>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">{getSettlementSettlebleName(settlement, locale)}</span>
+                  {getSettlementSettlebleRole(settlement, locale) && (
+                    <span className="text-xs text-muted-foreground">
+                      {getSettlementSettlebleRole(settlement, locale)}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 

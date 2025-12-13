@@ -555,6 +555,13 @@ export interface SettlementSettleble {
   email?: string;
   mobile?: string;
   status?: string;
+  /** User roles (only for User settleble type) */
+  roles?: Array<{
+    id: number;
+    name: string;
+    slug_en: string;
+    slug_ar: string;
+  }>;
 }
 
 /**
@@ -619,6 +626,7 @@ export interface SettlementsResponse {
 export interface SettlementFilters {
   page?: number;
   per_page?: number;
+  id?: number;
   type?: 'payout' | 'collection';
   status?: 'pending' | 'confirmed' | 'cancelled';
   settleble_type?: string;
@@ -673,6 +681,7 @@ export async function fetchSettlements(
 
   if (filters?.page) params.append('page', filters.page.toString());
   if (filters?.per_page) params.append('per_page', filters.per_page.toString());
+  if (filters?.id) params.append('filter[id]', filters.id.toString());
   if (filters?.type) params.append('filter[type]', filters.type);
   if (filters?.status) params.append('filter[status]', filters.status);
   if (filters?.settleble_type) params.append('filter[settleble_type]', filters.settleble_type);
@@ -731,7 +740,7 @@ export async function fetchSettlement(
  */
 export async function confirmSettlement(id: number): Promise<Settlement> {
   const response = await apiRequest<Settlement>(`/settlements/${id}/confirm`, {
-    method: 'PUT',
+    method: 'POST',
   });
 
   if (!response.data) {
@@ -748,7 +757,7 @@ export async function confirmSettlement(id: number): Promise<Settlement> {
  */
 export async function cancelSettlement(id: number): Promise<Settlement> {
   const response = await apiRequest<Settlement>(`/settlements/${id}/cancel`, {
-    method: 'PUT',
+    method: 'POST',
   });
 
   if (!response.data) {
@@ -778,6 +787,16 @@ export function getSettlementSettlebleType(settlebleType: string): 'user' | 'ven
   if (settlebleType.includes('User')) return 'user';
   if (settlebleType.includes('Vendor')) return 'vendor';
   return 'unknown';
+}
+
+/**
+ * Get settleble role name from settlement (for users only)
+ */
+export function getSettlementSettlebleRole(settlement: Settlement, locale: string): string | null {
+  if (!settlement.settleble?.roles || settlement.settleble.roles.length === 0) return null;
+
+  const role = settlement.settleble.roles[0];
+  return locale === 'ar' ? role.slug_ar : role.slug_en;
 }
 
 // ============================================

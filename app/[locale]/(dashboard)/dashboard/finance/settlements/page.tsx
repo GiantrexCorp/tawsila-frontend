@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { useRouter, Link } from "@/i18n/routing";
+import { Link } from "@/i18n/routing";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,7 @@ import {
   ExternalLink,
   AlertTriangle,
   Sparkles,
+  Hash,
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
@@ -47,6 +48,7 @@ import {
   cancelSettlement,
   getSettlementSettlebleName,
   getSettlementSettlebleType,
+  getSettlementSettlebleRole,
   type Settlement,
   type SettlementFilters,
 } from "@/lib/services/wallet";
@@ -56,7 +58,6 @@ export default function SettlementsPage() {
   const t = useTranslations('adminSettlements');
   const tCommon = useTranslations('common');
   const locale = useLocale();
-  const router = useRouter();
 
   // Check if user has permission to access settlements page
   const hasPermission = usePagePermission({ requiredPermissions: [PERMISSIONS.LIST_SETTLEMENTS] });
@@ -87,6 +88,8 @@ export default function SettlementsPage() {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     type: true,
     status: true,
+    settleble: false,
+    id: false,
   });
 
   // Load settlements
@@ -98,8 +101,11 @@ export default function SettlementsPage() {
         per_page: 20,
       };
 
+      if (filters.id) apiFilters.id = parseInt(filters.id);
       if (filters.type) apiFilters.type = filters.type as 'payout' | 'collection';
       if (filters.status) apiFilters.status = filters.status as 'pending' | 'confirmed' | 'cancelled';
+      if (filters.settleble_type) apiFilters.settleble_type = filters.settleble_type;
+      if (filters.settleble_id) apiFilters.settleble_id = parseInt(filters.settleble_id);
 
       const response = await fetchSettlements(apiFilters, ['settleble', 'createdBy']);
       setSettlements(response.data);
@@ -467,7 +473,40 @@ export default function SettlementsPage() {
 
             {/* Filter Sections */}
             {isFiltersExpanded && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Settlement ID */}
+                <div className="border rounded-xl p-4 bg-background/50">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedSections((prev) => ({ ...prev, id: !prev.id }))}
+                    className="flex items-center justify-between w-full mb-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Hash className="h-4 w-4 text-primary" />
+                      <Label className="text-sm font-semibold text-foreground">{t('settlementId')}</Label>
+                      {filters.id && (
+                        <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs rounded-full">1</Badge>
+                      )}
+                    </div>
+                    {expandedSections.id ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </button>
+                  {expandedSections.id && (
+                    <div className="space-y-2">
+                      <Input
+                        type="number"
+                        value={filters.id || ""}
+                        onChange={(e) => handleFilterChange("id", e.target.value)}
+                        placeholder={t('enterSettlementId')}
+                        className="h-10 bg-background rounded-lg"
+                      />
+                    </div>
+                  )}
+                </div>
+
                 {/* Settlement Type */}
                 <div className="border rounded-xl p-4 bg-background/50">
                   <button
@@ -543,6 +582,54 @@ export default function SettlementsPage() {
                           <SelectItem value="cancelled">{t('cancelled')}</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                  )}
+                </div>
+
+                {/* Settleble (Owner) */}
+                <div className="border rounded-xl p-4 bg-background/50">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedSections((prev) => ({ ...prev, settleble: !prev.settleble }))}
+                    className="flex items-center justify-between w-full mb-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-primary" />
+                      <Label className="text-sm font-semibold text-foreground">{t('settlebleFilter')}</Label>
+                      {(filters.settleble_type || filters.settleble_id) && (
+                        <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs rounded-full">
+                          {(filters.settleble_type ? 1 : 0) + (filters.settleble_id ? 1 : 0)}
+                        </Badge>
+                      )}
+                    </div>
+                    {expandedSections.settleble ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </button>
+                  {expandedSections.settleble && (
+                    <div className="space-y-3">
+                      <Select
+                        value={filters.settleble_type || "all"}
+                        onValueChange={(value) => handleFilterChange("settleble_type", value === "all" ? "" : value)}
+                      >
+                        <SelectTrigger className="h-10 bg-background rounded-lg">
+                          <SelectValue placeholder={t('settlebleType')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{t('allSettlebleTypes')}</SelectItem>
+                          <SelectItem value="Src\\Domain\\User\\Entities\\User">{t('user')}</SelectItem>
+                          <SelectItem value="Src\\Domain\\Vendor\\Entities\\Vendor">{t('vendor')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        type="number"
+                        value={filters.settleble_id || ""}
+                        onChange={(e) => handleFilterChange("settleble_id", e.target.value)}
+                        placeholder={t('settlebleId')}
+                        className="h-10 bg-background rounded-lg"
+                      />
                     </div>
                   )}
                 </div>
@@ -642,6 +729,11 @@ export default function SettlementsPage() {
                             <div className="flex items-center gap-1.5">
                               <SettlebleIcon className="h-3.5 w-3.5" />
                               <span>{getSettlementSettlebleName(settlement, locale)}</span>
+                              {getSettlementSettlebleRole(settlement, locale) && (
+                                <Badge variant="outline" className="text-[10px] ms-1 h-5 px-1.5 font-normal">
+                                  {getSettlementSettlebleRole(settlement, locale)}
+                                </Badge>
+                              )}
                             </div>
                             <div className="flex items-center gap-1.5">
                               <Calendar className="h-3.5 w-3.5" />

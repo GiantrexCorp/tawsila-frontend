@@ -33,7 +33,8 @@
     "logoutFailed": "فشل تسجيل الخروج",
     "finance": "المالية",
     "wallets": "المحافظ",
-    "allTransactions": "كل المعاملات"
+    "allTransactions": "كل المعاملات",
+    "settlements": "التسويات"
   },
   "dashboard": {
     "welcome": "أهلاً بيك تاني في توصيلة",
@@ -1222,8 +1223,16 @@
     "totalCollections": "إجمالي التحصيلات",
     "searchPlaceholder": "البحث برقم التسوية أو اسم المالك...",
     "filters": "الفلاتر",
+    "settlementId": "رقم التسوية",
+    "enterSettlementId": "أدخل رقم التسوية",
     "settlementType": "نوع التسوية",
     "settlementStatus": "حالة التسوية",
+    "settlebleFilter": "المالك",
+    "settlebleType": "نوع المالك",
+    "settlebleId": "أدخل رقم المالك",
+    "allSettlebleTypes": "كل أنواع المالكين",
+    "user": "مستخدم",
+    "vendor": "مورد",
     "allTypes": "كل الأنواع",
     "allStatuses": "كل الحالات",
     "payout": "مدفوعات",
