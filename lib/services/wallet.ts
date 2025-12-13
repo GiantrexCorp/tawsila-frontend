@@ -380,6 +380,39 @@ export async function fetchTransaction(id: number): Promise<Transaction> {
 }
 
 // ============================================
+// Wallet Adjustments
+// ============================================
+
+/**
+ * Adjustment request payload
+ */
+export interface CreateAdjustmentRequest {
+  type: 'credit' | 'debit';
+  amount: number;
+  description: string;
+}
+
+/**
+ * Create a wallet adjustment (credit or debit)
+ * Requires: create-adjustment permission
+ * Note: Users cannot create adjustments on their own wallets
+ * @param walletId - The wallet to adjust
+ * @param data - Adjustment details (type, amount, description)
+ */
+export async function createAdjustment(walletId: number, data: CreateAdjustmentRequest): Promise<Transaction> {
+  const response = await apiRequest<Transaction>(`/wallets/${walletId}/adjustments`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+
+  if (!response.data) {
+    throw new Error(response.message || 'Failed to create adjustment');
+  }
+
+  return response.data;
+}
+
+// ============================================
 // Helper Functions
 // ============================================
 

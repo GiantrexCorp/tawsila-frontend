@@ -8,6 +8,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Wallet,
   ArrowLeft,
@@ -26,19 +38,24 @@ import {
   Receipt,
   Loader2,
   ExternalLink,
+  Plus,
+  Minus,
+  Scale,
 } from "lucide-react";
 import {
   fetchWallet,
   fetchWalletTransactions,
+  createAdjustment,
   getWalletOwnerType,
   getWalletOwnerName,
   type Wallet as WalletType,
   type Transaction,
 } from "@/lib/services/wallet";
+import { getCurrentUser } from "@/lib/auth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { usePagePermission } from "@/hooks/use-page-permission";
-import { PERMISSIONS } from "@/hooks/use-permissions";
+import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
 
 export default function WalletDetailPage() {
   const params = useParams();
@@ -52,13 +69,33 @@ export default function WalletDetailPage() {
   // Check if user has permission to view wallet
   const hasPermission = usePagePermission({ requiredPermissions: [PERMISSIONS.SHOW_WALLET] });
 
+  // Check if user can create adjustments
+  const { hasPermission: canCreateAdjustment } = useHasPermission(PERMISSIONS.CREATE_ADJUSTMENT);
+
+  // Get current user to check if this is their own wallet
+  const currentUser = getCurrentUser();
+
   const [wallet, setWallet] = useState<WalletType | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Adjustment dialog state
+  const [isAdjustmentDialogOpen, setIsAdjustmentDialogOpen] = useState(false);
+  const [adjustmentType, setAdjustmentType] = useState<'credit' | 'debit'>('credit');
+  const [adjustmentAmount, setAdjustmentAmount] = useState('');
+  const [adjustmentDescription, setAdjustmentDescription] = useState('');
+  const [isSubmittingAdjustment, setIsSubmittingAdjustment] = useState(false);
+
   const hasLoadedRef = useRef(false);
+
+  // Check if this is the user's own wallet (cannot adjust own wallet)
+  const isOwnWallet = wallet?.walletable_type?.includes('User') &&
+    wallet?.walletable_id === currentUser?.id;
+
+  // Can show adjustment button if has permission and not own wallet
+  const showAdjustmentButton = canCreateAdjustment && !isOwnWallet;
 
   useEffect(() => {
     if (hasLoadedRef.current || !walletId) return;
@@ -97,6 +134,50 @@ export default function WalletDetailPage() {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [walletId]);
+
+  // Handle adjustment form submission
+  const handleAdjustmentSubmit = async () => {
+    const amount = parseFloat(adjustmentAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error(t('invalidAmount'));
+      return;
+    }
+
+    if (!adjustmentDescription.trim()) {
+      toast.error(t('descriptionRequired'));
+      return;
+    }
+
+    setIsSubmittingAdjustment(true);
+    try {
+      await createAdjustment(walletId, {
+        type: adjustmentType,
+        amount,
+        description: adjustmentDescription.trim(),
+      });
+
+      toast.success(t('adjustmentSuccess'));
+      setIsAdjustmentDialogOpen(false);
+
+      // Reset form
+      setAdjustmentType('credit');
+      setAdjustmentAmount('');
+      setAdjustmentDescription('');
+
+      // Reload wallet and transactions
+      hasLoadedRef.current = false;
+      const walletData = await fetchWallet(walletId, ['walletable']);
+      setWallet(walletData);
+
+      const transactionsData = await fetchWalletTransactions(walletId, { per_page: 10 });
+      setTransactions(transactionsData.data);
+    } catch (err) {
+      console.error('Error creating adjustment:', err);
+      toast.error(t('adjustmentFailed'));
+    } finally {
+      setIsSubmittingAdjustment(false);
+    }
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat(locale === 'ar' ? 'ar-EG' : 'en-EG', {
@@ -228,20 +309,33 @@ export default function WalletDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/dashboard/wallets">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-            {t('walletDetails')}
-          </h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">
-            {t('walletOwner')}: {getWalletOwnerName(wallet, locale)}
-          </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/dashboard/wallets">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+              {t('walletDetails')}
+            </h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
+              {t('walletOwner')}: {getWalletOwnerName(wallet, locale)}
+            </p>
+          </div>
         </div>
+
+        {/* Adjustment Button */}
+        {showAdjustmentButton && (
+          <Button
+            onClick={() => setIsAdjustmentDialogOpen(true)}
+            className="gap-2"
+          >
+            <Scale className="h-4 w-4" />
+            {t('createAdjustment')}
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
@@ -558,6 +652,199 @@ export default function WalletDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Adjustment Dialog */}
+      <Dialog open={isAdjustmentDialogOpen} onOpenChange={setIsAdjustmentDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Scale className="h-5 w-5 text-primary" />
+              {t('createAdjustment')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('adjustmentDescription')}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Adjustment Type */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">{t('adjustmentType')}</Label>
+              <RadioGroup
+                value={adjustmentType}
+                onValueChange={(value) => setAdjustmentType(value as 'credit' | 'debit')}
+                className="grid grid-cols-2 gap-4"
+              >
+                <div>
+                  <RadioGroupItem
+                    value="credit"
+                    id="credit"
+                    className="peer sr-only"
+                  />
+                  <Label
+                    htmlFor="credit"
+                    className={cn(
+                      "flex flex-col items-center justify-center rounded-xl border-2 p-4 cursor-pointer transition-all",
+                      "hover:bg-emerald-50 dark:hover:bg-emerald-950/20",
+                      adjustmentType === 'credit'
+                        ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30"
+                        : "border-muted"
+                    )}
+                  >
+                    <div className={cn(
+                      "h-10 w-10 rounded-xl flex items-center justify-center mb-2",
+                      adjustmentType === 'credit' ? "bg-emerald-500/20" : "bg-muted"
+                    )}>
+                      <Plus className={cn(
+                        "h-5 w-5",
+                        adjustmentType === 'credit' ? "text-emerald-500" : "text-muted-foreground"
+                      )} />
+                    </div>
+                    <span className={cn(
+                      "font-medium",
+                      adjustmentType === 'credit' ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
+                    )}>
+                      {t('credit')}
+                    </span>
+                    <span className="text-xs text-muted-foreground mt-1">
+                      {t('creditDescription')}
+                    </span>
+                  </Label>
+                </div>
+
+                <div>
+                  <RadioGroupItem
+                    value="debit"
+                    id="debit"
+                    className="peer sr-only"
+                  />
+                  <Label
+                    htmlFor="debit"
+                    className={cn(
+                      "flex flex-col items-center justify-center rounded-xl border-2 p-4 cursor-pointer transition-all",
+                      "hover:bg-red-50 dark:hover:bg-red-950/20",
+                      adjustmentType === 'debit'
+                        ? "border-red-500 bg-red-50 dark:bg-red-950/30"
+                        : "border-muted"
+                    )}
+                  >
+                    <div className={cn(
+                      "h-10 w-10 rounded-xl flex items-center justify-center mb-2",
+                      adjustmentType === 'debit' ? "bg-red-500/20" : "bg-muted"
+                    )}>
+                      <Minus className={cn(
+                        "h-5 w-5",
+                        adjustmentType === 'debit' ? "text-red-500" : "text-muted-foreground"
+                      )} />
+                    </div>
+                    <span className={cn(
+                      "font-medium",
+                      adjustmentType === 'debit' ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
+                    )}>
+                      {t('debit')}
+                    </span>
+                    <span className="text-xs text-muted-foreground mt-1">
+                      {t('debitDescription')}
+                    </span>
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            {/* Amount */}
+            <div className="space-y-2">
+              <Label htmlFor="amount" className="text-sm font-medium">
+                {t('amount')} <span className="text-destructive">*</span>
+              </Label>
+              <div className="relative">
+                <Input
+                  id="amount"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={adjustmentAmount}
+                  onChange={(e) => setAdjustmentAmount(e.target.value)}
+                  className="pe-16"
+                />
+                <span className="absolute end-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                  {tCommon('egp')}
+                </span>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="description" className="text-sm font-medium">
+                {t('adjustmentReason')} <span className="text-destructive">*</span>
+              </Label>
+              <Textarea
+                id="description"
+                placeholder={t('adjustmentReasonPlaceholder')}
+                value={adjustmentDescription}
+                onChange={(e) => setAdjustmentDescription(e.target.value)}
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">
+                {t('adjustmentReasonHelp')}
+              </p>
+            </div>
+
+            {/* Preview */}
+            {adjustmentAmount && parseFloat(adjustmentAmount) > 0 && (
+              <div className={cn(
+                "p-4 rounded-xl border",
+                adjustmentType === 'credit'
+                  ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800"
+                  : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
+              )}>
+                <p className="text-sm text-muted-foreground mb-1">{t('previewEffect')}</p>
+                <p className={cn(
+                  "text-lg font-bold",
+                  adjustmentType === 'credit' ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+                )}>
+                  {adjustmentType === 'credit' ? '+' : '-'}{formatCurrency(parseFloat(adjustmentAmount))} {tCommon('egp')}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setIsAdjustmentDialogOpen(false)}
+              disabled={isSubmittingAdjustment}
+            >
+              {tCommon('cancel')}
+            </Button>
+            <Button
+              onClick={handleAdjustmentSubmit}
+              disabled={isSubmittingAdjustment || !adjustmentAmount || !adjustmentDescription.trim()}
+              className={cn(
+                adjustmentType === 'credit'
+                  ? "bg-emerald-600 hover:bg-emerald-700"
+                  : "bg-red-600 hover:bg-red-700"
+              )}
+            >
+              {isSubmittingAdjustment ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin me-2" />
+                  {t('submitting')}
+                </>
+              ) : (
+                <>
+                  {adjustmentType === 'credit' ? (
+                    <Plus className="h-4 w-4 me-2" />
+                  ) : (
+                    <Minus className="h-4 w-4 me-2" />
+                  )}
+                  {t('confirmAdjustment')}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

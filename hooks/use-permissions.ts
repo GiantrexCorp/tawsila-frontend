@@ -66,6 +66,9 @@ export const PERMISSIONS = {
   // Transactions
   LIST_TRANSACTIONS: 'list-transactions',
   SHOW_TRANSACTION: 'show-transaction',
+
+  // Adjustments
+  CREATE_ADJUSTMENT: 'create-adjustment',
 } as const;
 
 /**
