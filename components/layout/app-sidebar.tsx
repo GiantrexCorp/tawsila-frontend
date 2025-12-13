@@ -15,6 +15,7 @@ import {
   LogOut,
   User as UserIcon,
   Shield,
+  Wallet,
   LucideIcon,
 } from "lucide-react";
 import { getCurrentUser, logout, User } from "@/lib/auth";
@@ -292,6 +293,12 @@ export function AppSidebar() {
               <Link href="/dashboard/profile">
                 <UserIcon className="me-2 h-4 w-4" />
                 {t('profile')}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/wallet">
+                <Wallet className="me-2 h-4 w-4" />
+                {t('wallet')}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
