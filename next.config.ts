@@ -26,6 +26,8 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+    // Disable optimization for external images to avoid Vercel caching issues
+    unoptimized: process.env.NODE_ENV === 'production',
   },
 };
 
