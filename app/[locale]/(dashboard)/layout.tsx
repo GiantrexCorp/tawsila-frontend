@@ -3,10 +3,10 @@
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { Bell, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import { useSessionMonitor } from "@/hooks/use-session-monitor";
 import { useState, useEffect, useCallback } from "react";
 import { isAuthenticated, hasToken, validateSession, clearAuthData } from "@/lib/auth";
@@ -88,9 +88,7 @@ export default function DashboardLayout({
 
           <div className="flex items-center gap-2">
             <LanguageSwitcher />
-            <Button variant="ghost" size="icon" className="h-9 w-9">
-              <Bell className="h-4 w-4" />
-            </Button>
+            <NotificationsDropdown />
             <ThemeToggle />
           </div>
         </header>
