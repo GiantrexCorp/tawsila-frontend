@@ -13,6 +13,9 @@ import {
   Users,
   Building2,
   Warehouse,
+  Wallet,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/routing";
@@ -25,6 +28,9 @@ import { useOrders } from "@/hooks/queries/use-orders";
 import { useUsers } from "@/hooks/queries/use-users";
 import { useInventories } from "@/hooks/queries/use-inventory";
 import { useVendors } from "@/hooks/queries/use-vendors";
+import { useQuery } from "@tanstack/react-query";
+import { fetchSystemWallet, SystemWallet } from "@/lib/services/wallet";
+import { PERMISSIONS } from "@/hooks/use-permissions";
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 
 export default function DashboardPage() {
@@ -69,6 +75,20 @@ export default function DashboardPage() {
   });
   const { data: vendors, isLoading: isLoadingVendors } = useVendors({
     enabled: shouldFetchSystemData,
+  });
+
+  // Check if user has permission to view system wallet (check both hyphen and underscore formats)
+  const canViewSystemWallet = isHydrated && (
+    user?.roles_permissions?.includes(PERMISSIONS.VIEW_SYSTEM_WALLET) ||
+    user?.roles_permissions?.includes('view_system_wallet')
+  );
+
+  // Fetch system/platform wallet
+  const { data: systemWallet, isLoading: isLoadingSystemWallet } = useQuery<SystemWallet>({
+    queryKey: ['systemWallet'],
+    queryFn: fetchSystemWallet,
+    enabled: canViewSystemWallet,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Get display name for vendor dashboard
@@ -250,6 +270,69 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Platform Finances - for users with view-system-wallet permission */}
+      {canViewSystemWallet && (
+        <Card className="border-emerald-200 dark:border-emerald-900 bg-gradient-to-br from-emerald-50/50 to-teal-50/50 dark:from-emerald-950/20 dark:to-teal-950/20">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                <Wallet className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div>
+                <CardTitle>{t('platformFinances')}</CardTitle>
+                <CardDescription>{t('platformFinancesDesc')}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoadingSystemWallet ? (
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+              </div>
+            ) : systemWallet ? (
+              <div className="grid gap-4 sm:grid-cols-3">
+                {/* Platform Balance */}
+                <div className="p-4 rounded-xl bg-white/60 dark:bg-gray-900/40 border border-emerald-100 dark:border-emerald-900/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Wallet className="h-4 w-4 text-emerald-600" />
+                    <span className="text-sm font-medium text-muted-foreground">{t('platformBalance')}</span>
+                  </div>
+                  <p className="text-2xl font-bold text-emerald-600">
+                    {tCommon('egpSymbol')} {systemWallet.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+                {/* Total Credited */}
+                <div className="p-4 rounded-xl bg-white/60 dark:bg-gray-900/40 border border-green-100 dark:border-green-900/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium text-muted-foreground">{t('totalRevenue')}</span>
+                  </div>
+                  <p className="text-2xl font-bold text-green-600">
+                    {tCommon('egpSymbol')} {systemWallet.total_credited.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+                {/* Total Debited */}
+                <div className="p-4 rounded-xl bg-white/60 dark:bg-gray-900/40 border border-red-100 dark:border-red-900/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingDown className="h-4 w-4 text-red-500" />
+                    <span className="text-sm font-medium text-muted-foreground">{t('totalDebited')}</span>
+                  </div>
+                  <p className="text-2xl font-bold text-red-500">
+                    {tCommon('egpSymbol')} {systemWallet.total_debited.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                {t('errorLoadingPlatformFinances')}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Charts Section - ONLY for super-admin */}

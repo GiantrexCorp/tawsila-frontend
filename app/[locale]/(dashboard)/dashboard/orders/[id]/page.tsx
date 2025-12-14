@@ -35,10 +35,13 @@ import {
   CircleDot,
   CheckCircle2,
   Circle,
+  Wallet,
+  ArrowUpRight,
+  ArrowDownLeft,
 } from "lucide-react";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { PERMISSIONS } from "@/hooks/use-permissions";
-import { fetchOrder, acceptOrder, rejectOrder, assignPickupAgent, type Order, type OrderItem, type Customer, type Assignment, type StatusLog, type Scan as ScanType, type Vendor } from "@/lib/services/orders";
+import { fetchOrder, acceptOrder, rejectOrder, assignPickupAgent, type Order, type OrderItem, type Customer, type Assignment, type StatusLog, type Scan as ScanType, type Vendor, type OrderTransaction } from "@/lib/services/orders";
 import { fetchInventories, fetchCurrentInventory, type Inventory } from "@/lib/services/inventories";
 import { fetchPickupAgents, type Agent } from "@/lib/services/agents";
 import { toast } from "sonner";
@@ -290,6 +293,7 @@ export default function OrderDetailPage() {
     items?: OrderItem[];
     status_logs?: StatusLog[];
     scans?: ScanType[];
+    transactions?: OrderTransaction[];
   }
   const orderWithRelations = order as OrderWithRelations;
   const customer: Customer = orderWithRelations.customer || { name: '', mobile: '', address: '' };
@@ -298,6 +302,7 @@ export default function OrderDetailPage() {
   const statusLogs = orderWithRelations.status_logs || [];
   const scans = orderWithRelations.scans || [];
   const inventory = orderWithRelations.inventory;
+  const transactions = orderWithRelations.transactions || [];
   const canAccept = order.can_accept === true;
   const canReject = order.can_reject === true;
   const canAssignPickupAgent = order.can_assign_pickup_agent === true;
@@ -583,6 +588,73 @@ export default function OrderDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Transactions Card */}
+        {transactions.length > 0 && (
+          <div className="md:col-span-2 lg:col-span-3 group relative overflow-hidden rounded-2xl bg-card border p-5 hover:shadow-lg transition-all duration-300">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
+                  <Wallet className="h-5 w-5 text-violet-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">{t('transactions') || 'Transactions'}</h3>
+                  <p className="text-xs text-muted-foreground">{transactions.length} {transactions.length === 1 ? 'transaction' : 'transactions'}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {transactions.map((transaction) => (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center justify-between p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        "h-10 w-10 rounded-xl flex items-center justify-center",
+                        transaction.type === 'credit' ? 'bg-emerald-500/10' : 'bg-red-500/10'
+                      )}>
+                        {transaction.type === 'credit' ? (
+                          <ArrowDownLeft className="h-5 w-5 text-emerald-500" />
+                        ) : (
+                          <ArrowUpRight className="h-5 w-5 text-red-500" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{transaction.category_label}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                          <span>#{transaction.reference_number}</span>
+                          <span>•</span>
+                          <span>{new Date(transaction.created_at).toLocaleString(locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                          {transaction.created_by && (
+                            <>
+                              <span>•</span>
+                              <span>{locale === 'ar' ? transaction.created_by.name_ar : transaction.created_by.name_en}</span>
+                            </>
+                          )}
+                        </div>
+                        {transaction.description && (
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{transaction.description}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-end">
+                      <p className={cn(
+                        "font-semibold",
+                        transaction.type === 'credit' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                      )}>
+                        {transaction.type === 'credit' ? '+' : '-'}{tCommon('egpSymbol')} {transaction.amount.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {t('balanceAfter') || 'Balance'}: {tCommon('egpSymbol')} {transaction.balance_after.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Order Items - Full Width */}
         {items.length > 0 && (
