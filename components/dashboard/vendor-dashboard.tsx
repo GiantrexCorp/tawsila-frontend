@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
+import { useQuery } from "@tanstack/react-query";
 import { BackendImage } from "@/components/ui/backend-image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,9 +21,15 @@ import {
   Calendar,
   ArrowRight,
   Package,
+  TrendingUp,
+  Wallet,
+  CreditCard,
+  Receipt,
+  DollarSign,
 } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import { fetchCurrentVendor, Vendor } from "@/lib/services/vendors";
+import { fetchMyProfitReport, ProfitReport } from "@/lib/services/wallet";
 
 interface VendorDashboardProps {
   userName: string;
@@ -52,6 +59,13 @@ export function VendorDashboard({ userName }: VendorDashboardProps) {
 
     loadVendor();
   }, []);
+
+  // Fetch profit report
+  const { data: profitReport, isLoading: isLoadingProfitReport } = useQuery<ProfitReport>({
+    queryKey: ['myProfitReport'],
+    queryFn: fetchMyProfitReport,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
   const displayName = vendor
     ? locale === "ar"
@@ -249,6 +263,113 @@ export function VendorDashboard({ userName }: VendorDashboardProps) {
           </div>
         </Card>
       </div>
+
+      {/* Profit Report Section */}
+      <Card className="border-emerald-200 dark:border-emerald-900 bg-gradient-to-br from-emerald-50/50 to-teal-50/50 dark:from-emerald-950/20 dark:to-teal-950/20">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+              <TrendingUp className="h-5 w-5 text-emerald-600" />
+            </div>
+            <div>
+              <CardTitle>{t("profitReport")}</CardTitle>
+              <CardDescription>{t("profitReportDesc")}</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoadingProfitReport ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          ) : profitReport ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Total Revenue */}
+              <div className="p-4 rounded-xl bg-white/60 dark:bg-gray-900/40 border border-emerald-100 dark:border-emerald-900/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <DollarSign className="h-4 w-4 text-emerald-600" />
+                  <span className="text-sm font-medium text-muted-foreground">{t("totalRevenue")}</span>
+                </div>
+                <p className="text-2xl font-bold text-emerald-600">
+                  {tCommon("egpSymbol")} {profitReport.total_revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">{t("totalRevenueDesc")}</p>
+              </div>
+
+              {/* COD Revenue */}
+              <div className="p-4 rounded-xl bg-white/60 dark:bg-gray-900/40 border border-blue-100 dark:border-blue-900/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <Wallet className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-muted-foreground">{t("codRevenue")}</span>
+                </div>
+                <p className="text-2xl font-bold text-blue-600">
+                  {tCommon("egpSymbol")} {profitReport.cod_revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">{profitReport.cod_order_count} {t("codOrders")}</p>
+              </div>
+
+              {/* Prepaid Revenue */}
+              <div className="p-4 rounded-xl bg-white/60 dark:bg-gray-900/40 border border-purple-100 dark:border-purple-900/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <CreditCard className="h-4 w-4 text-purple-600" />
+                  <span className="text-sm font-medium text-muted-foreground">{t("prepaidRevenue")}</span>
+                </div>
+                <p className="text-2xl font-bold text-purple-600">
+                  {tCommon("egpSymbol")} {profitReport.prepaid_revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">{profitReport.prepaid_order_count} {t("prepaidOrders")}</p>
+              </div>
+
+              {/* Shipping Fees Paid */}
+              <div className="p-4 rounded-xl bg-white/60 dark:bg-gray-900/40 border border-red-100 dark:border-red-900/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <Receipt className="h-4 w-4 text-red-500" />
+                  <span className="text-sm font-medium text-muted-foreground">{t("shippingFeesPaid")}</span>
+                </div>
+                <p className="text-2xl font-bold text-red-500">
+                  {tCommon("egpSymbol")} {profitReport.shipping_fees_paid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">{t("shippingFeesPaidDesc")}</p>
+              </div>
+
+              {/* Net Profit */}
+              <div className="p-4 rounded-xl bg-white/60 dark:bg-gray-900/40 border border-green-100 dark:border-green-900/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium text-muted-foreground">{t("netProfit")}</span>
+                </div>
+                <p className="text-2xl font-bold text-green-600">
+                  {tCommon("egpSymbol")} {profitReport.net_profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">{t("netProfitDesc")}</p>
+              </div>
+
+              {/* Total Orders Count */}
+              <div className="p-4 rounded-xl bg-white/60 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-2 mb-2">
+                  <Package className="h-4 w-4 text-gray-600" />
+                  <span className="text-sm font-medium text-muted-foreground">{t("totalOrdersCount")}</span>
+                </div>
+                <p className="text-2xl font-bold">
+                  {profitReport.total_order_count.toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {profitReport.cod_order_count} COD + {profitReport.prepaid_order_count} Prepaid
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-4 text-muted-foreground">
+              {t("errorLoadingProfitReport")}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Main Content Grid */}
       <div className="grid gap-6 lg:grid-cols-3">

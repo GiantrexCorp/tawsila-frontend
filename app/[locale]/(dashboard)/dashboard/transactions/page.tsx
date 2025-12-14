@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { useTranslations, useLocale } from "next-intl";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,8 +32,7 @@ import {
   Clock,
   X,
 } from "lucide-react";
-import { fetchMyTransactions, type Transaction, type TransactionFilters } from "@/lib/services/wallet";
-import { toast } from "sonner";
+import { fetchMyTransactions, type TransactionFilters } from "@/lib/services/wallet";
 import { cn } from "@/lib/utils";
 import { Link } from "@/i18n/routing";
 
@@ -41,74 +41,45 @@ export default function TransactionsPage() {
   const tCommon = useTranslations('common');
   const locale = useLocale();
 
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
-
   // Filter state
-  const [filters, setFilters] = useState<TransactionFilters>({
-    page: 1,
-    per_page: 10,
-  });
+  const [currentPage, setCurrentPage] = useState(1);
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const loadTransactions = useCallback(async (isRefresh = false) => {
-    try {
-      if (isRefresh) {
-        setIsRefreshing(true);
-      } else {
-        setIsLoading(true);
-      }
-      setError(null);
+  // Build API filters
+  const apiFilters: TransactionFilters = useMemo(() => ({
+    page: currentPage,
+    per_page: 10,
+    type: typeFilter !== 'all' ? typeFilter as 'credit' | 'debit' : undefined,
+  }), [currentPage, typeFilter]);
 
-      const appliedFilters: TransactionFilters = {
-        ...filters,
-        type: typeFilter !== 'all' ? typeFilter as 'credit' | 'debit' : undefined,
-      };
+  // Fetch transactions with React Query
+  const { data, isLoading, isFetching, refetch, error } = useQuery({
+    queryKey: ['my-transactions', apiFilters],
+    queryFn: () => fetchMyTransactions(apiFilters),
+  });
 
-      const response = await fetchMyTransactions(appliedFilters);
-      setTransactions(response.data);
-      setCurrentPage(response.meta.current_page);
-      setTotalPages(response.meta.last_page);
-      setTotalCount(response.meta.total);
-    } catch (err) {
-      console.error('Error loading transactions:', err);
-      setError(t('errorLoading'));
-      toast.error(t('errorLoading'));
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, [filters, typeFilter, t]);
-
-  useEffect(() => {
-    loadTransactions();
-  }, [loadTransactions]);
+  const transactions = data?.data || [];
+  const totalPages = data?.meta.last_page || 1;
+  const totalCount = data?.meta.total || 0;
 
   const handlePageChange = (page: number) => {
-    setFilters(prev => ({ ...prev, page }));
+    setCurrentPage(page);
   };
 
   const handleRefresh = () => {
-    loadTransactions(true);
+    refetch();
   };
 
   const handleTypeFilter = (value: string) => {
     setTypeFilter(value);
-    setFilters(prev => ({ ...prev, page: 1 }));
+    setCurrentPage(1);
   };
 
   const clearFilters = () => {
     setTypeFilter('all');
     setSearchQuery('');
-    setFilters({ page: 1, per_page: 10 });
+    setCurrentPage(1);
   };
 
   const formatCurrency = (amount: number) => {
@@ -171,7 +142,7 @@ export default function TransactionsPage() {
               <AlertTriangle className="h-8 w-8 text-destructive" />
             </div>
             <h3 className="text-lg font-semibold mb-2">{t('errorTitle')}</h3>
-            <p className="text-muted-foreground">{error}</p>
+            <p className="text-muted-foreground">{error.message}</p>
             <Button onClick={handleRefresh} className="mt-4">
               <RefreshCw className="h-4 w-4 me-2" />
               {tCommon('tryAgain')}
@@ -197,9 +168,9 @@ export default function TransactionsPage() {
             variant="outline"
             size="sm"
             onClick={handleRefresh}
-            disabled={isRefreshing}
+            disabled={isFetching}
           >
-            <RefreshCw className={cn("h-4 w-4 me-2", isRefreshing && "animate-spin")} />
+            <RefreshCw className={cn("h-4 w-4 me-2", isFetching && "animate-spin")} />
             {t('refresh')}
           </Button>
           <Link href="/dashboard/wallet">

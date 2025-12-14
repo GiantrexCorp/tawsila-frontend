@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { useRouter, Link } from "@/i18n/routing";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@/i18n/routing";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,7 @@ import {
   ExternalLink,
   AlertTriangle,
   Sparkles,
+  Hash,
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
@@ -47,6 +49,7 @@ import {
   cancelSettlement,
   getSettlementSettlebleName,
   getSettlementSettlebleType,
+  getSettlementSettlebleRole,
   type Settlement,
   type SettlementFilters,
 } from "@/lib/services/wallet";
@@ -56,7 +59,6 @@ export default function SettlementsPage() {
   const t = useTranslations('adminSettlements');
   const tCommon = useTranslations('common');
   const locale = useLocale();
-  const router = useRouter();
 
   // Check if user has permission to access settlements page
   const hasPermission = usePagePermission({ requiredPermissions: [PERMISSIONS.LIST_SETTLEMENTS] });
@@ -66,12 +68,19 @@ export default function SettlementsPage() {
   const { hasPermission: canConfirmSettlement } = useHasPermission(PERMISSIONS.CONFIRM_SETTLEMENT);
   const { hasPermission: canCancelSettlement } = useHasPermission(PERMISSIONS.CANCEL_SETTLEMENT);
 
-  // Settlements state
-  const [settlements, setSettlements] = useState<Settlement[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
+
+  // Pagination and filters state
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    type: true,
+    status: true,
+    settleble: false,
+    id: false,
+  });
 
   // Action states
   const [confirmingId, setConfirmingId] = useState<number | null>(null);
@@ -80,54 +89,30 @@ export default function SettlementsPage() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [selectedSettlement, setSelectedSettlement] = useState<Settlement | null>(null);
 
-  // Search and Filters
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filters, setFilters] = useState<Record<string, string>>({});
-  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    type: true,
-    status: true,
+  // Build API filters
+  const apiFilters: SettlementFilters = useMemo(() => {
+    const f: SettlementFilters = {
+      page: currentPage,
+      per_page: 20,
+    };
+    if (filters.id) f.id = parseInt(filters.id);
+    if (filters.type) f.type = filters.type as 'payout' | 'collection';
+    if (filters.status) f.status = filters.status as 'pending' | 'confirmed' | 'cancelled';
+    if (filters.settleble_type) f.settleble_type = filters.settleble_type;
+    if (filters.settleble_id) f.settleble_id = parseInt(filters.settleble_id);
+    return f;
+  }, [currentPage, filters]);
+
+  // Fetch settlements with React Query
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin-settlements', apiFilters],
+    queryFn: () => fetchSettlements(apiFilters, ['settleble', 'createdBy']),
+    enabled: hasPermission === true,
   });
 
-  // Load settlements
-  const loadSettlements = useCallback(async (page: number = 1) => {
-    setIsLoading(true);
-    try {
-      const apiFilters: SettlementFilters = {
-        page,
-        per_page: 20,
-      };
-
-      if (filters.type) apiFilters.type = filters.type as 'payout' | 'collection';
-      if (filters.status) apiFilters.status = filters.status as 'pending' | 'confirmed' | 'cancelled';
-
-      const response = await fetchSettlements(apiFilters, ['settleble', 'createdBy']);
-      setSettlements(response.data);
-      setTotalPages(response.meta.last_page);
-      setTotalCount(response.meta.total);
-      setCurrentPage(page);
-    } catch {
-      toast.error(t('errorLoading'));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [filters, t]);
-
-  // Initial load
-  const hasLoadedRef = useRef(false);
-  useEffect(() => {
-    if (hasLoadedRef.current) return;
-    hasLoadedRef.current = true;
-    loadSettlements(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Reload when filters change
-  useEffect(() => {
-    if (!hasLoadedRef.current) return;
-    loadSettlements(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters]);
+  const settlements = data?.data || [];
+  const totalPages = data?.meta.last_page || 1;
+  const totalCount = data?.meta.total || 0;
 
   // Filter settlements based on search query (client-side)
   const filteredSettlements = useMemo(() => {
@@ -148,6 +133,7 @@ export default function SettlementsPage() {
   }, [settlements, searchQuery, locale]);
 
   const handleFilterChange = useCallback((key: string, value: string) => {
+    setCurrentPage(1); // Reset to first page when filters change
     setFilters((prev) => {
       if (!value) {
         const newFilters = { ...prev };
@@ -159,6 +145,7 @@ export default function SettlementsPage() {
   }, []);
 
   const handleClearFilters = useCallback(() => {
+    setCurrentPage(1);
     setFilters({});
     setSearchQuery("");
   }, []);
@@ -194,7 +181,7 @@ export default function SettlementsPage() {
       toast.success(t('confirmSuccess'));
       setShowConfirmDialog(false);
       setSelectedSettlement(null);
-      loadSettlements(currentPage);
+      queryClient.invalidateQueries({ queryKey: ['admin-settlements'] });
     } catch (err: unknown) {
       if (err && typeof err === 'object') {
         const apiError = err as { message?: string; errors?: Record<string, string[]> };
@@ -224,7 +211,7 @@ export default function SettlementsPage() {
       toast.success(t('cancelSuccess'));
       setShowCancelDialog(false);
       setSelectedSettlement(null);
-      loadSettlements(currentPage);
+      queryClient.invalidateQueries({ queryKey: ['admin-settlements'] });
     } catch (err: unknown) {
       if (err && typeof err === 'object') {
         const apiError = err as { message?: string; errors?: Record<string, string[]> };
@@ -467,7 +454,40 @@ export default function SettlementsPage() {
 
             {/* Filter Sections */}
             {isFiltersExpanded && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Settlement ID */}
+                <div className="border rounded-xl p-4 bg-background/50">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedSections((prev) => ({ ...prev, id: !prev.id }))}
+                    className="flex items-center justify-between w-full mb-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Hash className="h-4 w-4 text-primary" />
+                      <Label className="text-sm font-semibold text-foreground">{t('settlementId')}</Label>
+                      {filters.id && (
+                        <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs rounded-full">1</Badge>
+                      )}
+                    </div>
+                    {expandedSections.id ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </button>
+                  {expandedSections.id && (
+                    <div className="space-y-2">
+                      <Input
+                        type="number"
+                        value={filters.id || ""}
+                        onChange={(e) => handleFilterChange("id", e.target.value)}
+                        placeholder={t('enterSettlementId')}
+                        className="h-10 bg-background rounded-lg"
+                      />
+                    </div>
+                  )}
+                </div>
+
                 {/* Settlement Type */}
                 <div className="border rounded-xl p-4 bg-background/50">
                   <button
@@ -543,6 +563,54 @@ export default function SettlementsPage() {
                           <SelectItem value="cancelled">{t('cancelled')}</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                  )}
+                </div>
+
+                {/* Settleble (Owner) */}
+                <div className="border rounded-xl p-4 bg-background/50">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedSections((prev) => ({ ...prev, settleble: !prev.settleble }))}
+                    className="flex items-center justify-between w-full mb-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-primary" />
+                      <Label className="text-sm font-semibold text-foreground">{t('settlebleFilter')}</Label>
+                      {(filters.settleble_type || filters.settleble_id) && (
+                        <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs rounded-full">
+                          {(filters.settleble_type ? 1 : 0) + (filters.settleble_id ? 1 : 0)}
+                        </Badge>
+                      )}
+                    </div>
+                    {expandedSections.settleble ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </button>
+                  {expandedSections.settleble && (
+                    <div className="space-y-3">
+                      <Select
+                        value={filters.settleble_type || "all"}
+                        onValueChange={(value) => handleFilterChange("settleble_type", value === "all" ? "" : value)}
+                      >
+                        <SelectTrigger className="h-10 bg-background rounded-lg">
+                          <SelectValue placeholder={t('settlebleType')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{t('allSettlebleTypes')}</SelectItem>
+                          <SelectItem value="Src\\Domain\\User\\Entities\\User">{t('user')}</SelectItem>
+                          <SelectItem value="Src\\Domain\\Vendor\\Entities\\Vendor">{t('vendor')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        type="number"
+                        value={filters.settleble_id || ""}
+                        onChange={(e) => handleFilterChange("settleble_id", e.target.value)}
+                        placeholder={t('settlebleId')}
+                        className="h-10 bg-background rounded-lg"
+                      />
                     </div>
                   )}
                 </div>
@@ -642,6 +710,11 @@ export default function SettlementsPage() {
                             <div className="flex items-center gap-1.5">
                               <SettlebleIcon className="h-3.5 w-3.5" />
                               <span>{getSettlementSettlebleName(settlement, locale)}</span>
+                              {getSettlementSettlebleRole(settlement, locale) && (
+                                <Badge variant="outline" className="text-[10px] ms-1 h-5 px-1.5 font-normal">
+                                  {getSettlementSettlebleRole(settlement, locale)}
+                                </Badge>
+                              )}
                             </div>
                             <div className="flex items-center gap-1.5">
                               <Calendar className="h-3.5 w-3.5" />
@@ -752,7 +825,7 @@ export default function SettlementsPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => loadSettlements(currentPage - 1)}
+                onClick={() => setCurrentPage(currentPage - 1)}
                 disabled={currentPage === 1 || isLoading}
                 className="rounded-lg"
               >
@@ -775,7 +848,7 @@ export default function SettlementsPage() {
                       key={pageNum}
                       variant={currentPage === pageNum ? "default" : "outline"}
                       size="sm"
-                      onClick={() => loadSettlements(pageNum)}
+                      onClick={() => setCurrentPage(pageNum)}
                       disabled={isLoading}
                       className="w-9 h-9 p-0 rounded-lg"
                     >
@@ -787,7 +860,7 @@ export default function SettlementsPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => loadSettlements(currentPage + 1)}
+                onClick={() => setCurrentPage(currentPage + 1)}
                 disabled={currentPage === totalPages || isLoading}
                 className="rounded-lg"
               >

@@ -54,7 +54,6 @@ import {
   type Wallet as WalletType,
   type Transaction,
   type Settlement,
-  type WalletSettlement,
 } from "@/lib/services/wallet";
 import { getCurrentUser } from "@/lib/auth";
 import { toast } from "sonner";

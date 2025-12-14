@@ -62,6 +62,7 @@ export const PERMISSIONS = {
   // Wallets
   LIST_WALLETS: 'list-wallets',
   SHOW_WALLET: 'show-wallet',
+  VIEW_SYSTEM_WALLET: 'view-system-wallet',
 
   // Transactions
   LIST_TRANSACTIONS: 'list-transactions',
@@ -76,6 +77,12 @@ export const PERMISSIONS = {
   CREATE_SETTLEMENT: 'create-settlement',
   CONFIRM_SETTLEMENT: 'confirm-settlement',
   CANCEL_SETTLEMENT: 'cancel-settlement',
+
+  // Reports
+  VIEW_VENDOR_PROFITS: 'view-vendor-profits',
+  VIEW_TOP_VENDORS: 'view-top-vendors',
+  VIEW_AGENT_PERFORMANCE: 'view-agent-performance',
+  VIEW_TOP_AGENTS: 'view-top-agents',
 } as const;
 
 /**
@@ -127,6 +134,7 @@ export const PERMISSION_MODULES = {
   WALLETS: [
     PERMISSIONS.LIST_WALLETS,
     PERMISSIONS.SHOW_WALLET,
+    PERMISSIONS.VIEW_SYSTEM_WALLET,
   ],
   TRANSACTIONS: [
     PERMISSIONS.LIST_TRANSACTIONS,
@@ -138,6 +146,12 @@ export const PERMISSION_MODULES = {
     PERMISSIONS.CREATE_SETTLEMENT,
     PERMISSIONS.CONFIRM_SETTLEMENT,
     PERMISSIONS.CANCEL_SETTLEMENT,
+  ],
+  REPORTS: [
+    PERMISSIONS.VIEW_VENDOR_PROFITS,
+    PERMISSIONS.VIEW_TOP_VENDORS,
+    PERMISSIONS.VIEW_AGENT_PERFORMANCE,
+    PERMISSIONS.VIEW_TOP_AGENTS,
   ],
 } as const;
 

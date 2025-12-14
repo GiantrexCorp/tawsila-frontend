@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useTranslations, useLocale } from "next-intl";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,8 +19,7 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
 } from "lucide-react";
-import { fetchMySummary, type MySummary } from "@/lib/services/wallet";
-import { toast } from "sonner";
+import { fetchMySummary } from "@/lib/services/wallet";
 import { cn } from "@/lib/utils";
 
 export default function MySummaryPage() {
@@ -28,28 +27,10 @@ export default function MySummaryPage() {
   const tCommon = useTranslations('common');
   const locale = useLocale();
 
-  const [summary, setSummary] = useState<MySummary | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadSummary = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const data = await fetchMySummary();
-        setSummary(data);
-      } catch (err) {
-        console.error('Error loading summary:', err);
-        setError(t('errorLoading'));
-        toast.error(t('errorLoading'));
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadSummary();
-  }, [t]);
+  const { data: summary, isLoading, error } = useQuery({
+    queryKey: ['my-summary'],
+    queryFn: fetchMySummary,
+  });
 
   const formatCurrency = (amount: number | string) => {
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
@@ -115,7 +96,7 @@ export default function MySummaryPage() {
     );
   }
 
-  if (error || !summary) {
+  if (error || (!isLoading && !summary)) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <Card className="max-w-md w-full">
@@ -124,11 +105,15 @@ export default function MySummaryPage() {
               <AlertTriangle className="h-8 w-8 text-destructive" />
             </div>
             <h3 className="text-lg font-semibold mb-2">{t('errorTitle')}</h3>
-            <p className="text-muted-foreground">{error || t('errorLoading')}</p>
+            <p className="text-muted-foreground">{error?.message || t('errorLoading')}</p>
           </CardContent>
         </Card>
       </div>
     );
+  }
+
+  if (!summary) {
+    return null;
   }
 
   const currentBalance = parseAmount(summary.current_balance);

@@ -297,6 +297,85 @@ export async function fetchMySummary(): Promise<MySummary> {
 }
 
 // ============================================
+// Agent Performance (My Account)
+// ============================================
+
+/**
+ * Agent info in performance response
+ */
+export interface PerformanceAgent {
+  id: number;
+  name_en: string;
+  name_ar: string;
+  email: string;
+}
+
+/**
+ * My performance data for agents
+ */
+export interface MyPerformance {
+  agent_id: number;
+  agent_name: string;
+  agent: PerformanceAgent;
+  pickup_orders_count: number;
+  delivered_orders_count: number;
+  total_orders_count: number;
+  total_collected: number;
+}
+
+/**
+ * My performance response with meta
+ */
+export interface MyPerformanceResponse {
+  data: MyPerformance;
+  meta: {
+    period: string | null;
+    from: string;
+    to: string;
+  };
+}
+
+/**
+ * Performance filter parameters
+ */
+export interface PerformanceFilters {
+  period?: 'this_month' | 'last_month' | 'this_quarter' | 'last_quarter' | 'this_year' | 'last_year';
+  from?: string;
+  to?: string;
+}
+
+/**
+ * Fetch current agent's performance
+ * For shipping agents only
+ */
+export async function fetchMyPerformance(filters?: PerformanceFilters): Promise<MyPerformanceResponse> {
+  const params = new URLSearchParams();
+
+  if (filters?.period) {
+    params.append('period', filters.period);
+  } else {
+    if (filters?.from) params.append('from', filters.from);
+    if (filters?.to) params.append('to', filters.to);
+  }
+
+  const queryString = params.toString();
+  const endpoint = `/finance/my/performance${queryString ? `?${queryString}` : ''}`;
+
+  const response = await apiRequest<MyPerformance>(endpoint, {
+    method: 'GET',
+  });
+
+  // Response structure: { data: {...}, meta: {...} }
+  const result = response as unknown as MyPerformanceResponse;
+
+  if (!result.data) {
+    throw new Error('No performance data returned');
+  }
+
+  return result;
+}
+
+// ============================================
 // Admin Wallets Management
 // ============================================
 
@@ -555,6 +634,13 @@ export interface SettlementSettleble {
   email?: string;
   mobile?: string;
   status?: string;
+  /** User roles (only for User settleble type) */
+  roles?: Array<{
+    id: number;
+    name: string;
+    slug_en: string;
+    slug_ar: string;
+  }>;
 }
 
 /**
@@ -619,6 +705,7 @@ export interface SettlementsResponse {
 export interface SettlementFilters {
   page?: number;
   per_page?: number;
+  id?: number;
   type?: 'payout' | 'collection';
   status?: 'pending' | 'confirmed' | 'cancelled';
   settleble_type?: string;
@@ -673,6 +760,7 @@ export async function fetchSettlements(
 
   if (filters?.page) params.append('page', filters.page.toString());
   if (filters?.per_page) params.append('per_page', filters.per_page.toString());
+  if (filters?.id) params.append('filter[id]', filters.id.toString());
   if (filters?.type) params.append('filter[type]', filters.type);
   if (filters?.status) params.append('filter[status]', filters.status);
   if (filters?.settleble_type) params.append('filter[settleble_type]', filters.settleble_type);
@@ -731,7 +819,7 @@ export async function fetchSettlement(
  */
 export async function confirmSettlement(id: number): Promise<Settlement> {
   const response = await apiRequest<Settlement>(`/settlements/${id}/confirm`, {
-    method: 'PUT',
+    method: 'POST',
   });
 
   if (!response.data) {
@@ -748,7 +836,7 @@ export async function confirmSettlement(id: number): Promise<Settlement> {
  */
 export async function cancelSettlement(id: number): Promise<Settlement> {
   const response = await apiRequest<Settlement>(`/settlements/${id}/cancel`, {
-    method: 'PUT',
+    method: 'POST',
   });
 
   if (!response.data) {
@@ -778,6 +866,16 @@ export function getSettlementSettlebleType(settlebleType: string): 'user' | 'ven
   if (settlebleType.includes('User')) return 'user';
   if (settlebleType.includes('Vendor')) return 'vendor';
   return 'unknown';
+}
+
+/**
+ * Get settleble role name from settlement (for users only)
+ */
+export function getSettlementSettlebleRole(settlement: Settlement, locale: string): string | null {
+  if (!settlement.settleble?.roles || settlement.settleble.roles.length === 0) return null;
+
+  const role = settlement.settleble.roles[0];
+  return locale === 'ar' ? role.slug_ar : role.slug_en;
 }
 
 // ============================================
@@ -830,3 +928,94 @@ export function getWalletOwnerName(wallet: Wallet, locale: string): string {
   if (owner.name) return owner.name;
   return owner.email || `#${wallet.walletable_id}`;
 }
+
+// ============================================
+// System/Platform Wallet
+// ============================================
+
+/**
+ * System wallet response from /api/finance/system/wallet
+ */
+export interface SystemWallet {
+  /** Platform balance (total profit) */
+  balance: number;
+  /** Total amount credited to platform */
+  total_credited: number;
+  /** Total amount debited from platform */
+  total_debited: number;
+}
+
+/**
+ * Fetch system/platform wallet
+ * Requires: view-system-wallet permission
+ */
+export async function fetchSystemWallet(): Promise<SystemWallet> {
+  const response = await apiRequest<SystemWallet>('/finance/system/wallet', {
+    method: 'GET',
+  });
+
+  if (!response.data) {
+    throw new Error('No system wallet data returned');
+  }
+
+  return response.data;
+}
+
+// ============================================
+// Vendor Profit Report
+// ============================================
+
+/**
+ * Vendor profit report data
+ */
+export interface ProfitReport {
+  /** Revenue from COD orders */
+  cod_revenue: number;
+  /** Revenue from prepaid orders */
+  prepaid_revenue: number;
+  /** Total revenue (COD + Prepaid) */
+  total_revenue: number;
+  /** Shipping fees paid */
+  shipping_fees_paid: number;
+  /** Net profit (revenue - shipping fees) */
+  net_profit: number;
+  /** Number of COD orders */
+  cod_order_count: number;
+  /** Number of prepaid orders */
+  prepaid_order_count: number;
+  /** Total order count */
+  total_order_count: number;
+}
+
+/**
+ * Fetch current vendor's profit report
+ * For vendor users only
+ */
+export async function fetchMyProfitReport(): Promise<ProfitReport> {
+  const response = await apiRequest<ProfitReport>('/finance/my/profit-report', {
+    method: 'GET',
+  });
+
+  if (!response.data) {
+    throw new Error('No profit report data returned');
+  }
+
+  return response.data;
+}
+
+// ============================================
+// Transaction Categories
+// ============================================
+
+/**
+ * Available transaction categories
+ */
+export const TRANSACTION_CATEGORIES = {
+  SHIPPING_FEE: 'shipping_fee',
+  COD_COLLECTION: 'cod_collection',
+  ADJUSTMENT: 'adjustment',
+  SETTLEMENT: 'settlement',
+  PREPAID_REVENUE: 'prepaid_revenue',
+} as const;
+
+export type TransactionCategory = typeof TRANSACTION_CATEGORIES[keyof typeof TRANSACTION_CATEGORIES];

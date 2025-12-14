@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useTranslations, useLocale } from "next-intl";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,8 +17,7 @@ import {
   CheckCircle2,
   Sparkles,
 } from "lucide-react";
-import { fetchMyWallet, type Wallet as WalletType } from "@/lib/services/wallet";
-import { toast } from "sonner";
+import { fetchMyWallet } from "@/lib/services/wallet";
 import { cn } from "@/lib/utils";
 
 export default function WalletPage() {
@@ -26,28 +25,10 @@ export default function WalletPage() {
   const tCommon = useTranslations('common');
   const locale = useLocale();
 
-  const [wallet, setWallet] = useState<WalletType | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadWallet = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const data = await fetchMyWallet();
-        setWallet(data);
-      } catch (err) {
-        console.error('Error loading wallet:', err);
-        setError(t('errorLoading'));
-        toast.error(t('errorLoading'));
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadWallet();
-  }, [t]);
+  const { data: wallet, isLoading, error } = useQuery({
+    queryKey: ['my-wallet'],
+    queryFn: fetchMyWallet,
+  });
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat(locale === 'ar' ? 'ar-EG' : 'en-EG', {
@@ -122,7 +103,7 @@ export default function WalletPage() {
     );
   }
 
-  if (error || !wallet) {
+  if (error || (!isLoading && !wallet)) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <Card className="max-w-md w-full">
@@ -131,11 +112,15 @@ export default function WalletPage() {
               <AlertTriangle className="h-8 w-8 text-destructive" />
             </div>
             <h3 className="text-lg font-semibold mb-2">{t('errorTitle')}</h3>
-            <p className="text-muted-foreground">{error || t('errorLoading')}</p>
+            <p className="text-muted-foreground">{t('errorLoading')}</p>
           </CardContent>
         </Card>
       </div>
     );
+  }
+
+  if (!wallet) {
+    return null;
   }
 
   const status = getBalanceStatus();
