@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "@/i18n/routing";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,14 +27,14 @@ import {
   Calendar,
   Hash,
   Wallet,
+  Tag,
   ExternalLink,
 } from "lucide-react";
-import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
 import {
   fetchTransactions,
-  type Transaction,
+  TRANSACTION_CATEGORIES,
   type TransactionFilters,
 } from "@/lib/services/wallet";
 import { cn } from "@/lib/utils";
@@ -50,18 +51,12 @@ export default function AdminTransactionsPage() {
   // Check if user has permission to access transactions page
   const hasPermission = usePagePermission({ requiredPermissions: [PERMISSIONS.LIST_TRANSACTIONS] });
 
-  // Permission check for viewing transaction details
-  const { hasPermission: canShowTransaction } = useHasPermission(PERMISSIONS.SHOW_TRANSACTION);
+  // Permission check for viewing details
   const { hasPermission: canShowWallet } = useHasPermission(PERMISSIONS.SHOW_WALLET);
+  const { hasPermission: canShowTransaction } = useHasPermission(PERMISSIONS.SHOW_TRANSACTION);
 
-  // Transactions state
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Pagination and filters state
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
-
-  // Search and Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
@@ -73,51 +68,35 @@ export default function AdminTransactionsPage() {
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(!!initialWalletId);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     type: true,
+    category: false,
     date: false,
     wallet: !!initialWalletId,
   });
 
-  // Load transactions
-  const loadTransactions = useCallback(async (page: number = 1) => {
-    setIsLoading(true);
-    try {
-      const apiFilters: TransactionFilters = {
-        page,
-        per_page: 20,
-      };
+  // Build API filters
+  const apiFilters: TransactionFilters = useMemo(() => {
+    const f: TransactionFilters = {
+      page: currentPage,
+      per_page: 20,
+    };
+    if (filters.type) f.type = filters.type as 'credit' | 'debit';
+    if (filters.category) f.category = filters.category;
+    if (filters.from_date) f.from_date = filters.from_date;
+    if (filters.to_date) f.to_date = filters.to_date;
+    if (filters.wallet_id) f.wallet_id = parseInt(filters.wallet_id);
+    return f;
+  }, [currentPage, filters]);
 
-      if (filters.type) apiFilters.type = filters.type as 'credit' | 'debit';
-      if (filters.from_date) apiFilters.from_date = filters.from_date;
-      if (filters.to_date) apiFilters.to_date = filters.to_date;
-      if (filters.wallet_id) apiFilters.wallet_id = parseInt(filters.wallet_id);
+  // Fetch transactions with React Query
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin-transactions', apiFilters],
+    queryFn: () => fetchTransactions(apiFilters),
+    enabled: hasPermission === true,
+  });
 
-      const response = await fetchTransactions(apiFilters);
-      setTransactions(response.data);
-      setTotalPages(response.meta.last_page);
-      setTotalCount(response.meta.total);
-      setCurrentPage(page);
-    } catch {
-      toast.error(t('errorLoadingTransactions'));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [filters, t]);
-
-  // Initial load
-  const hasLoadedRef = useRef(false);
-  useEffect(() => {
-    if (hasLoadedRef.current) return;
-    hasLoadedRef.current = true;
-    loadTransactions(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Reload when filters change
-  useEffect(() => {
-    if (!hasLoadedRef.current) return;
-    loadTransactions(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters]);
+  const transactions = data?.data || [];
+  const totalPages = data?.meta.last_page || 1;
+  const totalCount = data?.meta.total || 0;
 
   // Filter transactions based on search query (client-side)
   const filteredTransactions = useMemo(() => {
@@ -140,10 +119,12 @@ export default function AdminTransactionsPage() {
   }, [transactions, searchQuery]);
 
   const handleFilterChange = useCallback((key: string, value: string) => {
+    setCurrentPage(1); // Reset to first page when filters change
     setFilters((prev) => ({ ...prev, [key]: value }));
   }, []);
 
   const handleClearFilters = useCallback(() => {
+    setCurrentPage(1);
     setFilters({});
     setSearchQuery("");
   }, []);
@@ -377,6 +358,50 @@ export default function AdminTransactionsPage() {
                         <SelectContent>
                           <SelectItem value="credit">{t('credit')}</SelectItem>
                           <SelectItem value="debit">{t('debit')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+
+                {/* Category Filter */}
+                <div className="border rounded-lg p-4 bg-muted/30">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedSections((prev) => ({ ...prev, category: !prev.category }))}
+                    className="flex items-center justify-between w-full mb-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Tag className="h-4 w-4 text-primary" />
+                      <Label className="text-sm font-semibold text-foreground">{t('category')}</Label>
+                      {filters.category && (
+                        <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">1</Badge>
+                      )}
+                    </div>
+                    {expandedSections.category ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </button>
+                  {expandedSections.category && (
+                    <div className="space-y-2">
+                      <Label htmlFor="category-filter" className="text-xs text-muted-foreground font-medium">
+                        {t('selectCategory')}
+                      </Label>
+                      <Select
+                        value={filters.category || undefined}
+                        onValueChange={(value) => handleFilterChange("category", value)}
+                      >
+                        <SelectTrigger id="category-filter" className="h-10 bg-background">
+                          <SelectValue placeholder={t('allCategories')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={TRANSACTION_CATEGORIES.SHIPPING_FEE}>{t('categoryShippingFee')}</SelectItem>
+                          <SelectItem value={TRANSACTION_CATEGORIES.COD_COLLECTION}>{t('categoryCodCollection')}</SelectItem>
+                          <SelectItem value={TRANSACTION_CATEGORIES.ADJUSTMENT}>{t('categoryAdjustment')}</SelectItem>
+                          <SelectItem value={TRANSACTION_CATEGORIES.SETTLEMENT}>{t('categorySettlement')}</SelectItem>
+                          <SelectItem value={TRANSACTION_CATEGORIES.PREPAID_REVENUE}>{t('categoryPrepaidRevenue')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -619,7 +644,7 @@ export default function AdminTransactionsPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => loadTransactions(currentPage - 1)}
+                onClick={() => setCurrentPage(currentPage - 1)}
                 disabled={currentPage === 1 || isLoading}
               >
                 {t('previous')}
@@ -641,7 +666,7 @@ export default function AdminTransactionsPage() {
                       key={pageNum}
                       variant={currentPage === pageNum ? "default" : "outline"}
                       size="sm"
-                      onClick={() => loadTransactions(pageNum)}
+                      onClick={() => setCurrentPage(pageNum)}
                       disabled={isLoading}
                       className="w-8 h-8 p-0"
                     >
@@ -653,7 +678,7 @@ export default function AdminTransactionsPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => loadTransactions(currentPage + 1)}
+                onClick={() => setCurrentPage(currentPage + 1)}
                 disabled={currentPage === totalPages || isLoading}
               >
                 {t('next')}

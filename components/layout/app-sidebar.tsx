@@ -19,6 +19,10 @@ import {
   Receipt,
   PieChart,
   FileText,
+  TrendingUp,
+  Trophy,
+  Activity,
+  Award,
   LucideIcon,
 } from "lucide-react";
 import { getCurrentUser, logout, User } from "@/lib/auth";
@@ -46,7 +50,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TawsilaLogo } from "@/components/branding/tawsila-logo";
-import { useUserPermissions, PERMISSION_MODULES } from "@/hooks/use-permissions";
+import { useUserPermissions, PERMISSION_MODULES, PERMISSIONS } from "@/hooks/use-permissions";
 
 interface NavItem {
   title: string;
@@ -126,6 +130,9 @@ export function AppSidebar() {
   // Only check after hydration to prevent hydration mismatch
   const isVendor = isHydrated && user?.roles?.some(r => r.name === 'vendor');
 
+  // Check if user is a shipping agent - to show performance link
+  const isShippingAgent = isHydrated && user?.roles?.some(r => r.name === 'shipping-agent');
+
   // Build navigation purely based on permissions
   // Each module is shown if user has ANY permission related to that module
   const navigation: NavGroup[] = [
@@ -184,6 +191,13 @@ export function AppSidebar() {
       title: t('finance'),
       items: [
         {
+          title: t('platformFinances'),
+          href: "/dashboard/finance/system-wallet",
+          icon: Building2,
+          // Show only if user has view-system-wallet permission (check both hyphen and underscore formats)
+          requiredPermissions: [PERMISSIONS.VIEW_SYSTEM_WALLET, 'view_system_wallet'],
+        },
+        {
           title: t('wallets'),
           href: "/dashboard/wallets",
           icon: Wallet,
@@ -203,6 +217,36 @@ export function AppSidebar() {
           icon: FileText,
           // Show if user has ANY settlement permission
           requiredPermissions: [...PERMISSION_MODULES.SETTLEMENTS],
+        },
+      ],
+    },
+    // Reports section - permission-based
+    {
+      title: t('reports'),
+      items: [
+        {
+          title: t('vendorProfits'),
+          href: "/dashboard/reports/vendor-profits",
+          icon: TrendingUp,
+          requiredPermissions: [PERMISSIONS.VIEW_VENDOR_PROFITS],
+        },
+        {
+          title: t('topVendors'),
+          href: "/dashboard/reports/top-vendors",
+          icon: Trophy,
+          requiredPermissions: [PERMISSIONS.VIEW_TOP_VENDORS],
+        },
+        {
+          title: t('agentPerformance'),
+          href: "/dashboard/reports/agent-performance",
+          icon: Activity,
+          requiredPermissions: [PERMISSIONS.VIEW_AGENT_PERFORMANCE],
+        },
+        {
+          title: t('topAgents'),
+          href: "/dashboard/reports/top-agents",
+          icon: Award,
+          requiredPermissions: [PERMISSIONS.VIEW_TOP_AGENTS],
         },
       ],
     },
@@ -343,6 +387,14 @@ export function AppSidebar() {
                 {t('summary')}
               </Link>
             </DropdownMenuItem>
+            {isShippingAgent && (
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/performance">
+                  <Activity className="me-2 h-4 w-4" />
+                  {t('myPerformance')}
+                </Link>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-red-600" onClick={handleLogout}>
               <LogOut className="me-2 h-4 w-4" />

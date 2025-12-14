@@ -6,6 +6,7 @@
  */
 
 import { apiRequest } from '../api';
+import { Wallet } from './wallet';
 
 /**
  * Governorate (province/state) entity
@@ -80,6 +81,8 @@ export interface Vendor {
   created_at: string;
   /** Last update timestamp */
   updated_at: string;
+  /** Wallet (when included via ?include=wallet) */
+  wallet?: Wallet;
 }
 
 /**
@@ -163,11 +166,34 @@ export async function fetchCurrentVendor(): Promise<Vendor> {
 }
 
 /**
+ * Options for fetching a vendor
+ */
+export interface FetchVendorOptions {
+  /** Relations to include (e.g., ['wallet']) */
+  include?: string[];
+}
+
+/**
  * Fetch a single vendor by ID
  * API may return: { data: {...vendor} } or { data: { data: {...vendor} } }
+ *
+ * @param id - Vendor ID
+ * @param options - Optional includes
+ *
+ * @example
+ * // Fetch vendor with wallet
+ * const vendor = await fetchVendor(1, { include: ['wallet'] });
  */
-export async function fetchVendor(id: number): Promise<Vendor> {
-  const response = await apiRequest<Vendor | { data: Vendor }>(`/vendors/${id}`, {
+export async function fetchVendor(id: number, options?: FetchVendorOptions): Promise<Vendor> {
+  // Build query string
+  const params = new URLSearchParams();
+  if (options?.include?.length) {
+    params.append('include', options.include.join(','));
+  }
+  const queryString = params.toString();
+  const url = `/vendors/${id}${queryString ? `?${queryString}` : ''}`;
+
+  const response = await apiRequest<Vendor | { data: Vendor }>(url, {
     method: 'GET',
   });
 
