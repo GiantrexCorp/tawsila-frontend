@@ -39,7 +39,8 @@ export function UserTable({ users, canUpdateUser }: UserTableProps) {
   };
 
   return (
-    <div className="rounded-lg border bg-card">
+    <div className="rounded-lg border bg-card w-full overflow-hidden">
+      <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
@@ -157,6 +158,7 @@ export function UserTable({ users, canUpdateUser }: UserTableProps) {
           ))}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }

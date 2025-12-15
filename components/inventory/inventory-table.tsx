@@ -33,7 +33,8 @@ export function InventoryTable({ inventories, canUpdateInventory }: InventoryTab
   };
 
   return (
-    <div className="rounded-lg border bg-card">
+    <div className="rounded-lg border bg-card w-full overflow-hidden">
+      <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
@@ -136,6 +137,7 @@ export function InventoryTable({ inventories, canUpdateInventory }: InventoryTab
           ))}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }

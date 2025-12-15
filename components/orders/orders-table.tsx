@@ -3,6 +3,7 @@
 import { useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/ui/status-badge";
 import {
   DropdownMenu,
@@ -100,23 +101,41 @@ export function OrdersTable({
   };
 
   return (
-    <div className="w-full max-w-full rounded-md border">
-      <div className="overflow-x-auto max-w-full" style={{ maxWidth: '100%' }}>
-        <table className="min-w-[900px] w-full caption-bottom text-sm">
-          <thead className="[&_tr]:border-b">
-            <tr className="border-b transition-colors hover:bg-muted/50">
-              <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">{t("orderNumber")}</th>
-              <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">{t("customer")}</th>
-              <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">{t("currentLocation")}</th>
-              <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">{t("assignedAgent")}</th>
-              <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">{t("status")}</th>
-              <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">{t("paymentStatus")}</th>
-              <th className="h-12 px-4 text-end align-middle font-medium text-muted-foreground whitespace-nowrap">{t("total")}</th>
-              <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">{t("createdAt")}</th>
-              <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">{t("actions")}</th>
+    <Card className="w-full">
+      <div className="w-full overflow-auto">
+        <table className="w-full text-sm border-collapse" style={{ minWidth: 1000 }}>
+          <thead className="bg-muted/50 sticky top-0">
+            <tr className="border-b">
+              <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">
+                {t("orderNumber")}
+              </th>
+              <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">
+                {t("customer")}
+              </th>
+              <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">
+                {t("currentLocation")}
+              </th>
+              <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">
+                {t("assignedAgent")}
+              </th>
+              <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">
+                {t("status")}
+              </th>
+              <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">
+                {t("paymentStatus")}
+              </th>
+              <th className="h-12 px-4 text-end align-middle font-medium text-muted-foreground whitespace-nowrap">
+                {t("total")}
+              </th>
+              <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">
+                {t("createdAt")}
+              </th>
+              <th className="h-12 px-4 text-center align-middle font-medium text-muted-foreground whitespace-nowrap w-[60px]">
+                {t("actions")}
+              </th>
             </tr>
           </thead>
-          <tbody className="[&_tr:last-child]:border-0">
+          <tbody>
             {orders.map((order) => {
               const canAccept = order.can_accept === true;
               const canReject = order.can_reject === true;
@@ -210,7 +229,7 @@ export function OrdersTable({
                   <td className="p-4 align-middle text-muted-foreground text-sm whitespace-nowrap">
                     {new Date(order.created_at).toLocaleDateString(locale)}
                   </td>
-                  <td className="p-4 align-middle">
+                  <td className="p-4 align-middle text-center">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                         <Button variant="ghost" className="h-8 w-8 p-0">
@@ -250,6 +269,6 @@ export function OrdersTable({
           </tbody>
         </table>
       </div>
-    </div>
+    </Card>
   );
 }

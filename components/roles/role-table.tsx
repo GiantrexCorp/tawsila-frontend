@@ -48,7 +48,8 @@ export function RoleTable({ roles, canUpdateRole }: RoleTableProps) {
   };
 
   return (
-    <div className="rounded-lg border bg-card">
+    <div className="rounded-lg border bg-card w-full overflow-hidden">
+      <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
@@ -137,6 +138,7 @@ export function RoleTable({ roles, canUpdateRole }: RoleTableProps) {
           })}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }

@@ -28,7 +28,8 @@ export function VendorTable({ vendors, canUpdateVendor }: VendorTableProps) {
   const router = useRouter();
 
   return (
-    <div className="rounded-lg border bg-card">
+    <div className="rounded-lg border bg-card w-full overflow-hidden">
+      <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
@@ -146,6 +147,7 @@ export function VendorTable({ vendors, canUpdateVendor }: VendorTableProps) {
           ))}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }
