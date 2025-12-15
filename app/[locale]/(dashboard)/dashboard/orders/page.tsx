@@ -22,7 +22,6 @@ import {
   useAcceptOrder,
   useRejectOrder,
   useAssignPickupAgent,
-  useAssignDeliveryAgent,
   type OrderFilters,
 } from "@/hooks/queries/use-orders";
 import { useVendors } from "@/hooks/queries/use-vendors";
@@ -120,7 +119,6 @@ export default function OrdersPage() {
   const acceptOrderMutation = useAcceptOrder();
   const rejectOrderMutation = useRejectOrder();
   const assignAgentMutation = useAssignPickupAgent();
-  const assignDeliveryAgentMutation = useAssignDeliveryAgent();
 
   // Track if filter data has been loaded
   const [hasLoadedFilterData, setHasLoadedFilterData] = useState(false);
@@ -381,25 +379,6 @@ export default function OrdersPage() {
     [selectedOrder, assignAgentMutation, t, tCommon]
   );
 
-  const handleAssignDeliveryConfirm = useCallback(
-    async (agentId: number, notes?: string) => {
-      if (!selectedOrder) return;
-      try {
-        await assignDeliveryAgentMutation.mutateAsync({
-          orderId: selectedOrder.id,
-          agentId,
-          notes,
-        });
-        toast.success(t("agentAssignedSuccess"));
-        setShowAssignDialog(false);
-        setSelectedOrder(null);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : tCommon("tryAgain");
-        toast.error(t("agentAssignedFailed"), { description: message });
-      }
-    },
-    [selectedOrder, assignDeliveryAgentMutation, t, tCommon]
-  );
 
   // Computed values
   const orders = ordersResponse?.data || [];

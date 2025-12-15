@@ -109,7 +109,6 @@ export default function OrderDetailPage() {
   const [selectedDeliveryAgentId, setSelectedDeliveryAgentId] = useState<number | null>(null);
   const [deliveryAssignmentNotes, setDeliveryAssignmentNotes] = useState("");
   const [isLoadingDeliveryAgents, setIsLoadingDeliveryAgents] = useState(false);
-  const [assignmentType, setAssignmentType] = useState<'pickup' | 'delivery'>('pickup');
   const hasLoadedRef = useRef(false);
 
   useEffect(() => {
@@ -231,7 +230,6 @@ export default function OrderDetailPage() {
       toast.error(t('noInventoryAssigned'));
       return;
     }
-    setAssignmentType('pickup');
     setShowAssignDialog(true);
     loadAgents(inventoryId);
   }, [assignments, t, loadAgents, order?.inventory_id, order?.inventory?.id]);
@@ -251,7 +249,6 @@ export default function OrderDetailPage() {
       toast.error(t('noInventoryAssigned'));
       return;
     }
-    setAssignmentType('delivery');
     setShowAssignDeliveryDialog(true);
     loadDeliveryAgents(inventoryId);
   }, [assignments, t, loadDeliveryAgents, order?.inventory_id, order?.inventory?.id]);
