@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +20,7 @@ import {
   Search,
   Truck,
   CheckCircle,
+  Filter,
 } from "lucide-react";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { PERMISSIONS } from "@/hooks/use-permissions";
@@ -43,25 +44,23 @@ export default function AgentPerformancePage() {
   const hasPermission = usePagePermission({ requiredPermissions: [PERMISSIONS.VIEW_AGENT_PERFORMANCE] });
 
   // Filters state
-  const [period, setPeriod] = useState<ReportPeriod | ''>('this_month');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+  const [period, setPeriod] = useState<ReportPeriod>('all_time');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
 
   // Build filters
-  const getFilters = useCallback((): ReportFilters => {
-    if (fromDate && toDate) {
-      return { from: fromDate, to: toDate };
+  const getFilters = (): ReportFilters => {
+    if (period === 'custom' && startDate && endDate) {
+      return { period: 'custom', from: startDate, to: endDate };
     }
-    if (period) {
-      return { period };
-    }
-    return { period: 'this_month' };
-  }, [period, fromDate, toDate]);
+    return { period };
+  };
 
   // Fetch data
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
-    queryKey: ['agentPerformance', period, fromDate, toDate],
+    queryKey: ['agentPerformance', period, startDate, endDate],
     queryFn: () => fetchAgentPerformance(getFilters()),
     enabled: hasPermission === true,
   });
@@ -96,18 +95,6 @@ export default function AgentPerformancePage() {
     }).format(amount);
   };
 
-  const handlePeriodChange = (value: string) => {
-    setPeriod(value as ReportPeriod);
-    setFromDate('');
-    setToDate('');
-  };
-
-  const handleCustomDateChange = () => {
-    if (fromDate || toDate) {
-      setPeriod('');
-    }
-  };
-
   // Loading state
   if (hasPermission === null) {
     return (
@@ -131,94 +118,112 @@ export default function AgentPerformancePage() {
             {t('agentPerformance.subtitle')}
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refetch()}
-          disabled={isRefetching}
-          className="gap-2"
-        >
-          <RefreshCw className={cn("h-4 w-4", isRefetching && "animate-spin")} />
-          {t('refresh')}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="gap-2"
+          >
+            <Filter className="h-4 w-4" />
+            {tCommon("filters")}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isRefetching}
+            className="gap-2"
+          >
+            <RefreshCw className={cn("h-4 w-4", isRefetching && "animate-spin")} />
+            {t('refresh')}
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">{t('filters')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
-            {/* Period Select */}
-            <div className="space-y-2">
-              <Label>{t('period')}</Label>
-              <Select value={period} onValueChange={handlePeriodChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t('selectPeriod')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {REPORT_PERIODS.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>
-                      {t(p.labelKey)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* From Date */}
-            <div className="space-y-2">
-              <Label>{t('fromDate')}</Label>
-              <Input
-                type="date"
-                value={fromDate}
-                onChange={(e) => {
-                  setFromDate(e.target.value);
-                  handleCustomDateChange();
-                }}
-              />
-            </div>
-
-            {/* To Date */}
-            <div className="space-y-2">
-              <Label>{t('toDate')}</Label>
-              <Input
-                type="date"
-                value={toDate}
-                onChange={(e) => {
-                  setToDate(e.target.value);
-                  handleCustomDateChange();
-                }}
-              />
-            </div>
-
-            {/* Search */}
-            <div className="space-y-2">
-              <Label>{t('search')}</Label>
-              <div className="relative">
-                <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder={t('searchAgent')}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="ps-9"
-                />
+      {showFilters && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex flex-col md:flex-row gap-4 items-end">
+              {/* Period Select */}
+              <div className="flex-1 space-y-2">
+                <Label>{tCommon("period")}</Label>
+                <Select value={period} onValueChange={(value: ReportPeriod) => setPeriod(value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={tCommon("selectPeriod")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {REPORT_PERIODS.map((p) => (
+                      <SelectItem key={p.value} value={p.value}>
+                        {t(p.labelKey)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
-          </div>
 
-          {/* Period Info */}
-          {data?.meta && (
-            <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4" />
-              <span>
-                {t('periodRange')}: {data.meta.from} - {data.meta.to}
-              </span>
+              {/* Custom Date Range */}
+              {period === "custom" && (
+                <>
+                  <div className="flex-1 space-y-2">
+                    <Label>{tCommon("startDate")}</Label>
+                    <div className="relative">
+                      <Calendar className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="ps-10"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <Label>{tCommon("endDate")}</Label>
+                    <div className="relative">
+                      <Calendar className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="ps-10"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Search */}
+              <div className="flex-1 space-y-2">
+                <Label>{t('search')}</Label>
+                <div className="relative">
+                  <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder={t('searchAgent')}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="ps-10"
+                  />
+                </div>
+              </div>
+
+              {/* Apply Button */}
+              <Button
+                onClick={() => refetch()}
+                disabled={isRefetching || (period === "custom" && (!startDate || !endDate))}
+                className="gap-2"
+              >
+                {isRefetching ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Filter className="h-4 w-4" />
+                )}
+                {tCommon("apply")}
+              </Button>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Summary Stats */}
       <div className="grid gap-4 md:grid-cols-4">

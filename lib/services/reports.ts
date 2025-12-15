@@ -15,12 +15,15 @@ import { apiRequest } from '../api';
  * Period filter options for reports
  */
 export type ReportPeriod =
-  | 'last_month'
-  | 'last_quarter'
-  | 'last_year'
+  | 'all_time'
+  | 'today'
+  | 'yesterday'
+  | 'last_7_days'
+  | 'last_30_days'
   | 'this_month'
-  | 'this_quarter'
-  | 'this_year';
+  | 'last_month'
+  | 'this_year'
+  | 'custom';
 
 /**
  * Report filter options
@@ -59,7 +62,7 @@ export interface ReportVendor {
   id: number;
   name_en: string;
   name_ar: string;
-  logo: string | null;
+  logo_url: string | null;
 }
 
 /**
@@ -135,7 +138,16 @@ function buildReportQueryString(filters?: ReportFilters): string {
 
   const params = new URLSearchParams();
 
-  if (filters.period) {
+  // all_time means no filter - return empty query string
+  if (filters.period === 'all_time') {
+    return '';
+  }
+
+  // custom period uses from/to dates
+  if (filters.period === 'custom') {
+    if (filters.from) params.append('from', filters.from);
+    if (filters.to) params.append('to', filters.to);
+  } else if (filters.period) {
     params.append('period', filters.period);
   } else {
     if (filters.from) params.append('from', filters.from);
@@ -244,10 +256,13 @@ export function getAgentDisplayName(agent: ReportAgent, locale: string): string 
  * Period options for UI
  */
 export const REPORT_PERIODS: { value: ReportPeriod; labelKey: string }[] = [
+  { value: 'all_time', labelKey: 'allTime' },
+  { value: 'today', labelKey: 'today' },
+  { value: 'yesterday', labelKey: 'yesterday' },
+  { value: 'last_7_days', labelKey: 'last7Days' },
+  { value: 'last_30_days', labelKey: 'last30Days' },
   { value: 'this_month', labelKey: 'thisMonth' },
   { value: 'last_month', labelKey: 'lastMonth' },
-  { value: 'this_quarter', labelKey: 'thisQuarter' },
-  { value: 'last_quarter', labelKey: 'lastQuarter' },
   { value: 'this_year', labelKey: 'thisYear' },
-  { value: 'last_year', labelKey: 'lastYear' },
+  { value: 'custom', labelKey: 'customRange' },
 ];
