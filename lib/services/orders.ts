@@ -311,12 +311,20 @@ export interface OrderItem {
   product_id?: number;
   /** Product/item name */
   product_name?: string;
+  /** Product SKU */
+  product_sku?: string | null;
+  /** Product description */
+  product_description?: string | null;
   /** Number of units */
   quantity: number;
   /** Calculated price (quantity * unit_price) */
   price?: number;
   /** Price per single unit */
   unit_price: number;
+  /** Item weight */
+  weight?: number | null;
+  /** Item notes */
+  notes?: string | null;
 }
 
 /**
@@ -337,6 +345,10 @@ export interface Customer {
   address_notes?: string | null;
   /** Complete formatted address */
   full_address?: string;
+  /** Governorate ID */
+  governorate_id?: number | null;
+  /** City ID */
+  city_id?: number | null;
   /** Delivery location latitude */
   latitude?: number | null;
   /** Delivery location longitude */
@@ -350,29 +362,61 @@ export interface Customer {
 }
 
 /**
+ * Customer data for creating an order
+ */
+export interface CreateOrderCustomer {
+  /** Customer full name (required) */
+  name: string;
+  /** Mobile phone number (required) */
+  mobile: string;
+  /** Email address */
+  email?: string | null;
+  /** Delivery address (required) */
+  address: string;
+  /** Additional address notes */
+  address_notes?: string | null;
+  /** Governorate ID */
+  governorate_id?: number | null;
+  /** City ID */
+  city_id?: number | null;
+  /** Delivery location latitude */
+  latitude?: number | null;
+  /** Delivery location longitude */
+  longitude?: number | null;
+}
+
+/**
+ * Item data for creating an order
+ */
+export interface CreateOrderItem {
+  /** Product/item name (required) */
+  product_name: string;
+  /** Product SKU */
+  product_sku?: string | null;
+  /** Product description */
+  product_description?: string | null;
+  /** Number of units (required, min: 1) */
+  quantity: number;
+  /** Price per single unit (required, min: 0) */
+  unit_price: number;
+  /** Item weight */
+  weight?: number | null;
+  /** Item notes */
+  notes?: string | null;
+}
+
+/**
  * Request payload for creating a new order
  */
 export interface CreateOrderRequest {
-  /** Notes visible to vendor */
-  vendor_notes?: string;
-  /** Internal notes (admin only) */
-  internal_notes?: string;
+  /** Customer information (required) */
+  customer: CreateOrderCustomer;
+  /** Order items (required, min: 1) */
+  items: CreateOrderItem[];
   /** Payment method */
-  payment_method?: string;
-  /** Vendor ID (required for admin-created orders) */
-  vendor_id?: number;
-  /** Customer information */
-  customer: Customer;
-  /** Order items */
-  items: OrderItem[];
-  /** Shipping cost */
-  shipping_cost?: number;
-  /** Calculated subtotal */
-  subtotal?: number;
-  /** Calculated total amount */
-  total_amount?: number;
-  /** Additional dynamic fields */
-  [key: string]: unknown;
+  payment_method?: string | null;
+  /** Notes visible to vendor */
+  vendor_notes?: string | null;
 }
 
 /**

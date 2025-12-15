@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { BackendImage } from "@/components/ui/backend-image";
@@ -30,6 +30,7 @@ import {
 import { Link } from "@/i18n/routing";
 import { fetchCurrentVendor, Vendor } from "@/lib/services/vendors";
 import { fetchMyProfitReport, ProfitReport } from "@/lib/services/wallet";
+import { useOrders, Order } from "@/hooks/queries/use-orders";
 
 interface VendorDashboardProps {
   userName: string;
@@ -67,60 +68,75 @@ export function VendorDashboard({ userName }: VendorDashboardProps) {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  // Fetch orders for stats and recent orders
+  const { data: ordersData, isLoading: isLoadingOrders } = useOrders(1, 100); // Fetch first 100 orders for stats
+
+  // Calculate order stats from fetched orders
+  const orderStats = useMemo(() => {
+    if (!ordersData?.data) {
+      return { total: 0, pending: 0, inTransit: 0, delivered: 0 };
+    }
+
+    const orders = ordersData.data;
+    return {
+      total: ordersData.meta?.total || orders.length,
+      pending: orders.filter((o: Order) => o.status === 'pending').length,
+      inTransit: orders.filter((o: Order) =>
+        ['in_transit', 'picked_up', 'out_for_delivery', 'accepted', 'at_inventory'].includes(o.status)
+      ).length,
+      delivered: orders.filter((o: Order) => o.status === 'delivered').length,
+    };
+  }, [ordersData]);
+
+  // Get recent orders (last 5)
+  const recentOrders = useMemo(() => {
+    if (!ordersData?.data) return [];
+
+    return ordersData.data
+      .slice(0, 5)
+      .map((order: Order) => ({
+        id: order.order_number,
+        orderId: order.id,
+        customer: order.customer?.name || '-',
+        status: order.status,
+        amount: order.total_amount,
+        date: new Date(order.created_at),
+      }));
+  }, [ordersData]);
+
   const displayName = vendor
     ? locale === "ar"
       ? vendor.name_ar
       : vendor.name_en
     : userName;
 
-  // Mock order stats - in production, fetch from API
-  const orderStats = {
-    total: 24,
-    pending: 3,
-    inTransit: 5,
-    delivered: 16,
-  };
-
-  // Mock recent orders - in production, fetch from API
-  const recentOrders = [
-    {
-      id: "ORD-2024-001",
-      customer: "Ahmed Mohamed",
-      status: "in_transit",
-      amount: 450,
-      date: new Date(),
-    },
-    {
-      id: "ORD-2024-002",
-      customer: "Sara Ibrahim",
-      status: "pending",
-      amount: 320,
-      date: new Date(Date.now() - 86400000),
-    },
-    {
-      id: "ORD-2024-003",
-      customer: "Mohamed Ali",
-      status: "delivered",
-      amount: 780,
-      date: new Date(Date.now() - 172800000),
-    },
-  ];
-
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       in_transit: "default",
+      out_for_delivery: "default",
+      picked_up: "default",
       pending: "secondary",
+      accepted: "secondary",
+      at_inventory: "secondary",
       delivered: "outline",
+      rejected: "destructive",
+      cancelled: "destructive",
     };
     const colors: Record<string, string> = {
       in_transit: "bg-blue-500/10 text-blue-600 hover:bg-blue-500/20",
+      out_for_delivery: "bg-blue-500/10 text-blue-600 hover:bg-blue-500/20",
+      picked_up: "bg-blue-500/10 text-blue-600 hover:bg-blue-500/20",
       pending: "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20",
+      accepted: "bg-purple-500/10 text-purple-600 hover:bg-purple-500/20",
+      at_inventory: "bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20",
       delivered: "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20",
+      rejected: "bg-red-500/10 text-red-600 hover:bg-red-500/20",
+      cancelled: "bg-gray-500/10 text-gray-600 hover:bg-gray-500/20",
     };
 
     return (
-      <Badge variant={variants[status]} className={colors[status]}>
-        {tOrders(status as "pending" | "in_transit" | "delivered")}
+      <Badge variant={variants[status] || "secondary"} className={colors[status] || "bg-gray-500/10 text-gray-600"}>
+        {tOrders(status as keyof typeof variants) || status}
       </Badge>
     );
   };
@@ -202,8 +218,12 @@ export function VendorDashboard({ userName }: VendorDashboardProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl md:text-3xl font-bold">{orderStats.total}</div>
-            <p className="text-xs text-muted-foreground mt-1">{t("thisMonthOrders")}</p>
+            {isLoadingOrders ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              <div className="text-2xl md:text-3xl font-bold">{orderStats.total}</div>
+            )}
+            <p className="text-xs text-muted-foreground mt-1">{t("allOrders")}</p>
           </CardContent>
           <div className="absolute top-4 end-4">
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -219,7 +239,11 @@ export function VendorDashboard({ userName }: VendorDashboardProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl md:text-3xl font-bold text-amber-600">{orderStats.pending}</div>
+            {isLoadingOrders ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              <div className="text-2xl md:text-3xl font-bold text-amber-600">{orderStats.pending}</div>
+            )}
             <p className="text-xs text-muted-foreground mt-1">{tOrders("pending")}</p>
           </CardContent>
           <div className="absolute top-4 end-4">
@@ -236,7 +260,11 @@ export function VendorDashboard({ userName }: VendorDashboardProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl md:text-3xl font-bold text-blue-600">{orderStats.inTransit}</div>
+            {isLoadingOrders ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              <div className="text-2xl md:text-3xl font-bold text-blue-600">{orderStats.inTransit}</div>
+            )}
             <p className="text-xs text-muted-foreground mt-1">{tOrders("inTransit")}</p>
           </CardContent>
           <div className="absolute top-4 end-4">
@@ -253,8 +281,12 @@ export function VendorDashboard({ userName }: VendorDashboardProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl md:text-3xl font-bold text-emerald-600">{orderStats.delivered}</div>
-            <p className="text-xs text-muted-foreground mt-1">{t("thisMonthOrders")}</p>
+            {isLoadingOrders ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              <div className="text-2xl md:text-3xl font-bold text-emerald-600">{orderStats.delivered}</div>
+            )}
+            <p className="text-xs text-muted-foreground mt-1">{tOrders("delivered")}</p>
           </CardContent>
           <div className="absolute top-4 end-4">
             <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
@@ -390,12 +422,34 @@ export function VendorDashboard({ userName }: VendorDashboardProps) {
             </div>
           </CardHeader>
           <CardContent>
-            {recentOrders.length > 0 ? (
+            {isLoadingOrders ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center justify-between p-4 rounded-lg border">
+                    <div className="flex items-center gap-4">
+                      <Skeleton className="h-10 w-10 rounded-full" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-3 w-32" />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Skeleton className="h-6 w-20" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-16" />
+                        <Skeleton className="h-3 w-20" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : recentOrders.length > 0 ? (
               <div className="space-y-4">
                 {recentOrders.map((order) => (
-                  <div
+                  <Link
                     key={order.id}
-                    className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                    href={`/dashboard/orders/${order.orderId}`}
+                    className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-4">
                       <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -410,14 +464,14 @@ export function VendorDashboard({ userName }: VendorDashboardProps) {
                       {getStatusBadge(order.status)}
                       <div className="text-end">
                         <p className="font-medium">
-                          {order.amount} {tCommon("egp")}
+                          {order.amount.toLocaleString()} {tCommon("egp")}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {order.date.toLocaleDateString(locale)}
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             ) : (
