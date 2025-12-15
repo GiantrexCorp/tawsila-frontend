@@ -1461,7 +1461,8 @@
     "errorDeleting": "Failed to delete notification",
     "markedAllRead": "All notifications marked as read",
     "deleted": "Notification deleted",
-    "allDeleted": "All notifications deleted"
+    "allDeleted": "All notifications deleted",
+    "cancel": "Cancel"
   },
   "validation": {
     "mobileRequired": "Mobile number is required",

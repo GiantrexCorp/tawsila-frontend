@@ -1460,7 +1460,8 @@
     "errorDeleting": "فشل حذف الإشعار",
     "markedAllRead": "تم تحديد جميع الإشعارات كمقروءة",
     "deleted": "تم حذف الإشعار",
-    "allDeleted": "تم حذف جميع الإشعارات"
+    "allDeleted": "تم حذف جميع الإشعارات",
+    "cancel": "إلغاء"
   },
   "validation": {
     "mobileRequired": "رقم الموبايل مطلوب",
