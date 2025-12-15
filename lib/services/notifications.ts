@@ -1,5 +1,6 @@
 import { apiRequest } from "../api";
 
+// Types
 export interface NotificationData {
   order_id?: number;
   order_number?: string;
@@ -41,6 +42,8 @@ export interface NotificationFilters {
   page?: number;
   per_page?: number;
 }
+
+// API Functions
 
 // GET /notifications
 export async function fetchNotifications(
@@ -108,6 +111,8 @@ export async function deleteAllNotifications(): Promise<void> {
   });
 }
 
+// Utility Types & Functions
+
 export type NotificationIconType =
   | "order"
   | "wallet"
@@ -116,23 +121,24 @@ export type NotificationIconType =
   | "info";
 
 export function getNotificationIconType(type: string): NotificationIconType {
-  if (type.includes("order")) return "order";
+  const typeLower = type.toLowerCase();
+  if (typeLower.includes("order")) return "order";
   if (
-    type.includes("wallet") ||
-    type.includes("payment") ||
-    type.includes("settlement")
+    typeLower.includes("wallet") ||
+    typeLower.includes("payment") ||
+    typeLower.includes("settlement")
   )
     return "wallet";
   if (
-    type.includes("user") ||
-    type.includes("vendor") ||
-    type.includes("agent")
+    typeLower.includes("user") ||
+    typeLower.includes("vendor") ||
+    typeLower.includes("agent")
   )
     return "user";
   if (
-    type.includes("alert") ||
-    type.includes("warning") ||
-    type.includes("error")
+    typeLower.includes("alert") ||
+    typeLower.includes("warning") ||
+    typeLower.includes("error")
   )
     return "alert";
   return "info";

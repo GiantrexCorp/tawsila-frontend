@@ -1441,6 +1441,7 @@
   },
   "notifications": {
     "title": "Notifications",
+    "loading": "Loading notifications...",
     "noNotifications": "No notifications",
     "noNotificationsDesc": "You're all caught up! New notifications will appear here.",
     "markAllRead": "Mark all as read",
