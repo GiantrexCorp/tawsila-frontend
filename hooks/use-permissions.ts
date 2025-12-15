@@ -83,6 +83,9 @@ export const PERMISSIONS = {
   VIEW_TOP_VENDORS: 'view-top-vendors',
   VIEW_AGENT_PERFORMANCE: 'view-agent-performance',
   VIEW_TOP_AGENTS: 'view-top-agents',
+
+  // Analytics
+  VIEW_ANALYTICS: 'view-analytics',
 } as const;
 
 /**

@@ -254,7 +254,7 @@ export function AppSidebar() {
         },
       ],
     },
-    // Analytics section - accessible to all authenticated users (uses dummy data)
+    // Analytics section - permission-based
     {
       title: t('analyticsSection'),
       items: [
@@ -262,6 +262,8 @@ export function AppSidebar() {
           title: t('analytics'),
           href: "/dashboard/analytics",
           icon: BarChart3,
+          // Show only if user has view-analytics permission (check both hyphen and underscore formats)
+          requiredPermissions: [PERMISSIONS.VIEW_ANALYTICS, 'view_analytics'],
         },
       ],
     },
