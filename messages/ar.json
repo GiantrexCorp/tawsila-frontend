@@ -319,6 +319,8 @@
     "optional": "اختياري",
     "assignPickupAgent": "تعيين مندوب استلام",
     "assignPickupAgentDesc": "عين مندوب استلام يشيل الطلب ده",
+    "assignDeliveryAgent": "تعيين مندوب توصيل",
+    "assignDeliveryAgentDesc": "عين مندوب توصيل يشيل الطلب ده",
     "cardView": "عرض البطاقات",
     "tableView": "عرض الجدول",
     "selectAgent": "اختار المندوب",

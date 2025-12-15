@@ -15,6 +15,7 @@ interface OrderCardProps {
   onAccept?: () => void;
   onReject?: () => void;
   onAssignAgent?: () => void;
+  onAssignDeliveryAgent?: () => void;
   t: (key: string) => string;
   tCommon: (key: string) => string;
 }
@@ -25,6 +26,7 @@ export function OrderCard({
   onAccept,
   onReject,
   onAssignAgent,
+  onAssignDeliveryAgent,
   t,
   tCommon,
 }: OrderCardProps) {
@@ -33,6 +35,7 @@ export function OrderCard({
   const canAccept = order.can_accept === true;
   const canReject = order.can_reject === true;
   const canAssignPickupAgent = order.can_assign_pickup_agent === true;
+  const canAssignDeliveryAgent = order.can_assign_delivery_agent === true;
 
   // Determine phase-based styling and location
   // Use truthy check instead of strict boolean comparison to handle 1/true/"1" etc.
@@ -255,7 +258,19 @@ export function OrderCard({
               onClick={onAssignAgent}
             >
               <Truck className="h-4 w-4 me-1.5" />
-              {t("assign")}
+              {t("assignPickupAgent")}
+            </Button>
+          )}
+
+          {canAssignDeliveryAgent && onAssignDeliveryAgent && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="flex-1 min-w-[80px]"
+              onClick={onAssignDeliveryAgent}
+            >
+              <Truck className="h-4 w-4 me-1.5" />
+              {t("assignDeliveryAgent")}
             </Button>
           )}
         </div>

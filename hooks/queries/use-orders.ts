@@ -10,6 +10,7 @@ import {
   acceptOrder,
   rejectOrder,
   assignPickupAgent,
+  assignDeliveryAgent,
   fetchOrderAssignments,
   Order,
   OrdersResponse,
@@ -207,6 +208,62 @@ export function useAssignPickupAgent() {
                   ...order,
                   assignments: updatedAssignments,
                   can_assign_pickup_agent: false, // Typically can't assign again after assignment
+                };
+              }
+              return order;
+            }),
+          };
+        }
+      );
+
+      // Invalidate to refetch fresh data
+      queryClient.invalidateQueries({ queryKey: queryKeys.orders.detail(variables.orderId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.orders.lists() });
+      // Invalidate my assigned orders
+      queryClient.invalidateQueries({ queryKey: [...queryKeys.orders.all, "my-assigned"] });
+    },
+  });
+}
+
+/**
+ * Hook to assign delivery agent
+ */
+export function useAssignDeliveryAgent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      orderId,
+      agentId,
+      notes,
+    }: {
+      orderId: number;
+      agentId: number;
+      notes?: string;
+    }) => assignDeliveryAgent(orderId, agentId, notes),
+    onSuccess: async (newAssignment, variables) => {
+      // Update the order in all list caches with the new assignment immediately
+      queryClient.setQueriesData<OrdersResponse>(
+        { queryKey: queryKeys.orders.lists() },
+        (oldData) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            data: oldData.data.map((order) => {
+              if (order.id === variables.orderId) {
+                // Add or update the assignment in the order's assignments array
+                const existingAssignments = order.assignments || [];
+                const updatedAssignments = existingAssignments.some(
+                  (a) => a.id === newAssignment.id
+                )
+                  ? existingAssignments.map((a) =>
+                      a.id === newAssignment.id ? newAssignment : a
+                    )
+                  : [...existingAssignments, newAssignment];
+                return {
+                  ...order,
+                  assignments: updatedAssignments,
+                  can_assign_delivery_agent: false, // Typically can't assign again after assignment
                 };
               }
               return order;

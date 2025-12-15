@@ -9,6 +9,7 @@ interface OrdersCardGridProps {
   onAccept?: (orderId: number) => void;
   onReject?: (orderId: number) => void;
   onAssignAgent?: (orderId: number) => void;
+  onAssignDeliveryAgent?: (orderId: number) => void;
   t: (key: string) => string;
   tCommon: (key: string) => string;
 }
@@ -19,6 +20,7 @@ export function OrdersCardGrid({
   onAccept,
   onReject,
   onAssignAgent,
+  onAssignDeliveryAgent,
   t,
   tCommon,
 }: OrdersCardGridProps) {
@@ -32,6 +34,7 @@ export function OrdersCardGrid({
           onAccept={onAccept ? () => onAccept(order.id) : undefined}
           onReject={onReject ? () => onReject(order.id) : undefined}
           onAssignAgent={onAssignAgent ? () => onAssignAgent(order.id) : undefined}
+          onAssignDeliveryAgent={onAssignDeliveryAgent ? () => onAssignDeliveryAgent(order.id) : undefined}
           t={t}
           tCommon={tCommon}
         />

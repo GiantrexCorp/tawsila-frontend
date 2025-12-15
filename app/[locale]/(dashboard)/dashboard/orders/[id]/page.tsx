@@ -41,9 +41,9 @@ import {
 } from "lucide-react";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { PERMISSIONS } from "@/hooks/use-permissions";
-import { fetchOrder, acceptOrder, rejectOrder, assignPickupAgent, type Order, type OrderItem, type Customer, type Assignment, type StatusLog, type Scan as ScanType, type Vendor, type OrderTransaction } from "@/lib/services/orders";
+import { fetchOrder, acceptOrder, rejectOrder, assignPickupAgent, assignDeliveryAgent, type Order, type OrderItem, type Customer, type Assignment, type StatusLog, type Scan as ScanType, type Vendor, type OrderTransaction } from "@/lib/services/orders";
 import { fetchInventories, fetchCurrentInventory, type Inventory } from "@/lib/services/inventories";
-import { fetchPickupAgents, type Agent } from "@/lib/services/agents";
+import { fetchPickupAgents, fetchDeliveryAgents, type Agent } from "@/lib/services/agents";
 import { toast } from "sonner";
 import { getCurrentUser } from "@/lib/auth";
 import {
@@ -103,6 +103,13 @@ export default function OrderDetailPage() {
   const [assignmentNotes, setAssignmentNotes] = useState("");
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [isAssigningDelivery, setIsAssigningDelivery] = useState(false);
+  const [showAssignDeliveryDialog, setShowAssignDeliveryDialog] = useState(false);
+  const [deliveryAgents, setDeliveryAgents] = useState<Agent[]>([]);
+  const [selectedDeliveryAgentId, setSelectedDeliveryAgentId] = useState<number | null>(null);
+  const [deliveryAssignmentNotes, setDeliveryAssignmentNotes] = useState("");
+  const [isLoadingDeliveryAgents, setIsLoadingDeliveryAgents] = useState(false);
+  const [assignmentType, setAssignmentType] = useState<'pickup' | 'delivery'>('pickup');
   const hasLoadedRef = useRef(false);
 
   useEffect(() => {
@@ -199,6 +206,18 @@ export default function OrderDetailPage() {
     }
   }, [t]);
 
+  const loadDeliveryAgents = useCallback(async (inventoryId: number) => {
+    setIsLoadingDeliveryAgents(true);
+    try {
+      const fetchedAgents = await fetchDeliveryAgents(inventoryId);
+      setDeliveryAgents(fetchedAgents);
+    } catch {
+      toast.error(t('errorLoadingAgents'));
+    } finally {
+      setIsLoadingDeliveryAgents(false);
+    }
+  }, [t]);
+
   const handleAssignClick = useCallback(() => {
     const hasActiveAssignment = assignments.some(assignment => assignment.is_active && !assignment.is_finished);
     if (hasActiveAssignment) {
@@ -212,9 +231,30 @@ export default function OrderDetailPage() {
       toast.error(t('noInventoryAssigned'));
       return;
     }
+    setAssignmentType('pickup');
     setShowAssignDialog(true);
     loadAgents(inventoryId);
   }, [assignments, t, loadAgents, order?.inventory_id, order?.inventory?.id]);
+
+  const handleAssignDeliveryClick = useCallback(() => {
+    const hasActiveDeliveryAssignment = assignments.some(
+      assignment => assignment.is_active && !assignment.is_finished && assignment.assignment_type === 'inventory_to_customer'
+    );
+    if (hasActiveDeliveryAssignment) {
+      toast.warning(t('orderAlreadyAssigned'), {
+        description: t('orderAlreadyAssignedDesc'),
+      });
+      return;
+    }
+    const inventoryId = order?.inventory_id || order?.inventory?.id;
+    if (!inventoryId) {
+      toast.error(t('noInventoryAssigned'));
+      return;
+    }
+    setAssignmentType('delivery');
+    setShowAssignDeliveryDialog(true);
+    loadDeliveryAgents(inventoryId);
+  }, [assignments, t, loadDeliveryAgents, order?.inventory_id, order?.inventory?.id]);
 
   const handleAssignPickupAgent = useCallback(async () => {
     if (!selectedAgentId) {
@@ -249,6 +289,40 @@ export default function OrderDetailPage() {
       setIsAssigning(false);
     }
   }, [orderId, selectedAgentId, assignmentNotes, t, tCommon]);
+
+  const handleAssignDeliveryAgent = useCallback(async () => {
+    if (!selectedDeliveryAgentId) {
+      toast.error(t('agentRequired'));
+      return;
+    }
+
+    setIsAssigningDelivery(true);
+    try {
+      await assignDeliveryAgent(orderId, selectedDeliveryAgentId, deliveryAssignmentNotes.trim() || undefined);
+      setShowAssignDeliveryDialog(false);
+      setSelectedDeliveryAgentId(null);
+      setDeliveryAssignmentNotes("");
+      toast.success(t('agentAssignedSuccess'));
+      // Refresh order data (assignments included)
+      const updatedOrder = await fetchOrder(orderId);
+      setOrder(updatedOrder);
+      if (updatedOrder.assignments) {
+        setAssignments(updatedOrder.assignments);
+      }
+    } catch (error) {
+      const err = error as { status?: number };
+      if (err?.status === 403) {
+        toast.error(t('agentAssignedFailed'), {
+          description: t('orderAlreadyAssignedError') || t('orderAlreadyAssignedDesc'),
+        });
+      } else {
+        const message = error instanceof Error ? error.message : tCommon('tryAgain');
+        toast.error(t('agentAssignedFailed'), { description: message });
+      }
+    } finally {
+      setIsAssigningDelivery(false);
+    }
+  }, [orderId, selectedDeliveryAgentId, deliveryAssignmentNotes, t, tCommon]);
 
   const handleAcceptOrder = useCallback(async () => {
     if (!selectedInventoryId) {
@@ -306,6 +380,7 @@ export default function OrderDetailPage() {
   const canAccept = order.can_accept === true;
   const canReject = order.can_reject === true;
   const canAssignPickupAgent = order.can_assign_pickup_agent === true;
+  const canAssignDeliveryAgent = order.can_assign_delivery_agent === true;
 
   // Phase indicator
   const isPhase1 = !!order.is_in_phase1;
@@ -394,7 +469,7 @@ export default function OrderDetailPage() {
               </div>
 
               {/* Action Buttons */}
-              {(canAccept || canReject || canAssignPickupAgent) && (
+              {(canAccept || canReject || canAssignPickupAgent || canAssignDeliveryAgent) && (
                 <div className="flex flex-wrap gap-2 pt-4">
                   {canAccept && (
                     <Button onClick={handleAcceptClick} disabled={isAccepting} className="gap-2">
@@ -412,11 +487,22 @@ export default function OrderDetailPage() {
                     <Button
                       variant="outline"
                       onClick={handleAssignClick}
-                      disabled={isAssigning || assignments.some(a => a.is_active && !a.is_finished)}
+                      disabled={isAssigning || assignments.some(a => a.is_active && !a.is_finished && a.assignment_type === 'vendor_to_inventory')}
                       className="gap-2"
                     >
                       <Truck className="h-4 w-4" />
                       {t('assignPickupAgent')}
+                    </Button>
+                  )}
+                  {canAssignDeliveryAgent && (
+                    <Button
+                      variant="outline"
+                      onClick={handleAssignDeliveryClick}
+                      disabled={isAssigningDelivery || assignments.some(a => a.is_active && !a.is_finished && a.assignment_type === 'inventory_to_customer')}
+                      className="gap-2"
+                    >
+                      <Truck className="h-4 w-4" />
+                      {t('assignDeliveryAgent')}
                     </Button>
                   )}
                   <Button variant="outline" onClick={() => window.print()} className="gap-2">
@@ -1018,6 +1104,58 @@ export default function OrderDetailPage() {
             <Button onClick={handleAssignPickupAgent} disabled={isAssigning || !selectedAgentId} className="gap-2">
               {isAssigning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />}
               {isAssigning ? t('assigning') : t('assignPickupAgent')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAssignDeliveryDialog} onOpenChange={setShowAssignDeliveryDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('assignDeliveryAgent')}</DialogTitle>
+            <DialogDescription>{t('assignDeliveryAgentDesc') || t('assignPickupAgentDesc')}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="delivery_agent_id">{t('selectAgent')} *</Label>
+              {isLoadingDeliveryAgents ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                </div>
+              ) : (
+                <Select value={selectedDeliveryAgentId?.toString() || ''} onValueChange={(value) => setSelectedDeliveryAgentId(parseInt(value))}>
+                  <SelectTrigger id="delivery_agent_id">
+                    <SelectValue placeholder={t('selectAgentPlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {deliveryAgents.map((agent) => (
+                      <SelectItem key={agent.id} value={agent.id.toString()}>
+                        {locale === 'ar' && agent.name_ar ? agent.name_ar : agent.name_en || agent.name}
+                        {agent.mobile && ` - ${agent.mobile}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="delivery_assignment_notes">{t('assignmentNotes')} ({t('optional')})</Label>
+              <Textarea
+                id="delivery_assignment_notes"
+                placeholder={t('assignmentNotesPlaceholder')}
+                value={deliveryAssignmentNotes}
+                onChange={(e) => setDeliveryAssignmentNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowAssignDeliveryDialog(false); setSelectedDeliveryAgentId(null); setDeliveryAssignmentNotes(""); }} disabled={isAssigningDelivery}>
+              {tCommon('cancel')}
+            </Button>
+            <Button onClick={handleAssignDeliveryAgent} disabled={isAssigningDelivery || !selectedDeliveryAgentId} className="gap-2">
+              {isAssigningDelivery ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />}
+              {isAssigningDelivery ? t('assigning') : t('assignDeliveryAgent')}
             </Button>
           </DialogFooter>
         </DialogContent>

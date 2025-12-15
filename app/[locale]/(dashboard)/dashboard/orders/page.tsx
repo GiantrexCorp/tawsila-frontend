@@ -22,6 +22,7 @@ import {
   useAcceptOrder,
   useRejectOrder,
   useAssignPickupAgent,
+  useAssignDeliveryAgent,
   type OrderFilters,
 } from "@/hooks/queries/use-orders";
 import { useVendors } from "@/hooks/queries/use-vendors";
@@ -119,6 +120,7 @@ export default function OrdersPage() {
   const acceptOrderMutation = useAcceptOrder();
   const rejectOrderMutation = useRejectOrder();
   const assignAgentMutation = useAssignPickupAgent();
+  const assignDeliveryAgentMutation = useAssignDeliveryAgent();
 
   // Track if filter data has been loaded
   const [hasLoadedFilterData, setHasLoadedFilterData] = useState(false);
@@ -302,6 +304,24 @@ export default function OrdersPage() {
     [ordersResponse?.data, t]
   );
 
+  const handleAssignDeliveryClick = useCallback(
+    (orderId: number) => {
+      const order = ordersResponse?.data.find((o) => o.id === orderId);
+      if (order) {
+        const inventoryId = order.inventory_id || order.inventory?.id;
+        if (!inventoryId) {
+          toast.error(t("noInventoryAssigned"));
+          return;
+        }
+        setSelectedOrder(order);
+        setShowAssignDialog(true);
+        // Note: The OrderActionDialogs component will need to be updated to handle delivery agents
+        // For now, we'll use the same dialog but the backend flag determines which agents to show
+      }
+    },
+    [ordersResponse?.data, t]
+  );
+
   // Mutation handlers
   const handleAcceptConfirm = useCallback(
     async (inventoryId: number) => {
@@ -359,6 +379,26 @@ export default function OrdersPage() {
       }
     },
     [selectedOrder, assignAgentMutation, t, tCommon]
+  );
+
+  const handleAssignDeliveryConfirm = useCallback(
+    async (agentId: number, notes?: string) => {
+      if (!selectedOrder) return;
+      try {
+        await assignDeliveryAgentMutation.mutateAsync({
+          orderId: selectedOrder.id,
+          agentId,
+          notes,
+        });
+        toast.success(t("agentAssignedSuccess"));
+        setShowAssignDialog(false);
+        setSelectedOrder(null);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : tCommon("tryAgain");
+        toast.error(t("agentAssignedFailed"), { description: message });
+      }
+    },
+    [selectedOrder, assignDeliveryAgentMutation, t, tCommon]
   );
 
   // Computed values
@@ -1046,6 +1086,7 @@ export default function OrdersPage() {
           onAccept={handleAcceptClick}
           onReject={handleRejectClick}
           onAssignAgent={handleAssignClick}
+          onAssignDeliveryAgent={handleAssignDeliveryClick}
           t={t}
           tCommon={tCommon}
         />
@@ -1056,6 +1097,7 @@ export default function OrdersPage() {
           onAccept={handleAcceptClick}
           onReject={handleRejectClick}
           onAssignAgent={handleAssignClick}
+          onAssignDeliveryAgent={handleAssignDeliveryClick}
           t={t}
           tCommon={tCommon}
         />

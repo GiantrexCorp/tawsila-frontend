@@ -319,6 +319,8 @@
     "optional": "Optional",
     "assignPickupAgent": "Assign Pickup Agent",
     "assignPickupAgentDesc": "Assign a pickup agent to handle this order",
+    "assignDeliveryAgent": "Assign Delivery Agent",
+    "assignDeliveryAgentDesc": "Assign a delivery agent to handle this order",
     "cardView": "Card view",
     "tableView": "Table view",
     "selectAgent": "Select Agent",

@@ -603,6 +603,11 @@ export interface AssignPickupAgentRequest {
   notes?: string;
 }
 
+export interface AssignDeliveryAgentRequest {
+  agent_id: number;
+  notes?: string;
+}
+
 export interface Assignment {
   id: number;
   order_id: number;
@@ -642,6 +647,31 @@ export async function assignPickupAgent(id: number, agentId: number, notes?: str
 
   if (!response.data) {
     throw new Error(response.message || 'Failed to assign pickup agent');
+  }
+
+  return response.data;
+}
+
+/**
+ * Assign a delivery agent to an order
+ */
+export async function assignDeliveryAgent(id: number, agentId: number, notes?: string): Promise<Assignment> {
+  const body: AssignDeliveryAgentRequest = {
+    agent_id: agentId,
+  };
+  
+  if (notes && notes.trim()) {
+    body.notes = notes.trim();
+  }
+
+  const response = await apiRequest<Assignment>(`/orders/${id}/assign-delivery-agent`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    skipRedirectOn403: true, // Don't redirect on 403, show error message instead
+  });
+
+  if (!response.data) {
+    throw new Error(response.message || 'Failed to assign delivery agent');
   }
 
   return response.data;

@@ -22,6 +22,7 @@ interface OrdersTableProps {
   onAccept?: (orderId: number) => void;
   onReject?: (orderId: number) => void;
   onAssignAgent?: (orderId: number) => void;
+  onAssignDeliveryAgent?: (orderId: number) => void;
   t: (key: string) => string;
   tCommon: (key: string) => string;
 }
@@ -32,6 +33,7 @@ export function OrdersTable({
   onAccept,
   onReject,
   onAssignAgent,
+  onAssignDeliveryAgent,
   t,
   tCommon,
 }: OrdersTableProps) {
@@ -140,7 +142,8 @@ export function OrdersTable({
               const canAccept = order.can_accept === true;
               const canReject = order.can_reject === true;
               const canAssignPickupAgent = order.can_assign_pickup_agent === true;
-              const hasActions = canAccept || canReject || canAssignPickupAgent;
+              const canAssignDeliveryAgent = order.can_assign_delivery_agent === true;
+              const hasActions = canAccept || canReject || canAssignPickupAgent || canAssignDeliveryAgent;
               const locationInfo = getLocationInfo(order);
               const assignmentInfo = getAssignmentInfo(order);
               const agentName = assignmentInfo?.agent
@@ -258,6 +261,12 @@ export function OrdersTable({
                           <DropdownMenuItem onClick={() => onAssignAgent(order.id)}>
                             <Truck className="h-4 w-4 me-2 text-blue-600" />
                             {t("assignPickupAgent")}
+                          </DropdownMenuItem>
+                        )}
+                        {canAssignDeliveryAgent && onAssignDeliveryAgent && (
+                          <DropdownMenuItem onClick={() => onAssignDeliveryAgent(order.id)}>
+                            <Truck className="h-4 w-4 me-2 text-green-600" />
+                            {t("assignDeliveryAgent")}
                           </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>
