@@ -4,6 +4,7 @@ import * as React from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { Link, useRouter } from "@/i18n/routing";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   Package,
@@ -69,6 +70,7 @@ export function AppSidebar() {
   const router = useRouter();
   const locale = useLocale();
   const t = useTranslations('nav');
+  const queryClient = useQueryClient();
   const [user, setUser] = React.useState<User | null>(null);
   const [isHydrated, setIsHydrated] = React.useState(false);
 
@@ -95,6 +97,8 @@ export function AppSidebar() {
 
   const handleLogout = async () => {
     try {
+      // Clear all React Query cache before logout to prevent stale data
+      queryClient.clear();
       await logout();
       toast.success(t('logoutSuccess'));
       router.push('/login');

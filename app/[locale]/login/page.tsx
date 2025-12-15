@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 import { useRouter } from "@/i18n/routing";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,7 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 export default function LoginPage() {
   const router = useRouter();
   const t = useTranslations('login');
+  const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -92,6 +94,9 @@ export default function LoginPage() {
       // Normal login flow (status_code 200)
       if (response.data) {
         const userName = response.data.name_en || response.data.name_ar || response.data.email;
+
+        // Clear any stale React Query cache from previous user session
+        queryClient.clear();
 
         toast.success(t('loginSuccess'), {
           description: t('welcomeBack', { name: userName }),
