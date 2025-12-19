@@ -17,6 +17,16 @@ export const getInventoryFilterConfigs = (
     type: "text",
     placeholder: t("inventoryCode"),
   },
+  {
+    key: "status",
+    label: t("status"),
+    type: "select",
+    options: [
+      { value: "active", label: t("active") },
+      { value: "inactive", label: t("inactive") },
+    ],
+    placeholder: t("status"),
+  },
 ];
 
 export const DEFAULT_INVENTORY_FILTERS = ["name", "code"];

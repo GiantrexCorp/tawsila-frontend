@@ -5,12 +5,13 @@ import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Warehouse, Plus, Loader2, MapPin, Phone, Edit, Trash2, ArrowUpRight, Search, X, Filter, ChevronDown, ChevronUp, Hash } from "lucide-react";
+import { Warehouse, Plus, Loader2, MapPin, Phone, Edit, Trash2, ArrowUpRight, X, Filter, ChevronDown, ChevronUp, Hash } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
-import { fetchInventories, deleteInventory, type Inventory } from "@/lib/services/inventories";
+import { useInventories } from "@/hooks/queries/use-inventory";
+import { deleteInventory, type Inventory, type InventoryFilters } from "@/lib/services/inventories";
 import { fetchGovernorates, fetchCities, type Governorate, type City } from "@/lib/services/vendors";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -39,10 +40,7 @@ export default function InventoryPage() {
   const { hasPermission: canCreateInventory } = useHasPermission(PERMISSIONS.CREATE_INVENTORY);
   const { hasPermission: canUpdateInventory } = useHasPermission(PERMISSIONS.UPDATE_INVENTORY);
 
-  // Inventories state
-  const [inventories, setInventories] = useState<Inventory[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  // Filter state
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [inventoryToDelete, setInventoryToDelete] = useState<Inventory | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -50,6 +48,7 @@ export default function InventoryPage() {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     inventoryInfo: true,
     location: false,
+    status: false,
   });
   const [viewType, setViewType] = useState<ViewType>("cards");
   
@@ -58,6 +57,40 @@ export default function InventoryPage() {
   const [cities, setCities] = useState<City[]>([]);
   const [isLoadingCities, setIsLoadingCities] = useState(false);
   const [hasLoadedFilterData, setHasLoadedFilterData] = useState(false);
+
+  // Build backend filters from UI state
+  const backendFilters = useMemo<InventoryFilters>(() => {
+    const backendFilters: InventoryFilters = {};
+    
+    // Add specific filters
+    if (filters.name?.trim()) {
+      // Name filter uses the appropriate field based on current language
+      if (locale === 'ar') {
+        backendFilters.name_ar = filters.name.trim();
+      } else {
+        backendFilters.name_en = filters.name.trim();
+      }
+    }
+    if (filters.code?.trim()) {
+      backendFilters.code = filters.code.trim();
+    }
+    if (filters.status) {
+      backendFilters.status = filters.status;
+    }
+    if (filters.governorate_id) {
+      backendFilters.governorate_id = filters.governorate_id;
+    }
+    if (filters.city_id) {
+      backendFilters.city_id = filters.city_id;
+    }
+    
+    return backendFilters;
+  }, [filters, locale]);
+
+  // Fetch inventories with backend filters
+  const { data: inventories = [], isLoading, refetch } = useInventories(backendFilters, {
+    enabled: hasPermission === true,
+  });
 
   // Load governorates only when filters are expanded
   useEffect(() => {
@@ -77,107 +110,36 @@ export default function InventoryPage() {
   }, [isFiltersExpanded]);
 
 
-  // Load inventories on mount (ref persists across Strict Mode remounts)
-  const hasLoadedInventoriesRef = useRef(false);
-  useEffect(() => {
-    if (!hasPermission || hasLoadedInventoriesRef.current) return;
-
-    const loadInventories = async () => {
-      hasLoadedInventoriesRef.current = true;
-      setIsLoading(true);
-      try {
-        const fetchedInventories = await fetchInventories();
-        setInventories(fetchedInventories);
-      } catch {
-        toast.error(t('errorLoadingInventories'));
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadInventories();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasPermission]);
-
-  // Filter inventories based on search query and filters
-  const filteredInventories = useMemo(() => {
-    return inventories.filter((inventory) => {
-      // Search query (searches name, code, address, phone)
-      if (searchQuery) {
-        const searchLower = searchQuery.toLowerCase();
-        const nameEn = (inventory.name_en || '').toLowerCase();
-        const nameAr = (inventory.name_ar || '').toLowerCase();
-        const name = (inventory.name || '').toLowerCase();
-        const code = (inventory.code || '').toLowerCase();
-        const address = (inventory.address || '').toLowerCase();
-        const phone = (inventory.phone || '').toLowerCase();
-        
-        if (
-          !nameEn.includes(searchLower) &&
-          !nameAr.includes(searchLower) &&
-          !name.includes(searchLower) &&
-          !code.includes(searchLower) &&
-          !address.includes(searchLower) &&
-          !phone.includes(searchLower)
-        ) {
-          return false;
-        }
-      }
-
-      // Name filter
-      if (filters.name) {
-        const searchLower = filters.name.toLowerCase();
-        const nameEn = (inventory.name_en || '').toLowerCase();
-        const nameAr = (inventory.name_ar || '').toLowerCase();
-        const name = (inventory.name || '').toLowerCase();
-        if (!nameEn.includes(searchLower) && !nameAr.includes(searchLower) && !name.includes(searchLower)) {
-          return false;
-        }
-      }
-
-      // Code filter
-      if (filters.code) {
-        const code = (inventory.code || '').toLowerCase();
-        if (!code.includes(filters.code.toLowerCase())) {
-          return false;
-        }
-      }
-
-      // Governorate filter
-      if (filters.governorate_id) {
-        const governorateId = parseInt(filters.governorate_id);
-        if (inventory.governorate_id !== governorateId && inventory.governorate?.id !== governorateId) {
-          return false;
-        }
-      }
-
-      // City filter
-      if (filters.city_id) {
-        const cityId = parseInt(filters.city_id);
-        if (inventory.city_id !== cityId && inventory.city?.id !== cityId) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [inventories, filters, searchQuery]);
+  // Use inventories directly from backend (already filtered)
+  const filteredInventories = inventories;
 
   const handleFilterChange = useCallback((key: string, value: string) => {
     setFilters(prev => {
-      const newFilters = { ...prev, [key]: value };
+      const newFilters = { ...prev };
+      
+      // If value is empty, remove the filter
+      if (value === '' || value === undefined) {
+        delete newFilters[key];
+      } else {
+        newFilters[key] = value;
+      }
+      
       // Clear city filter if governorate changes
       if (key === 'governorate_id') {
-        if (value === '') {
+        if (value === '' || value === undefined) {
           delete newFilters.city_id;
+          setCities([]);
         } else {
           // Load cities for the selected governorate
           const governorateId = parseInt(value);
+          setIsLoadingCities(true);
           fetchCities(governorateId)
             .then(setCities)
-            .catch(() => toast.error(t('errorLoadingCities')));
+            .catch(() => toast.error(t('errorLoadingCities')))
+            .finally(() => setIsLoadingCities(false));
         }
       }
+      
       return newFilters;
     });
   }, [t]);
@@ -209,12 +171,11 @@ export default function InventoryPage() {
 
   const handleClearFilters = useCallback(() => {
     setFilters({});
-    setSearchQuery("");
   }, []);
 
   const activeFiltersCount = useMemo(() => {
-    return Object.values(filters).filter((v) => v && v.trim()).length + (searchQuery.trim() ? 1 : 0);
-  }, [filters, searchQuery]);
+    return Object.values(filters).filter((v) => v && v.trim()).length;
+  }, [filters]);
 
   const handleDelete = async () => {
     if (!inventoryToDelete) return;
@@ -223,10 +184,8 @@ export default function InventoryPage() {
     try {
       await deleteInventory(inventoryToDelete.id);
       
-      // Refresh the inventory list from the server to ensure we have the actual state
-      // This will reveal if the backend didn't actually delete the inventory
-      const fetchedInventories = await fetchInventories();
-      setInventories(fetchedInventories);
+      // Refresh the inventory list using the query
+      await refetch();
       
       setInventoryToDelete(null);
       toast.success(t('inventoryDeletedSuccess'));
@@ -329,28 +288,6 @@ export default function InventoryPage() {
       <Card>
         <CardContent className="p-6">
           <div className="space-y-6">
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder={t("searchInventories")}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-10 h-11 bg-background border-border focus:ring-2 focus:ring-primary/20"
-              />
-              {searchQuery && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-
             {/* Filter Header */}
             <div className="flex items-center justify-between">
               <button
@@ -422,7 +359,7 @@ export default function InventoryPage() {
                               id="name-filter"
                               value={filters.name || ""}
                               onChange={(e) => handleFilterChange("name", e.target.value)}
-                              placeholder={t("searchInventories")}
+                              placeholder={t("name")}
                               className="h-10 bg-background"
                             />
                           </div>
@@ -561,6 +498,65 @@ export default function InventoryPage() {
                         </div>
                       )}
                     </div>
+
+                    {/* Status Filter */}
+                    <div className="border rounded-lg p-4 bg-muted/30">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedSections((prev) => ({ ...prev, status: !prev.status }))}
+                        className="flex items-center justify-between w-full mb-3"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Hash className="h-4 w-4 text-primary" />
+                          <Label className="text-sm font-semibold text-foreground">{t("status")}</Label>
+                          {filters.status && (
+                            <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">
+                              1
+                            </Badge>
+                          )}
+                        </div>
+                        {expandedSections.status ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                      {expandedSections.status && (
+                        <div className="space-y-3">
+                          <div className="space-y-2">
+                            <Label htmlFor="status-filter" className="text-xs text-muted-foreground font-medium">
+                              {t("status")}
+                            </Label>
+                            <Select
+                              value={filters.status || undefined}
+                              onValueChange={(value) => handleFilterChange("status", value === "all" ? "" : value)}
+                            >
+                              <SelectTrigger id="status-filter" className="h-10 bg-background">
+                                <SelectValue placeholder={t("status")} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">{tCommon("all")}</SelectItem>
+                                <SelectItem value="active">{t("active")}</SelectItem>
+                                <SelectItem value="inactive">{t("inactive")}</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {filters.status && (
+                            <div className="flex items-center gap-2 flex-wrap pt-2">
+                              <Badge variant="secondary" className="gap-1.5">
+                                {t("status")}: {filters.status === "active" ? t("active") : t("inactive")}
+                                <button
+                                  onClick={() => handleFilterChange("status", "")}
+                                  className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </>
@@ -573,10 +569,7 @@ export default function InventoryPage() {
       {!isLoading && filteredInventories.length > 0 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            {filteredInventories.length === inventories.length
-              ? `${filteredInventories.length} ${filteredInventories.length === 1 ? 'inventory' : 'inventories'}`
-              : `Showing ${filteredInventories.length} of ${inventories.length} inventories`
-            }
+            {filteredInventories.length} {filteredInventories.length === 1 ? 'inventory' : 'inventories'}
           </p>
           <ViewToggle
             view={viewType}
@@ -602,25 +595,22 @@ export default function InventoryPage() {
               <div className="space-y-2">
                 <h3 className="text-lg font-semibold">{t('noInventories')}</h3>
                 <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  {searchQuery || Object.values(filters).some(v => v) 
-                    ? 'No inventories match your search criteria. Try adjusting your filters.'
+                  {Object.values(filters).some(v => v) 
+                    ? 'No inventories match your filter criteria. Try adjusting your filters.'
                     : t('noInventoriesDesc')
                   }
                 </p>
               </div>
-              {canCreateInventory && !searchQuery && !Object.values(filters).some(v => v) && (
+              {canCreateInventory && !Object.values(filters).some(v => v) && (
                 <Button onClick={() => router.push('/dashboard/inventory/new')} className="gap-2 mt-2">
                   <Plus className="h-4 w-4" />
                   {t('createInventory')}
                 </Button>
               )}
-              {(searchQuery || Object.values(filters).some(v => v)) && (
+              {Object.values(filters).some(v => v) && (
                 <Button 
                   variant="outline" 
-                  onClick={() => {
-                    setSearchQuery('');
-                    handleClearFilters();
-                  }}
+                  onClick={handleClearFilters}
                   className="gap-2 mt-2"
                 >
                   {tCommon('clearAll')}

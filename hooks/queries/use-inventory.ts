@@ -12,19 +12,20 @@ import {
   Inventory,
   CreateInventoryRequest,
   UpdateInventoryRequest,
+  InventoryFilters,
 } from "@/lib/services/inventories";
 
 /**
- * Hook to fetch all inventories
+ * Hook to fetch all inventories with optional filters
  * Inventories are semi-static - cached for 5 minutes
  */
 export function useInventories(
-  filters: Record<string, unknown> = {},
+  filters: InventoryFilters = {},
   options?: { enabled?: boolean }
 ) {
   return useQuery<Inventory[], Error>({
     queryKey: queryKeys.inventory.list(filters),
-    queryFn: fetchInventories,
+    queryFn: () => fetchInventories(filters),
     staleTime: STALE_TIMES.SEMI_STATIC,
     gcTime: CACHE_TIMES.SEMI_STATIC,
     enabled: options?.enabled !== false, // Default to true, can be disabled

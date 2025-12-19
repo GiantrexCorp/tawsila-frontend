@@ -135,10 +135,54 @@ export interface UpdateInventoryRequest {
 }
 
 /**
- * Fetch all inventories
+ * Filters for inventories list
+ * Based on backend allowedFilters and allowedFiltersExact
  */
-export async function fetchInventories(): Promise<Inventory[]> {
-  const response = await apiRequest<Inventory[]>('/inventories', {
+export interface InventoryFilters {
+  /** Searchable filters */
+  name_en?: string;
+  name_ar?: string;
+  code?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  /** Exact filters */
+  id?: string;
+  status?: string;
+  governorate_id?: string;
+  city_id?: string;
+  [key: string]: string | undefined;
+}
+
+/**
+ * Build query string from filters
+ */
+function buildFilterQuery(filters: InventoryFilters): string {
+  const params: string[] = [];
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') {
+      params.push(`filter[${key}]=${encodeURIComponent(value)}`);
+    }
+  });
+
+  return params.length > 0 ? `&${params.join('&')}` : '';
+}
+
+/**
+ * Available includes for inventories API
+ */
+const INVENTORY_INCLUDES = [
+  'governorate',
+  'city',
+].join(',');
+
+/**
+ * Fetch all inventories with optional filters
+ */
+export async function fetchInventories(filters: InventoryFilters = {}): Promise<Inventory[]> {
+  const filterQuery = buildFilterQuery(filters);
+  const response = await apiRequest<Inventory[]>(`/inventories?include=${INVENTORY_INCLUDES}${filterQuery}`, {
     method: 'GET',
   });
 
