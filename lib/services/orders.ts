@@ -43,6 +43,9 @@ export interface OrdersResponse {
   data: Order[];
   links: PaginationLinks;
   meta: PaginationMeta;
+  delivered: number;
+  in_transit: number;
+  pending_orders: number;
 }
 
 /**
@@ -485,6 +488,9 @@ export async function fetchOrders(
       to: 0,
       total: 0,
     },
+    delivered: rawResponse.delivered || 0,
+    in_transit: rawResponse.in_transit || 0,
+    pending_orders: rawResponse.pending_orders || 0,
   };
 }
 

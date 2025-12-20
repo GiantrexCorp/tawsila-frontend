@@ -220,7 +220,7 @@ export function OrderCard({
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 min-w-[80px]"
+            className="shrink-0"
             onClick={onClick}
           >
             <Eye className="h-4 w-4 me-1.5" />
@@ -230,7 +230,7 @@ export function OrderCard({
           {canAccept && onAccept && (
             <Button
               size="sm"
-              className="flex-1 min-w-[80px]"
+              className="shrink-0"
               onClick={onAccept}
             >
               <CheckCircle className="h-4 w-4 me-1.5" />
@@ -242,7 +242,7 @@ export function OrderCard({
             <Button
               variant="destructive"
               size="sm"
-              className="flex-1 min-w-[80px]"
+              className="shrink-0"
               onClick={onReject}
             >
               <XCircle className="h-4 w-4 me-1.5" />
@@ -254,7 +254,7 @@ export function OrderCard({
             <Button
               variant="secondary"
               size="sm"
-              className="flex-1 min-w-[80px]"
+              className="shrink-0"
               onClick={onAssignAgent}
             >
               <Truck className="h-4 w-4 me-1.5" />
@@ -266,7 +266,7 @@ export function OrderCard({
             <Button
               variant="secondary"
               size="sm"
-              className="flex-1 min-w-[80px]"
+              className="shrink-0"
               onClick={onAssignDeliveryAgent}
             >
               <Truck className="h-4 w-4 me-1.5" />

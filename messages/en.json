@@ -1122,7 +1122,9 @@
     "period": "Period",
     "selectPeriod": "Select period",
     "startDate": "Start Date",
-    "endDate": "End Date"
+    "endDate": "End Date",
+    "previous": "Previous",
+    "next": "Next"
   },
   "transactions": {
     "title": "My Transactions",

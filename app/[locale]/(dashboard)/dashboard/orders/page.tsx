@@ -388,13 +388,11 @@ export default function OrdersPage() {
   const stats = useMemo(() => {
     return {
       total: totalOrders,
-      pending: orders.filter((o) => o.status === "pending").length,
-      inTransit: orders.filter((o) =>
-        ["in_transit", "picked_up", "out_for_delivery"].includes(o.status)
-      ).length,
-      delivered: orders.filter((o) => o.status === "delivered").length,
+      pending: ordersResponse?.pending_orders || 0,
+      inTransit: ordersResponse?.in_transit || 0,
+      delivered: ordersResponse?.delivered || 0,
     };
-  }, [orders, totalOrders]);
+  }, [ordersResponse]);
 
   const activeFiltersCount = useMemo(() => {
     return Object.values(filters).filter((v) => v && v.trim()).length + (searchQuery.trim() ? 1 : 0);
@@ -1084,23 +1082,48 @@ export default function OrdersPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center justify-center gap-2 pt-4">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1 || isFetching}
+            className="rounded-lg"
           >
             {tCommon("previous")}
           </Button>
-          <span className="text-sm text-muted-foreground px-4">
-            {t("page")} {currentPage} {t("of")} {totalPages}
-          </span>
+          <div className="flex items-center gap-1">
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum: number;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+              return (
+                <Button
+                  key={pageNum}
+                  variant={currentPage === pageNum ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(pageNum)}
+                  disabled={isFetching}
+                  className="w-9 h-9 p-0 rounded-lg"
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+          </div>
           <Button
             variant="outline"
             size="sm"
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages || isFetching}
+            className="rounded-lg"
           >
             {tCommon("next")}
           </Button>

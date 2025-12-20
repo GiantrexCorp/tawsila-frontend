@@ -1121,7 +1121,9 @@
     "period": "الفترة",
     "selectPeriod": "اختار الفترة",
     "startDate": "تاريخ البداية",
-    "endDate": "تاريخ النهاية"
+    "endDate": "تاريخ النهاية",
+    "previous": "السابق",
+    "next": "التالي"
   },
   "transactions": {
     "title": "معاملاتي",
