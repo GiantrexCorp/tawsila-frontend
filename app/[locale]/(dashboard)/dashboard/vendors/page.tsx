@@ -17,7 +17,6 @@ import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
 import { fetchVendors, fetchGovernorates, fetchCities, type Vendor, type Governorate, type City } from "@/lib/services/vendors";
 import { ViewToggle, type ViewType } from "@/components/ui/view-toggle";
 import { VendorTable } from "@/components/vendors/vendor-table";
-import { clearFilterWithRelations } from "@/lib/utils/filter-utils";
 
 export default function VendorsPage() {
   const t = useTranslations('organizations');
