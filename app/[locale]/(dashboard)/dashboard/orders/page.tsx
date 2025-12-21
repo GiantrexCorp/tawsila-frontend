@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Loader2, Package, RefreshCw, Search, X, MapPin, Building2, UserCheck, Hash, Phone, Calendar, Filter, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Loader2, Package, RefreshCw, X, MapPin, Building2, UserCheck, Hash, Phone, Calendar, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { useRouter } from "@/i18n/routing";
 import { toast } from "sonner";
 
@@ -59,8 +59,7 @@ export default function OrdersPage() {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Search and Filters
-  const [searchQuery, setSearchQuery] = useState("");
+  // Filters
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [appliedFilters, setAppliedFilters] = useState<OrderFilters>({});
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
@@ -188,7 +187,16 @@ export default function OrdersPage() {
 
   // Filter handlers
   const handleFilterChange = useCallback((key: string, value: string) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
+    setFilters((prev) => {
+      const newFilters = { ...prev };
+      // If value is empty, remove the filter
+      if (value === '' || value === undefined) {
+        delete newFilters[key];
+      } else {
+        newFilters[key] = value;
+      }
+      return newFilters;
+    });
   }, []);
 
   const handleLocationFilterChange = useCallback((governorateId: string, cityId?: string) => {
@@ -211,35 +219,53 @@ export default function OrdersPage() {
 
   const handleClearFilters = useCallback(() => {
     setFilters({});
-    setSearchQuery("");
+    setAppliedFilters({});
+    setCities([]);
+    setCurrentPage(1);
   }, []);
 
   const handleClearAllFilters = useCallback(() => {
     setFilters({});
     setAppliedFilters({});
-    setSearchQuery("");
+    setCities([]);
     setCurrentPage(1);
   }, []);
 
   const handleApplyFilters = useCallback(() => {
     const newFilters: OrderFilters = {};
-    
-    // Add search query to filters if present
-    if (searchQuery.trim()) {
-      // Search can match order_number or tracking_number
-      newFilters.order_number = searchQuery.trim();
-    }
 
-    // Add all other filters
+    // Add all filters
     Object.entries(filters).forEach(([key, value]) => {
-      if (value && value.trim()) {
-        newFilters[key as keyof OrderFilters] = value.trim();
+      if (value && typeof value === 'string' && value.trim()) {
+        // Special handling for date range - must have both dates in YYYY-MM-DD format
+        if (key === 'created_at_between') {
+          const dateParts = value.split(',');
+          const fromDate = dateParts[0]?.trim();
+          const toDate = dateParts[1]?.trim();
+          // Validate format: YYYY-MM-DD (10 characters, matches regex)
+          const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+          // Only include if both dates are present, valid length, and match YYYY-MM-DD format
+          if (
+            dateParts.length === 2 &&
+            fromDate &&
+            toDate &&
+            fromDate.length === 10 &&
+            toDate.length === 10 &&
+            dateRegex.test(fromDate) &&
+            dateRegex.test(toDate)
+          ) {
+            // Ensure dates are in YYYY-MM-DD format
+            newFilters[key as keyof OrderFilters] = `${fromDate},${toDate}`;
+          }
+        } else {
+          newFilters[key as keyof OrderFilters] = value.trim();
+        }
       }
     });
 
     setAppliedFilters(newFilters);
     setCurrentPage(1);
-  }, [filters, searchQuery]);
+  }, [filters]);
 
   const handleRemoveFilter = useCallback((key: string) => {
     setFilters((prev) => {
@@ -395,8 +421,8 @@ export default function OrdersPage() {
   }, [ordersResponse]);
 
   const activeFiltersCount = useMemo(() => {
-    return Object.values(filters).filter((v) => v && v.trim()).length + (searchQuery.trim() ? 1 : 0);
-  }, [filters, searchQuery]);
+    return Object.values(filters).filter((v) => v && v.trim()).length;
+  }, [filters]);
 
   // Loading state
   if (hasPermission === null) {
@@ -445,36 +471,10 @@ export default function OrdersPage() {
       {/* Stats Cards */}
       <OrdersStatsCards stats={stats} isLoading={isLoading} t={t} />
 
-      {/* Search Bar & Filters */}
+      {/* Filters */}
       <Card>
         <CardContent className="p-6">
           <div className="space-y-6">
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder={t("searchPlaceholder")}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleApplyFilters();
-                  }
-                }}
-                className="pl-10 pr-10 h-11 bg-background border-border focus:ring-2 focus:ring-primary/20"
-              />
-              {searchQuery && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
             {/* Filter Header */}
             <div className="flex items-center justify-between">
               <button
@@ -752,12 +752,21 @@ export default function OrdersPage() {
                         </Label>
                         <Select
                           value={filters.vendor_id || undefined}
-                          onValueChange={(value) => handleFilterChange("vendor_id", value)}
+                          onValueChange={(value) => handleFilterChange("vendor_id", value === "all" ? "" : value)}
                         >
                           <SelectTrigger id="vendor-filter" className="h-10 bg-background">
-                            <SelectValue placeholder={t("selectVendor")} />
+                            <SelectValue placeholder={t("selectVendor")}>
+                              {filters.vendor_id
+                                ? vendors.find((v) => v.id.toString() === filters.vendor_id)
+                                    ? (locale === "ar"
+                                        ? vendors.find((v) => v.id.toString() === filters.vendor_id)?.name_ar
+                                        : vendors.find((v) => v.id.toString() === filters.vendor_id)?.name_en)
+                                    : filters.vendor_id
+                                : null}
+                            </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="all">{tCommon("all")}</SelectItem>
                             {vendors.map((vendor) => (
                               <SelectItem key={vendor.id} value={vendor.id.toString()}>
                                 {locale === "ar" ? vendor.name_ar : vendor.name_en}
@@ -844,9 +853,9 @@ export default function OrdersPage() {
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-primary" />
                       <Label className="text-sm font-semibold text-foreground">{t("statusAndDate")}</Label>
-                      {(filters.status || filters.created_at_between) && (
+                      {(filters.status || filters.created_at_between || filters.payment_method) && (
                         <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">
-                          {(filters.status ? 1 : 0) + (filters.created_at_between ? 1 : 0)}
+                          {(filters.status ? 1 : 0) + (filters.created_at_between ? 1 : 0) + (filters.payment_method ? 1 : 0)}
                         </Badge>
                       )}
                     </div>
@@ -872,15 +881,14 @@ export default function OrdersPage() {
                           <SelectContent>
                             <SelectItem value="pending">{t("pending")}</SelectItem>
                             <SelectItem value="accepted">{t("accepted")}</SelectItem>
+                            <SelectItem value="rejected">{t("rejected")}</SelectItem>
                             <SelectItem value="pickup_assigned">{t("pickupAssigned")}</SelectItem>
-                            <SelectItem value="picked_up">{t("pickedUp")}</SelectItem>
-                            <SelectItem value="in_transit">{t("inTransit")}</SelectItem>
-                            <SelectItem value="at_hub">{t("atHub")}</SelectItem>
+                            <SelectItem value="picked_up_from_vendor">{t("pickedUpFromVendor")}</SelectItem>
+                            <SelectItem value="received_at_inventory">{t("receivedAtInventory")}</SelectItem>
                             <SelectItem value="delivery_assigned">{t("deliveryAssigned")}</SelectItem>
                             <SelectItem value="out_for_delivery">{t("outForDelivery")}</SelectItem>
                             <SelectItem value="delivered">{t("delivered")}</SelectItem>
-                            <SelectItem value="failed_delivery">{t("failedDelivery")}</SelectItem>
-                            <SelectItem value="rejected">{t("rejected")}</SelectItem>
+                            <SelectItem value="delivery_failed">{t("deliveryFailed")}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -895,7 +903,14 @@ export default function OrdersPage() {
                             value={filters.created_at_between?.split(",")[0] || ""}
                             onChange={(e) => {
                               const to = filters.created_at_between?.split(",")[1] || "";
-                              handleFilterChange("created_at_between", e.target.value ? `${e.target.value},${to}` : "");
+                              if (e.target.value) {
+                                // Ensure date is in YYYY-MM-DD format (HTML date input should already provide this)
+                                const fromDate = e.target.value; // Already in YYYY-MM-DD format from date input
+                                handleFilterChange("created_at_between", to ? `${fromDate},${to}` : `${fromDate},`);
+                              } else {
+                                // Clear the entire filter if from date is cleared
+                                handleFilterChange("created_at_between", "");
+                              }
                             }}
                             className="h-10 bg-background"
                           />
@@ -905,11 +920,36 @@ export default function OrdersPage() {
                             value={filters.created_at_between?.split(",")[1] || ""}
                             onChange={(e) => {
                               const from = filters.created_at_between?.split(",")[0] || "";
-                              handleFilterChange("created_at_between", from ? `${from},${e.target.value}` : "");
+                              if (e.target.value) {
+                                // Ensure date is in YYYY-MM-DD format (HTML date input should already provide this)
+                                const toDate = e.target.value; // Already in YYYY-MM-DD format from date input
+                                handleFilterChange("created_at_between", from ? `${from},${toDate}` : `,${toDate}`);
+                              } else {
+                                // Clear the entire filter if to date is cleared
+                                handleFilterChange("created_at_between", "");
+                              }
                             }}
                             className="h-10 bg-background"
                           />
                         </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="payment-method-filter" className="text-xs text-muted-foreground font-medium">
+                          {t("paymentMethod")}
+                        </Label>
+                        <Select
+                          value={filters.payment_method || undefined}
+                          onValueChange={(value) => handleFilterChange("payment_method", value === "all" ? "" : value)}
+                        >
+                          <SelectTrigger id="payment-method-filter" className="h-10 bg-background">
+                            <SelectValue placeholder={tCommon("all")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">{tCommon("all")}</SelectItem>
+                            <SelectItem value="cash">{t("cash")}</SelectItem>
+                            <SelectItem value="card">{t("card")}</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                   )}
@@ -932,6 +972,13 @@ export default function OrdersPage() {
         </CardContent>
       </Card>
 
+      {/* Loading Indicator */}
+      {isFetching && (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      )}
+
       {/* Active Filters */}
       {Object.keys(appliedFilters).length > 0 && (
         <div className="flex flex-wrap gap-2">
@@ -952,6 +999,7 @@ export default function OrdersPage() {
               agent_id: t("assignedAgent"),
               status: t("status"),
               payment_status: t("paymentStatus"),
+              payment_method: t("paymentMethod"),
               created_at_between: t("dateRange"),
             };
             label = labelMap[key] || key;
@@ -976,6 +1024,13 @@ export default function OrdersPage() {
             } else if (key === "created_at_between") {
               const [from, to] = value.split(",");
               displayValue = `${from} - ${to}`;
+            } else if (key === "payment_method") {
+              // Payment method translations
+              const paymentMethodMap: Record<string, string> = {
+                cash: t("cash") || "Cash",
+                card: t("card") || "Card",
+              };
+              displayValue = paymentMethodMap[value] || value;
             }
             return (
               <Badge key={key} variant="secondary" className="gap-1.5">

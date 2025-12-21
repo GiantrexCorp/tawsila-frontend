@@ -50,32 +50,109 @@ export interface OrdersResponse {
 
 /**
  * Filters for orders list
+ * Based on backend API filter documentation
  */
 export interface OrderFilters {
+  id?: string;
   order_number?: string;
-  tracking_number?: string;
-  customer_name?: string;
-  customer_mobile?: string;
+  track_number?: string; // API uses track_number, not tracking_number
+  customer_mobile?: string; // Will be mapped to customer.mobile in query
   status?: string;
   payment_status?: string;
-  created_at_between?: string;
-  vendor_id?: string;
+  payment_method?: string;
+  created_between?: string; // API uses created_between, not created_at_between
   inventory_id?: string;
-  agent_id?: string;
-  governorate_id?: string;
-  city_id?: string;
+  'assignments.assigned_to'?: string; // API uses assignments.assigned_to, not agent_id
+  is_in_phase1?: string; // Boolean: 'true', 'false', '1', '0'
+  is_in_phase2?: string; // Boolean: 'true', 'false', '1', '0'
+  // Legacy/UI-only filters (will be mapped)
+  tracking_number?: string; // Maps to track_number
+  customer_name?: string; // Not in API, but kept for UI
+  vendor_id?: string; // Not in API, but kept for UI
+  agent_id?: string; // Maps to assignments.assigned_to
+  governorate_id?: string; // Not in API, but kept for UI
+  city_id?: string; // Not in API, but kept for UI
+  created_at_between?: string; // Maps to created_between
   [key: string]: string | undefined;
 }
 
 /**
  * Build query string from filters
+ * Maps UI filter names to API filter names
  */
 function buildFilterQuery(filters: OrderFilters): string {
   const params: string[] = [];
 
+  // Filters not supported by API (UI-only)
+  const unsupportedFilters = ['customer_name', 'governorate_id', 'city_id'];
+
   Object.entries(filters).forEach(([key, value]) => {
-    if (value !== undefined && value !== '') {
-      params.push(`filter[${key}]=${encodeURIComponent(value)}`);
+    if (value !== undefined && value !== '' && !unsupportedFilters.includes(key)) {
+      let apiKey = key;
+      let apiValue = value;
+
+      // Map UI filter names to API filter names
+      if (key === 'tracking_number') {
+        apiKey = 'track_number';
+      } else if (key === 'customer_mobile') {
+        apiKey = 'customer.mobile';
+      } else if (key === 'created_at_between') {
+        apiKey = 'created_between';
+        // Validate date range format: must have both dates in YYYY-MM-DD,YYYY-MM-DD format
+        // API expects: filter[created_between]=2024-01-01,2024-12-31
+        // URL encoded: filter[created_between]=2024-01-01%2C2024-12-31
+        const dateParts = value.split(',');
+        if (dateParts.length !== 2) {
+          // Skip invalid date ranges (must have comma separator)
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Invalid date range format (missing comma):', value);
+          }
+          return;
+        }
+        // Ensure both dates are in correct format (YYYY-MM-DD)
+        const fromDate = dateParts[0]?.trim();
+        const toDate = dateParts[1]?.trim();
+        // Validate both dates exist and are in correct format
+        if (!fromDate || !toDate || fromDate.length !== 10 || toDate.length !== 10) {
+          // Skip invalid date format - both dates must be present and in YYYY-MM-DD format
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Invalid date range (missing or invalid dates):', { fromDate, toDate, original: value });
+          }
+          return;
+        }
+        // Validate date format (basic check for YYYY-MM-DD)
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!dateRegex.test(fromDate) || !dateRegex.test(toDate)) {
+          // Skip invalid date format
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Invalid date format (does not match YYYY-MM-DD):', { fromDate, toDate, original: value });
+          }
+          return;
+        }
+        // Format: YYYY-MM-DD,YYYY-MM-DD (comma will be URL encoded by encodeURIComponent)
+        apiValue = `${fromDate},${toDate}`;
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Date range filter applied:', { fromDate, toDate, apiValue, encoded: encodeURIComponent(apiValue) });
+        }
+      } else if (key === 'agent_id') {
+        apiKey = 'assignments.assigned_to';
+      } else if (key === 'vendor_id') {
+        // Backend might expect vendor.id or just vendor_id - try vendor.id first
+        apiKey = 'vendor.id';
+      }
+
+      // Handle boolean filters - convert to API format
+      if (apiKey === 'is_in_phase1' || apiKey === 'is_in_phase2') {
+        // Convert '1'/'0' to 'true'/'false'
+        if (value === '1') {
+          apiValue = 'true';
+        } else if (value === '0') {
+          apiValue = 'false';
+        }
+        // If already 'true' or 'false', keep as is
+      }
+
+      params.push(`filter[${apiKey}]=${encodeURIComponent(apiValue)}`);
     }
   });
 
@@ -465,12 +542,20 @@ export async function fetchOrders(
   filters: OrderFilters = {}
 ): Promise<OrdersResponse> {
   const filterQuery = buildFilterQuery(filters);
-  const response = await apiRequest<OrdersResponse>(
-    `/orders?page=${page}&per_page=${perPage}&include=${ORDER_INCLUDES}${filterQuery}`,
-    {
-      method: 'GET',
-    }
-  );
+  const url = `/orders?page=${page}&per_page=${perPage}&include=${ORDER_INCLUDES}${filterQuery}`;
+  
+  // Debug logging (remove in production)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Orders API Request:', {
+      url,
+      filters,
+      filterQuery,
+    });
+  }
+  
+  const response = await apiRequest<OrdersResponse>(url, {
+    method: 'GET',
+  });
 
   // apiRequest returns the raw JSON response which has data, links, meta at root level
   const rawResponse = response as unknown as OrdersResponse;
