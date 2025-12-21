@@ -272,6 +272,8 @@ export default function OrderDetailPage() {
       if (updatedOrder.assignments) {
         setAssignments(updatedOrder.assignments);
       }
+      // Refresh the page to show updated status
+      router.refresh();
     } catch (error) {
       const err = error as { status?: number };
       if (err?.status === 403) {
@@ -285,7 +287,7 @@ export default function OrderDetailPage() {
     } finally {
       setIsAssigning(false);
     }
-  }, [orderId, selectedAgentId, assignmentNotes, t, tCommon]);
+  }, [orderId, selectedAgentId, assignmentNotes, router, t, tCommon]);
 
   const handleAssignDeliveryAgent = useCallback(async () => {
     if (!selectedDeliveryAgentId) {
@@ -306,6 +308,8 @@ export default function OrderDetailPage() {
       if (updatedOrder.assignments) {
         setAssignments(updatedOrder.assignments);
       }
+      // Refresh the page to show updated status
+      router.refresh();
     } catch (error) {
       const err = error as { status?: number };
       if (err?.status === 403) {
@@ -319,7 +323,7 @@ export default function OrderDetailPage() {
     } finally {
       setIsAssigningDelivery(false);
     }
-  }, [orderId, selectedDeliveryAgentId, deliveryAssignmentNotes, t, tCommon]);
+  }, [orderId, selectedDeliveryAgentId, deliveryAssignmentNotes, router, t, tCommon]);
 
   const handleAcceptOrder = useCallback(async () => {
     if (!selectedInventoryId) {

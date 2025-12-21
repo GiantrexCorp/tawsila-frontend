@@ -295,9 +295,10 @@ export default function OrdersPage() {
   // Navigation
   const handleOrderClick = useCallback(
     (orderId: number) => {
-      router.push(`/dashboard/orders/${orderId}`);
+      const path = `/${locale}/dashboard/orders/${orderId}`;
+      window.open(path, '_blank');
     },
-    [router]
+    [locale]
   );
 
   // Action handlers
@@ -408,12 +409,14 @@ export default function OrdersPage() {
         toast.success(t("agentAssignedSuccess"));
         setShowAssignDialog(false);
         setSelectedOrder(null);
+        // Refetch orders to see updated status
+        await refetch();
       } catch (error) {
         const message = error instanceof Error ? error.message : tCommon("tryAgain");
         toast.error(t("agentAssignedFailed"), { description: message });
       }
     },
-    [selectedOrder, assignAgentMutation, t, tCommon]
+    [selectedOrder, assignAgentMutation, refetch, t, tCommon]
   );
 
 
