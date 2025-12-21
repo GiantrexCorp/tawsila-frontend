@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Plus, Loader2, MapPin, ArrowUpRight, Edit, Search, X, Filter, ChevronDown, ChevronUp, Hash, CheckCircle2 } from "lucide-react";
+import { Building2, Plus, Loader2, MapPin, ArrowUpRight, Edit, X, Filter, ChevronDown, ChevronUp, Hash, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
@@ -35,12 +35,11 @@ export default function VendorsPage() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [isLoadingVendors, setIsLoadingVendors] = useState(true);
   
-  // Search and Filters
-  const [searchQuery, setSearchQuery] = useState("");
+  // Filters
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    vendorInfo: true,
+    vendorInfo: false,
     location: false,
     status: false,
   });
@@ -114,23 +113,9 @@ export default function VendorsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Filter vendors based on search query and filters
+  // Filter vendors based on filters
   const filteredVendors = useMemo(() => {
     return vendors.filter((vendor) => {
-      // Search query (searches name)
-      if (searchQuery) {
-        const searchLower = searchQuery.toLowerCase();
-        const nameEn = (vendor.name_en || '').toLowerCase();
-        const nameAr = (vendor.name_ar || '').toLowerCase();
-        
-        if (
-          !nameEn.includes(searchLower) &&
-          !nameAr.includes(searchLower)
-        ) {
-          return false;
-        }
-      }
-
       // Name filter
       if (filters.name) {
         const searchLower = filters.name.toLowerCase();
@@ -166,7 +151,7 @@ export default function VendorsPage() {
 
       return true;
     });
-  }, [vendors, filters, searchQuery]);
+  }, [vendors, filters]);
 
   const handleFilterChange = useCallback((key: string, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -183,8 +168,10 @@ export default function VendorsPage() {
           delete newFilters.city_id;
         }
       } else {
+        // Clear governorate and city filters, and reset cities array
         delete newFilters.governorate_id;
         delete newFilters.city_id;
+        setCities([]);
       }
       return newFilters;
     });
@@ -192,12 +179,12 @@ export default function VendorsPage() {
 
   const handleClearFilters = useCallback(() => {
     setFilters({});
-    setSearchQuery("");
+    setCities([]);
   }, []);
 
   const activeFiltersCount = useMemo(() => {
-    return Object.values(filters).filter((v) => v && v.trim()).length + (searchQuery.trim() ? 1 : 0);
-  }, [filters, searchQuery]);
+    return Object.values(filters).filter((v) => v && v.trim()).length;
+  }, [filters]);
 
   // Don't render page if permission check hasn't completed or user lacks permission
   if (hasPermission === null || hasPermission === false) {
@@ -255,35 +242,12 @@ export default function VendorsPage() {
       <Card>
         <CardContent className="p-6">
           <div className="space-y-6">
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder={t("searchVendors")}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-10 h-11 bg-background border-border focus:ring-2 focus:ring-primary/20"
-              />
-              {searchQuery && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-
             {/* Filter Header */}
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
-                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-              >
+            <div 
+              className="flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
+            >
+              <div className="flex items-center gap-2 flex-1">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <h3 className="text-lg font-semibold">{t("filters")}</h3>
                 {activeFiltersCount > 0 && (
@@ -296,12 +260,15 @@ export default function VendorsPage() {
                 ) : (
                   <ChevronDown className="h-4 w-4 text-muted-foreground ms-2" />
                 )}
-              </button>
+              </div>
               {activeFiltersCount > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleClearFilters}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClearFilters();
+                  }}
                   className="gap-2"
                 >
                   <X className="h-4 w-4" />
@@ -549,12 +516,12 @@ export default function VendorsPage() {
             <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-lg font-medium">{t('noVendors')}</p>
             <p className="text-sm text-muted-foreground mt-2">
-              {searchQuery || Object.values(filters).some(v => v)
+              {Object.values(filters).some(v => v)
                 ? 'No vendors match your search criteria. Try adjusting your filters.'
                 : t('noVendorsDesc')
               }
             </p>
-            {(searchQuery || Object.values(filters).some(v => v)) && (
+            {Object.values(filters).some(v => v) && (
               <Button 
                 variant="outline" 
                 onClick={handleClearFilters}

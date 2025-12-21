@@ -418,12 +418,11 @@ export default function SettlementsPage() {
             </div>
 
             {/* Filter Header */}
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
-                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-              >
+            <div 
+              className="flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
+            >
+              <div className="flex items-center gap-2 flex-1">
                 <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                   <Filter className="h-4 w-4 text-primary" />
                 </div>
@@ -438,12 +437,15 @@ export default function SettlementsPage() {
                 ) : (
                   <ChevronDown className="h-4 w-4 text-muted-foreground ms-2" />
                 )}
-              </button>
+              </div>
               {activeFiltersCount > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleClearFilters}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClearFilters();
+                  }}
                   className="gap-2 rounded-lg"
                 >
                   <X className="h-4 w-4" />
