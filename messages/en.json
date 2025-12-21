@@ -240,12 +240,15 @@
     "pickupAssigned": "Pickup Assigned",
     "picked_up": "Picked Up",
     "pickedUp": "Picked Up",
+    "pickedUpFromVendor": "Picked Up From Vendor",
+    "receivedAtInventory": "Received At Inventory",
     "in_transit": "In Transit",
     "inTransit": "In Transit",
     "atHub": "At Hub",
     "deliveryAssigned": "Delivery Assigned",
     "outForDelivery": "Out for Delivery",
     "delivered": "Delivered",
+    "deliveryFailed": "Delivery Failed",
     "failedDelivery": "Failed Delivery",
     "rejected": "Rejected",
     "assignAgent": "Assign to Agent",
@@ -257,6 +260,7 @@
     "ordersFound": "orders found",
     "filtered": "filtered",
     "refreshData": "Refresh",
+    "orderId": "Order ID",
     "searchByOrderNumber": "Search by order number...",
     "searchByCustomerName": "Search by customer name...",
     "searchByMobile": "Search by mobile...",
@@ -440,7 +444,9 @@
     "from": "From",
     "statusChanged": "Status Changed",
     "transactions": "Transactions",
-    "balanceAfter": "Balance After"
+    "balanceAfter": "Balance After",
+    "cash": "Cash",
+    "card": "Card"
   },
   "orderCreate": {
     "title": "Create New Order",
@@ -457,6 +463,8 @@
     "paymentInformationDesc": "Select the payment method for this order",
     "paymentMethod": "Payment Method",
     "selectPaymentMethod": "Select payment method",
+    "cash": "Cash",
+    "card": "Card",
     "cashOnDelivery": "Cash on Delivery (COD)",
     "paid": "Paid",
     "shippingCost": "Shipping Cost",
@@ -1084,6 +1092,7 @@
     "memberSince": "Member since"
   },
   "common": {
+    "all": "All",
     "save": "Save",
     "saving": "Saving...",
     "cancel": "Cancel",

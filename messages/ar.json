@@ -240,12 +240,15 @@
     "pickupAssigned": "اتعين للاستلام",
     "picked_up": "اتسلم",
     "pickedUp": "اتسلم",
+    "pickedUpFromVendor": "تم الاستلام من المورد",
+    "receivedAtInventory": "تم الاستلام في المستودع",
     "in_transit": "في الطريق",
     "inTransit": "في الطريق",
     "atHub": "في المستودع",
     "deliveryAssigned": "اتعين للتوصيل",
     "outForDelivery": "طالع للتوصيل",
     "delivered": "اتوصل",
+    "deliveryFailed": "فشل التوصيل",
     "failedDelivery": "فشل التوصيل",
     "rejected": "مرفوض",
     "assignAgent": "تعيين لمندوب",
@@ -254,6 +257,7 @@
     "pendingOrders": "طلبات مستنية",
     "inTransitOrders": "في الطريق",
     "deliveredOrders": "اتوصلت",
+    "orderId": "رقم الطلب",
     "ordersFound": "طلبات",
     "filtered": "مفلترة",
     "refreshData": "تحديث",
@@ -439,7 +443,9 @@
     "from": "من",
     "statusChanged": "تم تغيير الحالة",
     "transactions": "المعاملات",
-    "balanceAfter": "الرصيد بعدها"
+    "balanceAfter": "الرصيد بعدها",
+    "cash": "نقدي",
+    "card": "بطاقة"
   },
   "orderCreate": {
     "title": "عمل طلب جديد",
@@ -456,6 +462,8 @@
     "paymentInformationDesc": "اختار طريقة الدفع للطلب ده",
     "paymentMethod": "طريقة الدفع",
     "selectPaymentMethod": "اختار طريقة الدفع",
+    "cash": "نقدي",
+    "card": "بطاقة",
     "cashOnDelivery": "الدفع عند الاستلام (COD)",
     "paid": "مدفوع",
     "shippingCost": "تكلفة الشحن",
@@ -1084,6 +1092,7 @@
     "memberSince": "عضو من"
   },
   "common": {
+    "all": "الكل",
     "save": "حفظ",
     "saving": "جاري الحفظ...",
     "cancel": "إلغاء",
