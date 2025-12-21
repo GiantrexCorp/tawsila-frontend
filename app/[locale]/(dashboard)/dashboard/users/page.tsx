@@ -19,7 +19,6 @@ import {
   Edit,
   Users,
   RefreshCw,
-  Search,
   X,
   Filter,
   ChevronDown,
@@ -263,7 +262,6 @@ export default function UsersPage() {
 
   // Pagination and filters state
   const [currentPage, setCurrentPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<UserFilters>({});
   const [appliedFilters, setAppliedFilters] = useState<UserFilters>({});
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
@@ -352,39 +350,26 @@ export default function UsersPage() {
 
   const handleClearFilters = useCallback(() => {
     setFilters({});
-    setSearchQuery("");
+    setAppliedFilters({});
+    setCurrentPage(1);
   }, []);
 
   const handleClearAllFilters = useCallback(() => {
     setFilters({});
     setAppliedFilters({});
-    setSearchQuery("");
     setCurrentPage(1);
   }, []);
 
   const handleApplyFilters = useCallback(() => {
     const filtersToApply: UserFilters = { ...filters };
     
-    // Add search query to filters if it exists
-    if (searchQuery.trim()) {
-      if (locale === 'ar') {
-        filtersToApply.name_ar = searchQuery.trim();
-      } else {
-        filtersToApply.name_en = searchQuery.trim();
-      }
-    } else {
-      // Remove name filters if search is empty
-      delete filtersToApply.name_ar;
-      delete filtersToApply.name_en;
-    }
-    
     setAppliedFilters(filtersToApply);
     setCurrentPage(1);
-  }, [filters, searchQuery, locale]);
+  }, [filters]);
 
   const activeFiltersCount = useMemo(() => {
-    return Object.values(filters).filter((v) => v && v.trim()).length + (searchQuery.trim() ? 1 : 0);
-  }, [filters, searchQuery]);
+    return Object.values(filters).filter((v) => v && v.trim()).length;
+  }, [filters]);
 
   const getLocalizedRoleDisplay = useCallback((user: User) => {
     if (!user.roles || user.roles.length === 0) return t('noRole');
@@ -633,44 +618,16 @@ export default function UsersPage() {
         </Card>
       </div>
 
-      {/* Search Bar & Filters */}
+      {/* Filters */}
       <Card>
         <CardContent className="p-6">
           <div className="space-y-6">
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder={t("searchUsers")}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleApplyFilters();
-                  }
-                }}
-                className="pl-10 pr-10 h-11 bg-background border-border focus:ring-2 focus:ring-primary/20"
-              />
-              {searchQuery && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-
             {/* Filter Header */}
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
-                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-              >
+            <div 
+              className="flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
+            >
+              <div className="flex items-center gap-2 flex-1">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <h3 className="text-lg font-semibold">{t("filters")}</h3>
                 {activeFiltersCount > 0 && (
@@ -683,12 +640,15 @@ export default function UsersPage() {
                 ) : (
                   <ChevronDown className="h-4 w-4 text-muted-foreground ms-2" />
                 )}
-              </button>
+              </div>
               {activeFiltersCount > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleClearAllFilters}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClearAllFilters();
+                  }}
                   className="gap-2"
                 >
                   <X className="h-4 w-4" />
@@ -930,22 +890,8 @@ export default function UsersPage() {
       </Card>
 
       {/* Active Filters Display */}
-      {(Object.keys(appliedFilters).length > 0 || searchQuery.trim()) && (
+      {Object.keys(appliedFilters).length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          {searchQuery.trim() && (
-            <Badge variant="secondary" className="gap-1.5">
-              {t("name")}: {searchQuery}
-              <button
-                onClick={() => {
-                  setSearchQuery("");
-                  handleApplyFilters();
-                }}
-                className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          )}
           {appliedFilters.id && (
             <Badge variant="secondary" className="gap-1.5">
               {t("id")}: {appliedFilters.id}

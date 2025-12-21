@@ -64,12 +64,12 @@ export default function OrdersPage() {
   const [appliedFilters, setAppliedFilters] = useState<OrderFilters>({});
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    orderInfo: true,
+    orderInfo: false,
     customerInfo: false,
     location: false,
     organization: false,
     agent: false,
-    status: true,
+    status: false,
   });
 
   // Data for filters (lazy loaded when filters expanded)
@@ -192,8 +192,17 @@ export default function OrdersPage() {
       // If value is empty, remove the filter
       if (value === '' || value === undefined) {
         delete newFilters[key];
+        // If clearing governorate, also clear city and cities array
+        if (key === 'governorate_id') {
+          delete newFilters.city_id;
+          setCities([]);
+        }
       } else {
         newFilters[key] = value;
+        // If setting governorate, clear city (city depends on governorate)
+        if (key === 'governorate_id') {
+          delete newFilters.city_id;
+        }
       }
       return newFilters;
     });
@@ -210,8 +219,10 @@ export default function OrdersPage() {
           delete newFilters.city_id;
         }
       } else {
+        // Clear governorate and city filters, and reset cities array
         delete newFilters.governorate_id;
         delete newFilters.city_id;
+        setCities([]);
       }
       return newFilters;
     });
@@ -478,12 +489,11 @@ export default function OrdersPage() {
         <CardContent className="p-6">
           <div className="space-y-6">
             {/* Filter Header */}
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
-                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-              >
+            <div 
+              className="flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
+            >
+              <div className="flex items-center gap-2 flex-1">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <h3 className="text-lg font-semibold">{t("filters")}</h3>
                 {activeFiltersCount > 0 && (
@@ -496,12 +506,15 @@ export default function OrdersPage() {
                 ) : (
                   <ChevronDown className="h-4 w-4 text-muted-foreground ms-2" />
                 )}
-              </button>
+              </div>
               {activeFiltersCount > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleClearAllFilters}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClearAllFilters();
+                  }}
                   className="gap-2"
                 >
                   <X className="h-4 w-4" />
@@ -753,19 +766,12 @@ export default function OrdersPage() {
                           {t("vendor")}
                         </Label>
                         <Select
+                          key={`vendor-${filters.vendor_id || 'none'}`}
                           value={filters.vendor_id || undefined}
                           onValueChange={(value) => handleFilterChange("vendor_id", value === "all" ? "" : value)}
                         >
                           <SelectTrigger id="vendor-filter" className="h-10 bg-background">
-                            <SelectValue placeholder={t("selectVendor")}>
-                              {filters.vendor_id
-                                ? vendors.find((v) => v.id.toString() === filters.vendor_id)
-                                    ? (locale === "ar"
-                                        ? vendors.find((v) => v.id.toString() === filters.vendor_id)?.name_ar
-                                        : vendors.find((v) => v.id.toString() === filters.vendor_id)?.name_en)
-                                    : filters.vendor_id
-                                : null}
-                            </SelectValue>
+                            <SelectValue placeholder={t("selectVendor")} />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="all">{tCommon("all")}</SelectItem>
@@ -874,13 +880,15 @@ export default function OrdersPage() {
                           {t("status")}
                         </Label>
                         <Select
+                          key={`status-${filters.status || 'none'}`}
                           value={filters.status || undefined}
-                          onValueChange={(value) => handleFilterChange("status", value)}
+                          onValueChange={(value) => handleFilterChange("status", value === "all" ? "" : value)}
                         >
                           <SelectTrigger id="status-filter" className="h-10 bg-background">
                             <SelectValue placeholder={t("selectStatus")} />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="all">{tCommon("all")}</SelectItem>
                             <SelectItem value="pending">{t("pending")}</SelectItem>
                             <SelectItem value="accepted">{t("accepted")}</SelectItem>
                             <SelectItem value="rejected">{t("rejected")}</SelectItem>
@@ -940,6 +948,7 @@ export default function OrdersPage() {
                           {t("paymentMethod")}
                         </Label>
                         <Select
+                          key={`payment-method-${filters.payment_method || 'none'}`}
                           value={filters.payment_method || undefined}
                           onValueChange={(value) => handleFilterChange("payment_method", value === "all" ? "" : value)}
                         >

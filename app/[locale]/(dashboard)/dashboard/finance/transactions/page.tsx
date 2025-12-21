@@ -65,7 +65,7 @@ export default function AdminTransactionsPage() {
     }
     return initial;
   });
-  const [isFiltersExpanded, setIsFiltersExpanded] = useState(!!initialWalletId);
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     type: true,
     category: false,
@@ -288,12 +288,11 @@ export default function AdminTransactionsPage() {
             </div>
 
             {/* Filter Header */}
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
-                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-              >
+            <div 
+              className="flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
+            >
+              <div className="flex items-center gap-2 flex-1">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <h3 className="text-lg font-semibold">{t('filters')}</h3>
                 {activeFiltersCount > 0 && (
@@ -306,12 +305,15 @@ export default function AdminTransactionsPage() {
                 ) : (
                   <ChevronDown className="h-4 w-4 text-muted-foreground ms-2" />
                 )}
-              </button>
+              </div>
               {activeFiltersCount > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleClearFilters}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClearFilters();
+                  }}
                   className="gap-2"
                 >
                   <X className="h-4 w-4" />
