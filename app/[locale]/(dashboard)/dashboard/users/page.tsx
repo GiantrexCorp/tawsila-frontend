@@ -287,7 +287,7 @@ export default function UsersPage() {
   } = useUsers(currentPage, 50, appliedFilters);
 
   // Only load roles when filters are expanded
-  const { data: rolesResponse } = useRoles({ enabled: isFiltersExpanded });
+  const { data: rolesResponse } = useRoles({ enabled: true });
 
   // Load inventories for filter (only when filters expanded)
   useEffect(() => {
