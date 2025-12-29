@@ -23,7 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, CheckCircle, XCircle, Truck } from "lucide-react";
 import { toast } from "sonner";
 import {
-  fetchInventories,
+  fetchMyInventories,
   fetchCurrentInventory,
   type Inventory,
 } from "@/lib/services/inventories";
@@ -99,10 +99,10 @@ export function OrderActionDialogs({
         setInventories([currentInventory]);
         setSelectedInventoryId(currentInventory.id);
       } catch {
-        const allInventories = await fetchInventories();
-        setInventories(allInventories);
-        if (allInventories.length > 0) {
-          setSelectedInventoryId(allInventories[0].id);
+        const myInventories = await fetchMyInventories();
+        setInventories(myInventories);
+        if (myInventories.length > 0) {
+          setSelectedInventoryId(myInventories[0].id);
         }
       }
     } catch {

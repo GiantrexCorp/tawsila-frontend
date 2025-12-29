@@ -205,6 +205,18 @@ export async function fetchCurrentInventory(): Promise<Inventory> {
 }
 
 /**
+ * Fetch current user's inventories using /my-inventories endpoint
+ * Used specifically for accept order dialog
+ */
+export async function fetchMyInventories(): Promise<Inventory[]> {
+  const response = await apiRequest<Inventory[]>(`/my-inventories?include=${INVENTORY_INCLUDES}`, {
+    method: 'GET',
+  });
+
+  return response.data || [];
+}
+
+/**
  * Create a new inventory
  */
 export async function createInventory(inventoryData: CreateInventoryRequest): Promise<Inventory> {

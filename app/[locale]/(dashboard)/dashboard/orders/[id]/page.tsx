@@ -42,7 +42,7 @@ import {
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { PERMISSIONS } from "@/hooks/use-permissions";
 import { fetchOrder, acceptOrder, rejectOrder, assignPickupAgent, assignDeliveryAgent, type Order, type OrderItem, type Customer, type Assignment, type StatusLog, type Scan as ScanType, type Vendor, type OrderTransaction } from "@/lib/services/orders";
-import { fetchInventories, fetchCurrentInventory, type Inventory } from "@/lib/services/inventories";
+import { fetchMyInventories, fetchCurrentInventory, type Inventory } from "@/lib/services/inventories";
 import { fetchPickupAgents, fetchDeliveryAgents, type Agent } from "@/lib/services/agents";
 import { toast } from "sonner";
 import { getCurrentUser } from "@/lib/auth";
@@ -154,10 +154,10 @@ export default function OrderDetailPage() {
         setInventories([currentInventory]);
         setSelectedInventoryId(currentInventory.id);
       } catch {
-        const allInventories = await fetchInventories();
-        setInventories(allInventories);
-        if (allInventories.length > 0) {
-          setSelectedInventoryId(allInventories[0].id);
+        const myInventories = await fetchMyInventories();
+        setInventories(myInventories);
+        if (myInventories.length > 0) {
+          setSelectedInventoryId(myInventories[0].id);
         }
       }
     } catch {
