@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys, CACHE_TIMES, STALE_TIMES } from "@/components/providers/query-provider";
 import {
   fetchVendors,
+  fetchAllVendors,
   fetchVendor,
   fetchCurrentVendor,
   createVendor,
@@ -25,6 +26,21 @@ export function useVendors(options?: { enabled?: boolean }) {
   return useQuery<Vendor[], Error>({
     queryKey: queryKeys.vendors.lists(),
     queryFn: fetchVendors,
+    staleTime: STALE_TIMES.SEMI_STATIC,
+    gcTime: CACHE_TIMES.SEMI_STATIC,
+    enabled: options?.enabled !== false, // Default to true, can be disabled
+  });
+}
+
+/**
+ * Hook to fetch all vendors using /all-vendors endpoint
+ * Used specifically for order filters
+ * Vendors are semi-static - cached for 5 minutes
+ */
+export function useAllVendors(options?: { enabled?: boolean }) {
+  return useQuery<Vendor[], Error>({
+    queryKey: [...queryKeys.vendors.lists(), 'all-vendors'],
+    queryFn: fetchAllVendors,
     staleTime: STALE_TIMES.SEMI_STATIC,
     gcTime: CACHE_TIMES.SEMI_STATIC,
     enabled: options?.enabled !== false, // Default to true, can be disabled

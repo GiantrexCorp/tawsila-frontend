@@ -150,6 +150,28 @@ export async function fetchVendors(): Promise<Vendor[]> {
 }
 
 /**
+ * Fetch all vendors using the /all-vendors endpoint
+ * Used specifically for order filters
+ */
+export async function fetchAllVendors(): Promise<Vendor[]> {
+  const response = await apiRequest<Vendor[] | { data: Vendor[] }>('/all-vendors', {
+    method: 'GET',
+  });
+
+  // Handle both direct array and nested data structure
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+
+  // Handle nested { data: { data: [...] } } structure
+  if (response.data && typeof response.data === 'object' && 'data' in response.data) {
+    return (response.data as { data: Vendor[] }).data || [];
+  }
+
+  return [];
+}
+
+/**
  * Fetch current vendor's profile (for vendor users)
  * Uses /my-vendor endpoint
  */

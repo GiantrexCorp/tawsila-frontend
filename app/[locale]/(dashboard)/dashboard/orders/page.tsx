@@ -24,7 +24,7 @@ import {
   useAssignPickupAgent,
   type OrderFilters,
 } from "@/hooks/queries/use-orders";
-import { useVendors } from "@/hooks/queries/use-vendors";
+import { useAllVendors } from "@/hooks/queries/use-vendors";
 
 // Components
 import {
@@ -73,7 +73,7 @@ export default function OrdersPage() {
   });
 
   // Data for filters (lazy loaded when filters expanded)
-  const { data: vendors = [] } = useVendors({ enabled: isFiltersExpanded });
+  const { data: vendors = [] } = useAllVendors({ enabled: isFiltersExpanded });
   const [inventories, setInventories] = useState<Inventory[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [governorates, setGovernorates] = useState<Governorate[]>([]);
