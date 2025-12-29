@@ -27,7 +27,7 @@ import {
   fetchCurrentInventory,
   type Inventory,
 } from "@/lib/services/inventories";
-import { fetchPickupAgents, type Agent } from "@/lib/services/agents";
+import { fetchPickupAgents, fetchDeliveryAgents, type Agent } from "@/lib/services/agents";
 import type { Order } from "@/lib/services/orders";
 
 interface OrderActionDialogsProps {
@@ -51,6 +51,7 @@ interface OrderActionDialogsProps {
   onAssignDialogClose: () => void;
   onAssignConfirm: (agentId: number, notes?: string) => Promise<void>;
   isAssigning: boolean;
+  assignmentType?: 'pickup' | 'delivery';
 
   // Translations
   t: (key: string) => string;
@@ -71,6 +72,7 @@ export function OrderActionDialogs({
   onAssignDialogClose,
   onAssignConfirm,
   isAssigning,
+  assignmentType = 'pickup',
   t,
   tCommon,
 }: OrderActionDialogsProps) {
@@ -114,10 +116,12 @@ export function OrderActionDialogs({
 
   // Load agents when assign dialog opens
   const loadAgents = useCallback(
-    async (inventoryId: number) => {
+    async (inventoryId: number, type: 'pickup' | 'delivery') => {
       setIsLoadingAgents(true);
       try {
-        const fetchedAgents = await fetchPickupAgents(inventoryId);
+        const fetchedAgents = type === 'pickup' 
+          ? await fetchPickupAgents(inventoryId)
+          : await fetchDeliveryAgents(inventoryId);
         setAgents(fetchedAgents);
       } catch {
         toast.error(t("errorLoadingAgents"));
@@ -143,13 +147,13 @@ export function OrderActionDialogs({
       const inventoryId =
         selectedOrder.inventory_id || selectedOrder.inventory?.id;
       if (inventoryId) {
-        loadAgents(inventoryId);
+        loadAgents(inventoryId, assignmentType);
       }
     } else {
       setSelectedAgentId(null);
       setAssignmentNotes("");
     }
-  }, [showAssignDialog, selectedOrder, loadAgents]);
+  }, [showAssignDialog, selectedOrder, assignmentType, loadAgents]);
 
   // Reset rejection reason when dialog closes
   useEffect(() => {
@@ -308,12 +312,18 @@ export function OrderActionDialogs({
         </DialogContent>
       </Dialog>
 
-      {/* Assign Pickup Agent Dialog */}
+      {/* Assign Agent Dialog */}
       <Dialog open={showAssignDialog} onOpenChange={onAssignDialogClose}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t("assignPickupAgent")}</DialogTitle>
-            <DialogDescription>{t("assignPickupAgentDesc")}</DialogDescription>
+            <DialogTitle>
+              {assignmentType === 'pickup' ? t("assignPickupAgent") : t("assignDeliveryAgent")}
+            </DialogTitle>
+            <DialogDescription>
+              {assignmentType === 'pickup' 
+                ? t("assignPickupAgentDesc") 
+                : (t("assignDeliveryAgentDesc") || t("assignPickupAgentDesc"))}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -389,7 +399,7 @@ export function OrderActionDialogs({
               ) : (
                 <>
                   <Truck className="h-4 w-4" />
-                  {t("assignPickupAgent")}
+                  {assignmentType === 'pickup' ? t("assignPickupAgent") : t("assignDeliveryAgent")}
                 </>
               )}
             </Button>

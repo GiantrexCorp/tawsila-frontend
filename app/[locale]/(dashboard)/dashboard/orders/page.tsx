@@ -22,6 +22,7 @@ import {
   useAcceptOrder,
   useRejectOrder,
   useAssignPickupAgent,
+  useAssignDeliveryAgent,
   type OrderFilters,
 } from "@/hooks/queries/use-orders";
 import { useAllVendors } from "@/hooks/queries/use-vendors";
@@ -87,6 +88,7 @@ export default function OrdersPage() {
   const [showAcceptDialog, setShowAcceptDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [assignmentType, setAssignmentType] = useState<'pickup' | 'delivery'>('pickup');
 
   // Permissions
   const hasPermission = usePagePermission({
@@ -120,6 +122,7 @@ export default function OrdersPage() {
   const acceptOrderMutation = useAcceptOrder();
   const rejectOrderMutation = useRejectOrder();
   const assignAgentMutation = useAssignPickupAgent();
+  const assignDeliveryAgentMutation = useAssignDeliveryAgent();
 
   // Track if filter data has been loaded
   const [hasLoadedFilterData, setHasLoadedFilterData] = useState(false);
@@ -336,6 +339,7 @@ export default function OrdersPage() {
           return;
         }
         setSelectedOrder(order);
+        setAssignmentType('pickup');
         setShowAssignDialog(true);
       }
     },
@@ -352,9 +356,8 @@ export default function OrdersPage() {
           return;
         }
         setSelectedOrder(order);
+        setAssignmentType('delivery');
         setShowAssignDialog(true);
-        // Note: The OrderActionDialogs component will need to be updated to handle delivery agents
-        // For now, we'll use the same dialog but the backend flag determines which agents to show
       }
     },
     [ordersResponse?.data, t]
@@ -403,11 +406,19 @@ export default function OrdersPage() {
     async (agentId: number, notes?: string) => {
       if (!selectedOrder) return;
       try {
-        await assignAgentMutation.mutateAsync({
-          orderId: selectedOrder.id,
-          agentId,
-          notes,
-        });
+        if (assignmentType === 'pickup') {
+          await assignAgentMutation.mutateAsync({
+            orderId: selectedOrder.id,
+            agentId,
+            notes,
+          });
+        } else {
+          await assignDeliveryAgentMutation.mutateAsync({
+            orderId: selectedOrder.id,
+            agentId,
+            notes,
+          });
+        }
         toast.success(t("agentAssignedSuccess"));
         setShowAssignDialog(false);
         setSelectedOrder(null);
@@ -418,7 +429,7 @@ export default function OrdersPage() {
         toast.error(t("agentAssignedFailed"), { description: message });
       }
     },
-    [selectedOrder, assignAgentMutation, refetch, t, tCommon]
+    [selectedOrder, assignmentType, assignAgentMutation, assignDeliveryAgentMutation, refetch, t, tCommon]
   );
 
 
@@ -1222,7 +1233,8 @@ export default function OrdersPage() {
           setSelectedOrder(null);
         }}
         onAssignConfirm={handleAssignConfirm}
-        isAssigning={assignAgentMutation.isPending}
+        isAssigning={assignmentType === 'pickup' ? assignAgentMutation.isPending : assignDeliveryAgentMutation.isPending}
+        assignmentType={assignmentType}
         t={t}
         tCommon={tCommon}
       />
