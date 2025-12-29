@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
 import { fetchWallets, getWalletOwnerType, getWalletOwnerName, type Wallet as WalletType } from "@/lib/services/wallet";
+import { PAGINATION } from "@/lib/constants/pagination";
 import { cn } from "@/lib/utils";
 
 export default function WalletsPage() {
@@ -70,7 +71,7 @@ export default function WalletsPage() {
       hasLoadedWalletsRef.current = true;
       setIsLoadingWallets(true);
       try {
-        const response = await fetchWallets({ per_page: 100, includes: ['walletable'] });
+        const response = await fetchWallets({ per_page: PAGINATION.WALLETS, includes: ['walletable'] });
         setWallets(response.data);
       } catch {
         toast.error(t('errorLoadingWallets'));

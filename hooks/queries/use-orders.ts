@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys, CACHE_TIMES, STALE_TIMES } from "@/components/providers/query-provider";
+import { PAGINATION } from "@/lib/constants/pagination";
 import {
   fetchOrders,
   fetchOrder,
@@ -28,7 +29,7 @@ export type { Order, OrdersResponse, OrderFilters };
  */
 export function useOrders(
   page: number = 1,
-  perPage: number = 50,
+  perPage: number = PAGINATION.ORDERS,
   filters: OrderFilters = {}
 ) {
   return useQuery<OrdersResponse, Error>({

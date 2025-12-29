@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys, CACHE_TIMES, STALE_TIMES } from "@/components/providers/query-provider";
+import { PAGINATION } from "@/lib/constants/pagination";
 import {
   fetchUsers,
   fetchUser,
@@ -23,7 +24,7 @@ import { CURRENT_USER_QUERY_KEY } from "@/hooks/use-permissions";
  */
 export function useUsers(
   page: number = 1,
-  perPage: number = 50,
+  perPage: number = PAGINATION.USERS,
   filters: UserFilters = {},
   options?: { enabled?: boolean }
 ) {

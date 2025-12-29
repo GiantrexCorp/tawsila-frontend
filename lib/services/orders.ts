@@ -6,6 +6,7 @@
  */
 
 import { apiRequest } from '../api';
+import { PAGINATION } from '../constants/pagination';
 
 /**
  * Pagination links from API response
@@ -538,7 +539,7 @@ const ORDER_INCLUDES = [
  */
 export async function fetchOrders(
   page: number = 1,
-  perPage: number = 50,
+  perPage: number = PAGINATION.ORDERS,
   filters: OrderFilters = {}
 ): Promise<OrdersResponse> {
   const filterQuery = buildFilterQuery(filters);

@@ -53,6 +53,7 @@ import {
   type Settlement,
   type SettlementFilters,
 } from "@/lib/services/wallet";
+import { PAGINATION } from "@/lib/constants/pagination";
 import { cn } from "@/lib/utils";
 
 export default function SettlementsPage() {
@@ -93,7 +94,7 @@ export default function SettlementsPage() {
   const apiFilters: SettlementFilters = useMemo(() => {
     const f: SettlementFilters = {
       page: currentPage,
-      per_page: 20,
+      per_page: PAGINATION.SETTLEMENTS,
     };
     if (filters.id) f.id = parseInt(filters.id);
     if (filters.type) f.type = filters.type as 'payout' | 'collection';

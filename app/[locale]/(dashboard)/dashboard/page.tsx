@@ -31,6 +31,7 @@ import { useVendors } from "@/hooks/queries/use-vendors";
 import { useQuery } from "@tanstack/react-query";
 import { fetchSystemWallet, SystemWallet } from "@/lib/services/wallet";
 import { PERMISSIONS } from "@/hooks/use-permissions";
+import { PAGINATION } from "@/lib/constants/pagination";
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 
 export default function DashboardPage() {
@@ -61,7 +62,7 @@ export default function DashboardPage() {
   const isSuperAdmin = isHydrated && user?.roles?.some(r => r.name === 'super-admin');
 
   // Fetch recent orders (last 10, sorted by created_at desc) - all authenticated users can access this
-  const { data: ordersResponse, isLoading: isLoadingOrders } = useOrders(1, 50, {});
+  const { data: ordersResponse, isLoading: isLoadingOrders } = useOrders(1, PAGINATION.ORDERS, {});
   
   // Fetch system counts - ONLY for super-admin (they're the only ones with permission)
   // System stats (users, inventories, vendors) should only be visible to super-admin

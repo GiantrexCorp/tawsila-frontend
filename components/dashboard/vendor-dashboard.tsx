@@ -31,6 +31,7 @@ import { Link } from "@/i18n/routing";
 import { fetchCurrentVendor, Vendor } from "@/lib/services/vendors";
 import { fetchMyProfitReport, ProfitReport } from "@/lib/services/wallet";
 import { useOrders, Order } from "@/hooks/queries/use-orders";
+import { PAGINATION } from "@/lib/constants/pagination";
 
 interface VendorDashboardProps {
   userName: string;
@@ -69,7 +70,8 @@ export function VendorDashboard({ userName }: VendorDashboardProps) {
   });
 
   // Fetch orders for stats and recent orders
-  const { data: ordersData, isLoading: isLoadingOrders } = useOrders(1, 100); // Fetch first 100 orders for stats
+  // Using 4x the default pagination for stats calculation (24 * 4 = 96, rounded to 100 for better coverage)
+  const { data: ordersData, isLoading: isLoadingOrders } = useOrders(1, PAGINATION.ORDERS * 4);
 
   // Calculate order stats from fetched orders
   const orderStats = useMemo(() => {

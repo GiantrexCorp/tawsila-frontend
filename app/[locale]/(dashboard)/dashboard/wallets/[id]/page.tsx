@@ -56,6 +56,7 @@ import {
   type Settlement,
 } from "@/lib/services/wallet";
 import { getCurrentUser } from "@/lib/auth";
+import { PAGINATION } from "@/lib/constants/pagination";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { usePagePermission } from "@/hooks/use-page-permission";
@@ -132,7 +133,7 @@ export default function WalletDetailPage() {
 
         // Fetch transactions separately
         try {
-          const transactionsData = await fetchWalletTransactions(walletId, { per_page: 10 });
+          const transactionsData = await fetchWalletTransactions(walletId, { per_page: PAGINATION.WALLET_TRANSACTIONS });
           setTransactions(transactionsData.data);
         } catch (err) {
           console.error('Error loading transactions:', err);
@@ -187,7 +188,7 @@ export default function WalletDetailPage() {
       const walletData = await fetchWallet(walletId, ['walletable', 'settlements']);
       setWallet(walletData);
 
-      const transactionsData = await fetchWalletTransactions(walletId, { per_page: 10 });
+      const transactionsData = await fetchWalletTransactions(walletId, { per_page: PAGINATION.WALLET_TRANSACTIONS });
       setTransactions(transactionsData.data);
     } catch (err) {
       // Extract error message from API error response
@@ -246,7 +247,7 @@ export default function WalletDetailPage() {
       const walletData = await fetchWallet(walletId, ['walletable', 'settlements']);
       setWallet(walletData);
 
-      const transactionsData = await fetchWalletTransactions(walletId, { per_page: 10 });
+      const transactionsData = await fetchWalletTransactions(walletId, { per_page: PAGINATION.WALLET_TRANSACTIONS });
       setTransactions(transactionsData.data);
     } catch (err: unknown) {
       // Extract error message from API error response

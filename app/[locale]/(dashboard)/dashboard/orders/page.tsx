@@ -43,7 +43,9 @@ import { fetchGovernorates, fetchCities, type Governorate, type City } from "@/l
 import { fetchActiveAgents, type Agent } from "@/lib/services/agents";
 import { getCurrentUser } from "@/lib/auth";
 
-const ORDERS_PER_PAGE = 50;
+import { PAGINATION } from "@/lib/constants/pagination";
+
+const ORDERS_PER_PAGE = PAGINATION.ORDERS;
 const VIEW_STORAGE_KEY = "orders-view-preference";
 
 export default function OrdersPage() {

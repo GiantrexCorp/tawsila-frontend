@@ -28,6 +28,7 @@ import {
   Warehouse,
 } from "lucide-react";
 import { User, UserFilters, getRoleDisplayName, userHasRole } from "@/lib/services/users";
+import { PAGINATION } from "@/lib/constants/pagination";
 import {
   validateEgyptianMobile,
   validateEmail,
@@ -284,7 +285,7 @@ export default function UsersPage() {
     isLoading,
     isFetching,
     refetch: refetchUsers,
-  } = useUsers(currentPage, 50, appliedFilters);
+  } = useUsers(currentPage, PAGINATION.USERS, appliedFilters);
 
   // Only load roles when filters are expanded
   const { data: rolesResponse } = useRoles({ enabled: true });

@@ -6,6 +6,7 @@
  */
 
 import { apiRequest } from '../api';
+import { PAGINATION } from '../constants/pagination';
 
 /**
  * Role object returned from API
@@ -175,7 +176,7 @@ function buildFilterQuery(filters: UserFilters): string {
  */
 export async function fetchUsers(
   page: number = 1,
-  perPage: number = 50,
+  perPage: number = PAGINATION.USERS,
   filters: UserFilters = {}
 ): Promise<UsersResponse> {
   const filterQuery = buildFilterQuery(filters);

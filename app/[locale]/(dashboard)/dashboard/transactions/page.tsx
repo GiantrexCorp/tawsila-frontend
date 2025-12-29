@@ -33,6 +33,7 @@ import {
   X,
 } from "lucide-react";
 import { fetchMyTransactions, type TransactionFilters } from "@/lib/services/wallet";
+import { PAGINATION } from "@/lib/constants/pagination";
 import { cn } from "@/lib/utils";
 import { Link } from "@/i18n/routing";
 
@@ -49,7 +50,7 @@ export default function TransactionsPage() {
   // Build API filters
   const apiFilters: TransactionFilters = useMemo(() => ({
     page: currentPage,
-    per_page: 10,
+    per_page: PAGINATION.TRANSACTIONS,
     type: typeFilter !== 'all' ? typeFilter as 'credit' | 'debit' : undefined,
   }), [currentPage, typeFilter]);
 

@@ -37,6 +37,7 @@ import {
   TRANSACTION_CATEGORIES,
   type TransactionFilters,
 } from "@/lib/services/wallet";
+import { PAGINATION } from "@/lib/constants/pagination";
 import { cn } from "@/lib/utils";
 
 export default function AdminTransactionsPage() {
@@ -77,7 +78,7 @@ export default function AdminTransactionsPage() {
   const apiFilters: TransactionFilters = useMemo(() => {
     const f: TransactionFilters = {
       page: currentPage,
-      per_page: 20,
+      per_page: PAGINATION.TRANSACTIONS,
     };
     if (filters.type) f.type = filters.type as 'credit' | 'debit';
     if (filters.category) f.category = filters.category;
