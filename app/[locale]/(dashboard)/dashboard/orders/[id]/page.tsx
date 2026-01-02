@@ -367,14 +367,21 @@ export default function OrderDetailPage() {
   const handleSkipPickup = useCallback(async () => {
     setIsSkipActionLoading(true);
     try {
-      const updatedOrder = await skipScan(orderId);
-      setOrder(updatedOrder);
+      await skipScan(orderId);
       setShowSkipPickupDialog(false);
       toast.success(t('orderMarkedPickedUp'));
-      router.refresh();
+      // Refetch the complete order data to refresh all information
+      const refreshedOrder = await fetchOrder(orderId);
+      setOrder(refreshedOrder);
+      if (refreshedOrder.assignments) {
+        setAssignments(refreshedOrder.assignments);
+      }
     } catch (error) {
       const err = error as { status?: number };
-      if (err?.status === 403) {
+      setShowSkipPickupDialog(false);
+      if (err?.status === 501) {
+        setShowComingSoonDialog(true);
+      } else if (err?.status === 403) {
         toast.error(t('skipActionFailed'), { description: t('noPermissionForAction') });
       } else {
         const message = error instanceof Error ? error.message : t('invalidOrderStatus');
@@ -383,19 +390,26 @@ export default function OrderDetailPage() {
     } finally {
       setIsSkipActionLoading(false);
     }
-  }, [orderId, router, t]);
+  }, [orderId, t]);
 
   const handleSkipReceive = useCallback(async () => {
     setIsSkipActionLoading(true);
     try {
-      const updatedOrder = await skipScan(orderId);
-      setOrder(updatedOrder);
+      await skipScan(orderId);
       setShowSkipReceiveDialog(false);
       toast.success(t('orderMarkedReceived'));
-      router.refresh();
+      // Refetch the complete order data to refresh all information
+      const refreshedOrder = await fetchOrder(orderId);
+      setOrder(refreshedOrder);
+      if (refreshedOrder.assignments) {
+        setAssignments(refreshedOrder.assignments);
+      }
     } catch (error) {
       const err = error as { status?: number };
-      if (err?.status === 403) {
+      setShowSkipReceiveDialog(false);
+      if (err?.status === 501) {
+        setShowComingSoonDialog(true);
+      } else if (err?.status === 403) {
         toast.error(t('skipActionFailed'), { description: t('noPermissionForAction') });
       } else {
         const message = error instanceof Error ? error.message : t('invalidOrderStatus');
@@ -404,19 +418,26 @@ export default function OrderDetailPage() {
     } finally {
       setIsSkipActionLoading(false);
     }
-  }, [orderId, router, t]);
+  }, [orderId, t]);
 
   const handleSkipDispatch = useCallback(async () => {
     setIsSkipActionLoading(true);
     try {
-      const updatedOrder = await skipScan(orderId);
-      setOrder(updatedOrder);
+      await skipScan(orderId);
       setShowSkipDispatchDialog(false);
       toast.success(t('orderMarkedOutForDelivery'));
-      router.refresh();
+      // Refetch the complete order data to refresh all information
+      const refreshedOrder = await fetchOrder(orderId);
+      setOrder(refreshedOrder);
+      if (refreshedOrder.assignments) {
+        setAssignments(refreshedOrder.assignments);
+      }
     } catch (error) {
       const err = error as { status?: number };
-      if (err?.status === 403) {
+      setShowSkipDispatchDialog(false);
+      if (err?.status === 501) {
+        setShowComingSoonDialog(true);
+      } else if (err?.status === 403) {
         toast.error(t('skipActionFailed'), { description: t('noPermissionForAction') });
       } else {
         const message = error instanceof Error ? error.message : t('invalidOrderStatus');
@@ -425,19 +446,26 @@ export default function OrderDetailPage() {
     } finally {
       setIsSkipActionLoading(false);
     }
-  }, [orderId, router, t]);
+  }, [orderId, t]);
 
   const handleSkipDelivery = useCallback(async () => {
     setIsSkipActionLoading(true);
     try {
-      const updatedOrder = await skipVerifyOtp(orderId);
-      setOrder(updatedOrder);
+      await skipVerifyOtp(orderId);
       setShowSkipDeliveryDialog(false);
       toast.success(t('orderMarkedDelivered'));
-      router.refresh();
+      // Refetch the complete order data to refresh all information
+      const refreshedOrder = await fetchOrder(orderId);
+      setOrder(refreshedOrder);
+      if (refreshedOrder.assignments) {
+        setAssignments(refreshedOrder.assignments);
+      }
     } catch (error) {
       const err = error as { status?: number };
-      if (err?.status === 403) {
+      setShowSkipDeliveryDialog(false);
+      if (err?.status === 501) {
+        setShowComingSoonDialog(true);
+      } else if (err?.status === 403) {
         toast.error(t('skipActionFailed'), { description: t('noPermissionForAction') });
       } else {
         const message = error instanceof Error ? error.message : t('invalidOrderStatus');
@@ -446,7 +474,7 @@ export default function OrderDetailPage() {
     } finally {
       setIsSkipActionLoading(false);
     }
-  }, [orderId, router, t]);
+  }, [orderId, t]);
 
   if (hasPermission === null || hasPermission === false || isLoading || !order) {
     return (
