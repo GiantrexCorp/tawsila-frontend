@@ -498,7 +498,11 @@
     "orderMarkedDelivered": "Order marked as delivered successfully",
     "skipActionFailed": "Action failed",
     "invalidOrderStatus": "Order cannot be updated from current status",
-    "noPermissionForAction": "You don't have permission to perform this action"
+    "noPermissionForAction": "You don't have permission to perform this action",
+    "featureComingSoon": "Coming Soon",
+    "featureComingSoonMessage": "This feature is currently under development and will be available soon.",
+    "featureUnderDevelopmentDesc": "We're working hard to bring you this feature. Stay tuned!",
+    "gotIt": "Got it"
   },
   "orderCreate": {
     "title": "Create New Order",
@@ -1132,6 +1136,12 @@
     "title": "Access Denied",
     "description": "You don't have permission to access this resource. Please contact your administrator if you believe this is an error.",
     "home": "Home"
+  },
+  "comingSoon": {
+    "title": "Coming Soon",
+    "description": "This feature is coming soon. Stay tuned for updates!",
+    "home": "Home",
+    "goBack": "Go Back"
   },
   "profile": {
     "title": "My Profile",

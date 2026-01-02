@@ -87,6 +87,13 @@ export function isUnauthorizedError(error: unknown): boolean {
 }
 
 /**
+ * Checks if error is a 501 Not Implemented (coming soon)
+ */
+export function isNotImplementedError(error: unknown): boolean {
+  return isHttpError(error, 501);
+}
+
+/**
  * Formats all validation error messages into a single string
  * @param error - The error object from API
  * @returns Comma-separated error messages or null

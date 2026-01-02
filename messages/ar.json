@@ -497,7 +497,11 @@
     "orderMarkedDelivered": "تم تأكيد تسليم الطلب بنجاح",
     "skipActionFailed": "فشل الإجراء",
     "invalidOrderStatus": "لا يمكن تحديث الطلب من حالته الحالية",
-    "noPermissionForAction": "ليس لديك صلاحية لتنفيذ هذا الإجراء"
+    "noPermissionForAction": "ليس لديك صلاحية لتنفيذ هذا الإجراء",
+    "featureComingSoon": "قريباً",
+    "featureComingSoonMessage": "هذه الميزة قيد التطوير حالياً وستكون متاحة قريباً.",
+    "featureUnderDevelopmentDesc": "نحن نعمل بجد لتقديم هذه الميزة لك. ترقبوا!",
+    "gotIt": "فهمت"
   },
   "orderCreate": {
     "title": "عمل طلب جديد",
@@ -1132,6 +1136,12 @@
     "title": "مش مسموحلك",
     "description": "معندكش صلاحية الوصول للمورد ده. من فضلك تواصل مع المسؤول لو فاكر إن ده غلط.",
     "home": "الرئيسية"
+  },
+  "comingSoon": {
+    "title": "قريباً",
+    "description": "هذه الميزة قيد التطوير. ترقبوا التحديثات القادمة!",
+    "home": "الرئيسية",
+    "goBack": "رجوع"
   },
   "profile": {
     "title": "بروفايلي",

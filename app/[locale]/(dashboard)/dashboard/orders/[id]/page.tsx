@@ -41,6 +41,8 @@ import {
   AlertTriangle,
   AlertCircle,
   ShieldAlert,
+  Rocket,
+  Wrench,
 } from "lucide-react";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { PERMISSIONS } from "@/hooks/use-permissions";
@@ -120,6 +122,7 @@ export default function OrderDetailPage() {
   const [showSkipDispatchDialog, setShowSkipDispatchDialog] = useState(false);
   const [showSkipDeliveryDialog, setShowSkipDeliveryDialog] = useState(false);
   const [isSkipActionLoading, setIsSkipActionLoading] = useState(false);
+  const [showComingSoonDialog, setShowComingSoonDialog] = useState(false);
 
   useEffect(() => {
     // Only load once when permission is granted (ref persists across Strict Mode remounts)
@@ -1552,6 +1555,52 @@ export default function OrderDetailPage() {
             <Button onClick={handleSkipDelivery} disabled={isSkipActionLoading} variant="destructive" className="gap-2">
               {isSkipActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
               {isSkipActionLoading ? t('markingDelivered') : t('confirmDelivery')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Feature Coming Soon Dialog */}
+      <Dialog open={showComingSoonDialog} onOpenChange={setShowComingSoonDialog}>
+        <DialogContent className="sm:max-w-md">
+          <div className="flex flex-col items-center text-center py-6">
+            {/* Animated Icon */}
+            <div className="relative mb-6">
+              <div className="h-20 w-20 rounded-full bg-primary/20 flex items-center justify-center">
+                <Wrench className="h-10 w-10 text-primary animate-pulse" />
+              </div>
+              <div className="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-amber-500/20 flex items-center justify-center">
+                <Rocket className="h-3.5 w-3.5 text-amber-600 animate-bounce" />
+              </div>
+            </div>
+
+            {/* Title */}
+            <DialogTitle className="text-xl font-bold mb-2">
+              {t('featureComingSoon')}
+            </DialogTitle>
+
+            {/* Description */}
+            <DialogDescription className="text-center max-w-sm">
+              {t('featureComingSoonMessage')}
+            </DialogDescription>
+
+            {/* Visual decoration */}
+            <div className="flex items-center gap-2 mt-6 mb-2">
+              <div className="h-1.5 w-1.5 rounded-full bg-primary/40 animate-pulse" style={{ animationDelay: '0ms' }} />
+              <div className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-pulse" style={{ animationDelay: '150ms' }} />
+              <div className="h-1.5 w-1.5 rounded-full bg-primary/80 animate-pulse" style={{ animationDelay: '300ms' }} />
+            </div>
+
+            {/* Additional info */}
+            <p className="text-xs text-muted-foreground mt-4">
+              {t('featureUnderDevelopmentDesc')}
+            </p>
+          </div>
+
+          <DialogFooter className="sm:justify-center">
+            <Button onClick={() => setShowComingSoonDialog(false)} className="gap-2 min-w-[120px]">
+              <CheckCircle className="h-4 w-4" />
+              {t('gotIt')}
             </Button>
           </DialogFooter>
         </DialogContent>

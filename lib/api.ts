@@ -135,6 +135,16 @@ export async function apiRequest<T>(
         } as ApiError;
       }
 
+      // Handle 501 Not Implemented - feature coming soon
+      if (response.status === 501) {
+        handleNotImplemented();
+        throw {
+          message: data.message || 'This feature is coming soon. Stay tuned for updates!',
+          errors: data.errors,
+          status: 501,
+        } as ApiError;
+      }
+
       throw {
         message: data.message || 'An error occurred',
         errors: data.errors,
@@ -188,6 +198,20 @@ function handleForbidden(): void {
   if (!window.location.pathname.includes('/403')) {
     const locale = getCurrentLocale();
     window.location.href = `/${locale}/403`;
+  }
+}
+
+/**
+ * Handle not implemented (501)
+ * This happens when a feature is coming soon / not yet available
+ */
+function handleNotImplemented(): void {
+  if (typeof window === 'undefined') return;
+
+  // Only redirect if not already on coming-soon page
+  if (!window.location.pathname.includes('/coming-soon')) {
+    const locale = getCurrentLocale();
+    window.location.href = `/${locale}/coming-soon`;
   }
 }
 
