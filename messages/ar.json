@@ -518,6 +518,8 @@
     "selectCity": "اختار المدينة",
     "latitude": "خط العرض",
     "longitude": "خط الطول",
+    "deliveryLocation": "موقع التسليم",
+    "deliveryLocationDesc": "حدد موقع التسليم على الخريطة، أو ابحث عن موقع، أو أدخل الإحداثيات يدويًا",
     "productSku": "كود المنتج",
     "productSkuPlaceholder": "كود المنتج",
     "productDescription": "الوصف",

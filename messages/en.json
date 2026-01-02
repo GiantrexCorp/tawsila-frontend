@@ -519,6 +519,8 @@
     "selectCity": "Select city",
     "latitude": "Latitude",
     "longitude": "Longitude",
+    "deliveryLocation": "Delivery Location",
+    "deliveryLocationDesc": "Select the delivery location on the map, search for a location, or enter coordinates manually",
     "productSku": "SKU",
     "productSkuPlaceholder": "Product SKU",
     "productDescription": "Description",
