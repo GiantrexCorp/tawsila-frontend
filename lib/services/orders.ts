@@ -337,6 +337,16 @@ export interface Order {
   /** Whether current user can verify OTP */
   can_verify_otp?: boolean;
 
+  // Admin skip action flags
+  /** Whether current user can mark order as picked up from vendor (skip QR scan) */
+  can_mark_picked_up_from_vendor?: boolean;
+  /** Whether current user can mark order as received at inventory (skip QR scan) */
+  can_mark_received_at_inventory?: boolean;
+  /** Whether current user can mark order as out for delivery (skip QR scan) */
+  can_mark_out_for_delivery?: boolean;
+  /** Whether current user can mark order as delivered (skip OTP verification) */
+  can_mark_delivered?: boolean;
+
   /** Assigned inventory ID (direct field) */
   inventory_id?: number;
   /** Vendor ID */
@@ -778,5 +788,47 @@ export async function fetchOrderAssignments(id: number): Promise<Assignment[]> {
   });
 
   return response.data || [];
+}
+
+/**
+ * Skip scan action - used by admins to manually advance order status
+ * without QR code scanning
+ * 
+ * Used for:
+ * - Mark picked up from vendor (when status is pickup_assigned)
+ * - Mark received at inventory (when status is picked_up_from_vendor)
+ * - Mark out for delivery (when status is delivery_assigned)
+ */
+export async function skipScan(orderId: number): Promise<Order> {
+  const response = await apiRequest<Order>(`/orders/${orderId}/skip-scan`, {
+    method: 'POST',
+    skipRedirectOn403: true,
+  });
+
+  if (!response.data) {
+    throw new Error(response.message || 'Failed to skip scan');
+  }
+
+  return response.data;
+}
+
+/**
+ * Skip OTP verification - used by admins to manually mark order as delivered
+ * without customer OTP verification
+ * 
+ * Used for:
+ * - Mark as delivered (when status is out_for_delivery)
+ */
+export async function skipVerifyOtp(orderId: number): Promise<Order> {
+  const response = await apiRequest<Order>(`/orders/${orderId}/skip-verify-otp`, {
+    method: 'POST',
+    skipRedirectOn403: true,
+  });
+
+  if (!response.data) {
+    throw new Error(response.message || 'Failed to skip OTP verification');
+  }
+
+  return response.data;
 }
 

@@ -38,10 +38,13 @@ import {
   Wallet,
   ArrowUpRight,
   ArrowDownLeft,
+  AlertTriangle,
+  AlertCircle,
+  ShieldAlert,
 } from "lucide-react";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { PERMISSIONS } from "@/hooks/use-permissions";
-import { fetchOrder, acceptOrder, rejectOrder, assignPickupAgent, assignDeliveryAgent, type Order, type OrderItem, type Customer, type Assignment, type StatusLog, type Scan as ScanType, type Vendor, type OrderTransaction } from "@/lib/services/orders";
+import { fetchOrder, acceptOrder, rejectOrder, assignPickupAgent, assignDeliveryAgent, skipScan, skipVerifyOtp, type Order, type OrderItem, type Customer, type Assignment, type StatusLog, type Scan as ScanType, type Vendor, type OrderTransaction } from "@/lib/services/orders";
 import { fetchMyInventories, fetchCurrentInventory, type Inventory } from "@/lib/services/inventories";
 import { fetchPickupAgents, fetchDeliveryAgents, type Agent } from "@/lib/services/agents";
 import { toast } from "sonner";
@@ -110,6 +113,13 @@ export default function OrderDetailPage() {
   const [deliveryAssignmentNotes, setDeliveryAssignmentNotes] = useState("");
   const [isLoadingDeliveryAgents, setIsLoadingDeliveryAgents] = useState(false);
   const hasLoadedRef = useRef(false);
+
+  // Skip action states
+  const [showSkipPickupDialog, setShowSkipPickupDialog] = useState(false);
+  const [showSkipReceiveDialog, setShowSkipReceiveDialog] = useState(false);
+  const [showSkipDispatchDialog, setShowSkipDispatchDialog] = useState(false);
+  const [showSkipDeliveryDialog, setShowSkipDeliveryDialog] = useState(false);
+  const [isSkipActionLoading, setIsSkipActionLoading] = useState(false);
 
   useEffect(() => {
     // Only load once when permission is granted (ref persists across Strict Mode remounts)
@@ -350,6 +360,91 @@ export default function OrderDetailPage() {
     toast.success(t('copied'), { description: label });
   }, [t]);
 
+  // Skip action handlers for admin
+  const handleSkipPickup = useCallback(async () => {
+    setIsSkipActionLoading(true);
+    try {
+      const updatedOrder = await skipScan(orderId);
+      setOrder(updatedOrder);
+      setShowSkipPickupDialog(false);
+      toast.success(t('orderMarkedPickedUp'));
+      router.refresh();
+    } catch (error) {
+      const err = error as { status?: number };
+      if (err?.status === 403) {
+        toast.error(t('skipActionFailed'), { description: t('noPermissionForAction') });
+      } else {
+        const message = error instanceof Error ? error.message : t('invalidOrderStatus');
+        toast.error(t('skipActionFailed'), { description: message });
+      }
+    } finally {
+      setIsSkipActionLoading(false);
+    }
+  }, [orderId, router, t]);
+
+  const handleSkipReceive = useCallback(async () => {
+    setIsSkipActionLoading(true);
+    try {
+      const updatedOrder = await skipScan(orderId);
+      setOrder(updatedOrder);
+      setShowSkipReceiveDialog(false);
+      toast.success(t('orderMarkedReceived'));
+      router.refresh();
+    } catch (error) {
+      const err = error as { status?: number };
+      if (err?.status === 403) {
+        toast.error(t('skipActionFailed'), { description: t('noPermissionForAction') });
+      } else {
+        const message = error instanceof Error ? error.message : t('invalidOrderStatus');
+        toast.error(t('skipActionFailed'), { description: message });
+      }
+    } finally {
+      setIsSkipActionLoading(false);
+    }
+  }, [orderId, router, t]);
+
+  const handleSkipDispatch = useCallback(async () => {
+    setIsSkipActionLoading(true);
+    try {
+      const updatedOrder = await skipScan(orderId);
+      setOrder(updatedOrder);
+      setShowSkipDispatchDialog(false);
+      toast.success(t('orderMarkedOutForDelivery'));
+      router.refresh();
+    } catch (error) {
+      const err = error as { status?: number };
+      if (err?.status === 403) {
+        toast.error(t('skipActionFailed'), { description: t('noPermissionForAction') });
+      } else {
+        const message = error instanceof Error ? error.message : t('invalidOrderStatus');
+        toast.error(t('skipActionFailed'), { description: message });
+      }
+    } finally {
+      setIsSkipActionLoading(false);
+    }
+  }, [orderId, router, t]);
+
+  const handleSkipDelivery = useCallback(async () => {
+    setIsSkipActionLoading(true);
+    try {
+      const updatedOrder = await skipVerifyOtp(orderId);
+      setOrder(updatedOrder);
+      setShowSkipDeliveryDialog(false);
+      toast.success(t('orderMarkedDelivered'));
+      router.refresh();
+    } catch (error) {
+      const err = error as { status?: number };
+      if (err?.status === 403) {
+        toast.error(t('skipActionFailed'), { description: t('noPermissionForAction') });
+      } else {
+        const message = error instanceof Error ? error.message : t('invalidOrderStatus');
+        toast.error(t('skipActionFailed'), { description: message });
+      }
+    } finally {
+      setIsSkipActionLoading(false);
+    }
+  }, [orderId, router, t]);
+
   if (hasPermission === null || hasPermission === false || isLoading || !order) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -382,6 +477,13 @@ export default function OrderDetailPage() {
   const canReject = order.can_reject === true;
   const canAssignPickupAgent = order.can_assign_pickup_agent === true;
   const canAssignDeliveryAgent = order.can_assign_delivery_agent === true;
+
+  // Admin skip action flags
+  const canMarkPickedUp = order.can_mark_picked_up_from_vendor === true;
+  const canMarkReceived = order.can_mark_received_at_inventory === true;
+  const canMarkOutForDelivery = order.can_mark_out_for_delivery === true;
+  const canMarkDelivered = order.can_mark_delivered === true;
+  const hasAdminSkipActions = canMarkPickedUp || canMarkReceived || canMarkOutForDelivery || canMarkDelivered;
 
   // Phase indicator
   const isPhase1 = !!order.is_in_phase1;
@@ -516,6 +618,66 @@ export default function OrderDetailPage() {
                     <Printer className="h-4 w-4" />
                     {t('printLabel')}
                   </Button>
+                </div>
+              )}
+
+              {/* Admin Skip Actions */}
+              {hasAdminSkipActions && (
+                <div className="pt-4 border-t mt-4">
+                  <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
+                    <ShieldAlert className="h-3.5 w-3.5" />
+                    {t('adminSkipActions')}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {canMarkPickedUp && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowSkipPickupDialog(true)}
+                        disabled={isSkipActionLoading}
+                        className="gap-2 border-amber-500/50 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10"
+                      >
+                        <Truck className="h-4 w-4" />
+                        {t('markPickedUp')}
+                      </Button>
+                    )}
+                    {canMarkReceived && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowSkipReceiveDialog(true)}
+                        disabled={isSkipActionLoading}
+                        className="gap-2 border-amber-500/50 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10"
+                      >
+                        <Warehouse className="h-4 w-4" />
+                        {t('markReceivedAtWarehouse')}
+                      </Button>
+                    )}
+                    {canMarkOutForDelivery && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowSkipDispatchDialog(true)}
+                        disabled={isSkipActionLoading}
+                        className="gap-2 border-amber-500/50 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10"
+                      >
+                        <Truck className="h-4 w-4" />
+                        {t('markOutForDelivery')}
+                      </Button>
+                    )}
+                    {canMarkDelivered && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowSkipDeliveryDialog(true)}
+                        disabled={isSkipActionLoading}
+                        className="gap-2 border-red-500/50 text-red-700 dark:text-red-400 hover:bg-red-500/10"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        {t('markAsDelivered')}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -1234,6 +1396,162 @@ export default function OrderDetailPage() {
             <Button onClick={handleAcceptOrder} disabled={isAccepting || !selectedInventoryId} className="gap-2">
               {isAccepting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
               {isAccepting ? t('accepting') : t('acceptOrder')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Skip Pickup Dialog */}
+      <Dialog open={showSkipPickupDialog} onOpenChange={setShowSkipPickupDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-amber-600" />
+              </div>
+              <DialogTitle>{t('confirmManualPickup')}</DialogTitle>
+            </div>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">{t('confirmManualPickupMessage')}</p>
+            <div className="rounded-lg bg-muted/50 p-3 space-y-2">
+              <p className="text-sm font-medium">{t('confirmManualPickupUseCases')}</p>
+              <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                <li>{t('confirmManualPickupCase1')}</li>
+                <li>{t('confirmManualPickupCase2')}</li>
+              </ul>
+            </div>
+            <p className="text-xs text-muted-foreground italic">{t('actionWillBeLogged')}</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSkipPickupDialog(false)} disabled={isSkipActionLoading}>
+              {tCommon('cancel')}
+            </Button>
+            <Button onClick={handleSkipPickup} disabled={isSkipActionLoading} className="gap-2 bg-amber-600 hover:bg-amber-700">
+              {isSkipActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />}
+              {isSkipActionLoading ? t('markingPickedUp') : t('confirmPickup')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Skip Receive at Warehouse Dialog */}
+      <Dialog open={showSkipReceiveDialog} onOpenChange={setShowSkipReceiveDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-amber-600" />
+              </div>
+              <DialogTitle>{t('confirmManualWarehouseReceipt')}</DialogTitle>
+            </div>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">{t('confirmManualWarehouseReceiptMessage')}</p>
+            <div className="rounded-lg bg-muted/50 p-3 space-y-2">
+              <p className="text-sm font-medium">{t('confirmManualWarehouseReceiptUseCases')}</p>
+              <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                <li>{t('confirmManualWarehouseReceiptCase1')}</li>
+                <li>{t('confirmManualWarehouseReceiptCase2')}</li>
+              </ul>
+            </div>
+            <p className="text-xs text-muted-foreground italic">{t('actionWillBeLogged')}</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSkipReceiveDialog(false)} disabled={isSkipActionLoading}>
+              {tCommon('cancel')}
+            </Button>
+            <Button onClick={handleSkipReceive} disabled={isSkipActionLoading} className="gap-2 bg-amber-600 hover:bg-amber-700">
+              {isSkipActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Warehouse className="h-4 w-4" />}
+              {isSkipActionLoading ? t('markingReceived') : t('confirmReceipt')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Skip Dispatch Dialog */}
+      <Dialog open={showSkipDispatchDialog} onOpenChange={setShowSkipDispatchDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-amber-600" />
+              </div>
+              <DialogTitle>{t('confirmManualDispatch')}</DialogTitle>
+            </div>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">{t('confirmManualDispatchMessage')}</p>
+            <div className="rounded-lg bg-muted/50 p-3 space-y-2">
+              <p className="text-sm font-medium">{t('confirmManualDispatchUseCases')}</p>
+              <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                <li>{t('confirmManualDispatchCase1')}</li>
+                <li>{t('confirmManualDispatchCase2')}</li>
+              </ul>
+            </div>
+            <p className="text-xs text-muted-foreground italic">{t('actionWillBeLogged')}</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSkipDispatchDialog(false)} disabled={isSkipActionLoading}>
+              {tCommon('cancel')}
+            </Button>
+            <Button onClick={handleSkipDispatch} disabled={isSkipActionLoading} className="gap-2 bg-amber-600 hover:bg-amber-700">
+              {isSkipActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />}
+              {isSkipActionLoading ? t('markingOutForDelivery') : t('confirmDispatch')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Skip Delivery (OTP Bypass) Dialog - Critical Action */}
+      <Dialog open={showSkipDeliveryDialog} onOpenChange={setShowSkipDeliveryDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+              </div>
+              <DialogTitle>{t('confirmManualDelivery')}</DialogTitle>
+            </div>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">{t('confirmManualDeliveryMessage')}</p>
+            <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3">
+              <p className="text-sm font-medium text-red-700 dark:text-red-400 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                {t('confirmManualDeliveryWarning')}
+              </p>
+            </div>
+            <div className="rounded-lg bg-muted/50 p-3 space-y-2">
+              <p className="text-sm font-medium">{t('confirmManualDeliveryUseCases')}</p>
+              <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                <li>{t('confirmManualDeliveryCase1')}</li>
+                <li>{t('confirmManualDeliveryCase2')}</li>
+                <li>{t('confirmManualDeliveryCase3')}</li>
+              </ul>
+            </div>
+            <div className="rounded-lg bg-muted/50 p-3 space-y-2">
+              <p className="text-sm font-medium">{t('confirmManualDeliveryConfirmation')}</p>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  {t('confirmManualDeliveryConfirm1')}
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  {t('confirmManualDeliveryConfirm2')}
+                </li>
+              </ul>
+            </div>
+            <p className="text-xs text-muted-foreground italic">{t('actionWillBeLogged')}</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSkipDeliveryDialog(false)} disabled={isSkipActionLoading}>
+              {tCommon('cancel')}
+            </Button>
+            <Button onClick={handleSkipDelivery} disabled={isSkipActionLoading} variant="destructive" className="gap-2">
+              {isSkipActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+              {isSkipActionLoading ? t('markingDelivered') : t('confirmDelivery')}
             </Button>
           </DialogFooter>
         </DialogContent>
