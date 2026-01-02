@@ -39,7 +39,7 @@ import {
 
 // Services
 import type { Order } from "@/lib/services/orders";
-import { fetchInventories, type Inventory } from "@/lib/services/inventories";
+import { fetchAllInventories, type Inventory } from "@/lib/services/inventories";
 import { fetchGovernorates, fetchCities, type Governorate, type City } from "@/lib/services/vendors";
 import { fetchActiveAgents, type Agent } from "@/lib/services/agents";
 import { getCurrentUser } from "@/lib/auth";
@@ -135,7 +135,7 @@ export default function OrdersPage() {
       setHasLoadedFilterData(true);
       try {
         const [inventoriesData, agentsData, governoratesData] = await Promise.all([
-          fetchInventories(),
+          fetchAllInventories(),
           fetchActiveAgents(),
           fetchGovernorates(),
         ]);

@@ -43,7 +43,7 @@ import {
   useAssignUserRole,
   useRoles,
 } from "@/hooks/queries";
-import { fetchInventories, type Inventory } from "@/lib/services/inventories";
+import { fetchAllInventories, type Inventory } from "@/lib/services/inventories";
 
 // User Card Component
 interface UserCardProps {
@@ -298,7 +298,7 @@ export default function UsersPage() {
       setHasLoadedFilterData(true);
       setIsLoadingInventories(true);
       try {
-        const fetchedInventories = await fetchInventories();
+        const fetchedInventories = await fetchAllInventories();
         setInventories(fetchedInventories);
       } catch {
         // Silently fail - inventories filter is optional

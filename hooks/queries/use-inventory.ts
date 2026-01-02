@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys, CACHE_TIMES, STALE_TIMES } from "@/components/providers/query-provider";
 import {
   fetchInventories,
+  fetchAllInventories,
   fetchInventory,
   fetchCurrentInventory,
   createInventory,
@@ -26,6 +27,21 @@ export function useInventories(
   return useQuery<Inventory[], Error>({
     queryKey: queryKeys.inventory.list(filters),
     queryFn: () => fetchInventories(filters),
+    staleTime: STALE_TIMES.SEMI_STATIC,
+    gcTime: CACHE_TIMES.SEMI_STATIC,
+    enabled: options?.enabled !== false, // Default to true, can be disabled
+  });
+}
+
+/**
+ * Hook to fetch all inventories using /all-inventories endpoint
+ * Used for filter options in pages like Orders and Users
+ * Inventories are semi-static - cached for 5 minutes
+ */
+export function useAllInventories(options?: { enabled?: boolean }) {
+  return useQuery<Inventory[], Error>({
+    queryKey: [...queryKeys.inventory.all, "all-inventories"],
+    queryFn: () => fetchAllInventories(),
     staleTime: STALE_TIMES.SEMI_STATIC,
     gcTime: CACHE_TIMES.SEMI_STATIC,
     enabled: options?.enabled !== false, // Default to true, can be disabled

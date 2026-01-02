@@ -190,6 +190,18 @@ export async function fetchInventories(filters: InventoryFilters = {}): Promise<
 }
 
 /**
+ * Fetch all inventories using /all-inventories endpoint
+ * Used for filter options in orders page
+ */
+export async function fetchAllInventories(): Promise<Inventory[]> {
+  const response = await apiRequest<Inventory[]>(`/all-inventories?include=${INVENTORY_INCLUDES}`, {
+    method: 'GET',
+  });
+
+  return response.data || [];
+}
+
+/**
  * Fetch current user's inventory
  */
 export async function fetchCurrentInventory(): Promise<Inventory> {
