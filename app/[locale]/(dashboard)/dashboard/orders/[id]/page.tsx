@@ -506,6 +506,12 @@ export default function OrderDetailPage() {
                       {t('assignDeliveryAgent')}
                     </Button>
                   )}
+                </div>
+              )}
+
+              {/* Print Button - Vendor Only */}
+              {isVendor && (
+                <div className="flex flex-wrap gap-2 pt-4">
                   <Button variant="outline" onClick={() => window.print()} className="gap-2">
                     <Printer className="h-4 w-4" />
                     {t('printLabel')}
