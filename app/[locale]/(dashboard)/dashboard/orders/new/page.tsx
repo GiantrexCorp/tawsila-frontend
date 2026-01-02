@@ -14,6 +14,8 @@ import { validateEgyptianMobile, validateRequired } from "@/lib/validations";
 import { createOrder, type CreateOrderItem, type CreateOrderRequest } from "@/lib/services/orders";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useGovernorates, useCities } from "@/hooks/queries/use-vendors";
+import { LocationPicker } from "@/components/ui/location-picker";
+import { Separator } from "@/components/ui/separator";
 
 interface CustomerFormData {
   name: string;
@@ -215,6 +217,10 @@ export default function CreateOrderPage() {
     setCustomer(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleLocationChange = (lat: string, lng: string) => {
+    setCustomer(prev => ({ ...prev, latitude: lat, longitude: lng }));
+  };
+
   const handleItemChange = (index: number, field: keyof CreateOrderItem | 'price', value: string | number) => {
     setItems(prev => {
       const newItems = [...prev];
@@ -411,33 +417,57 @@ export default function CreateOrderPage() {
               </div>
             </div>
 
-            {/* Latitude & Longitude */}
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="latitude">{t('latitude')}</Label>
-                <Input
-                  id="latitude"
-                  type="number"
-                  step="any"
-                  min="-90"
-                  max="90"
-                  placeholder="e.g., 30.0444"
-                  value={customer.latitude}
-                  onChange={(e) => handleCustomerChange('latitude', e.target.value)}
+            <Separator />
+
+            {/* Location Picker */}
+            <div className="space-y-4">
+              <div>
+                <Label>{t('deliveryLocation')}</Label>
+                <p className="text-sm text-muted-foreground mb-3">
+                  {t('deliveryLocationDesc') || 'Select the delivery location on the map, search for a location, or enter coordinates manually'}
+                </p>
+                <LocationPicker
+                  latitude={customer.latitude}
+                  longitude={customer.longitude}
+                  onLocationChange={handleLocationChange}
+                  disabled={isSubmitting}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="longitude">{t('longitude')}</Label>
-                <Input
-                  id="longitude"
-                  type="number"
-                  step="any"
-                  min="-180"
-                  max="180"
-                  placeholder="e.g., 31.2357"
-                  value={customer.longitude}
-                  onChange={(e) => handleCustomerChange('longitude', e.target.value)}
-                />
+
+              {/* Latitude & Longitude */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="latitude">{t('latitude')}</Label>
+                  <Input
+                    id="latitude"
+                    type="number"
+                    step="any"
+                    min="-90"
+                    max="90"
+                    placeholder="e.g., 30.0444"
+                    value={customer.latitude}
+                    onChange={(e) => handleCustomerChange('latitude', e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter manually or click/drag on map
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="longitude">{t('longitude')}</Label>
+                  <Input
+                    id="longitude"
+                    type="number"
+                    step="any"
+                    min="-180"
+                    max="180"
+                    placeholder="e.g., 31.2357"
+                    value={customer.longitude}
+                    onChange={(e) => handleCustomerChange('longitude', e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter manually or click/drag on map
+                  </p>
+                </div>
               </div>
             </div>
           </CardContent>

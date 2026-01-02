@@ -764,25 +764,35 @@ export default function EditVendorPage() {
                     <Label htmlFor="latitude">{t('latitude')} *</Label>
                     <Input
                       id="latitude"
+                      type="number"
+                      step="any"
                       value={formData.latitude}
-                      readOnly
-                      disabled
+                      onChange={handleInputChange}
+                      disabled={isSubmitting}
                       required
-                      placeholder="Click on map to set"
-                      className={`bg-muted ${errors.latitude ? "border-red-500" : ""}`}
+                      placeholder="e.g., 30.0444"
+                      className={errors.latitude ? "border-red-500" : ""}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Enter manually or click/drag on map
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="longitude">{t('longitude')} *</Label>
                     <Input
                       id="longitude"
+                      type="number"
+                      step="any"
                       value={formData.longitude}
-                      readOnly
-                      disabled
+                      onChange={handleInputChange}
+                      disabled={isSubmitting}
                       required
-                      placeholder="Click on map to set"
-                      className={`bg-muted ${errors.longitude ? "border-red-500" : ""}`}
+                      placeholder="e.g., 31.2357"
+                      className={errors.longitude ? "border-red-500" : ""}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Enter manually or click/drag on map
+                    </p>
                   </div>
                 </div>
               </div>
