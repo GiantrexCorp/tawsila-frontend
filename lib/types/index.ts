@@ -1,5 +1,5 @@
 /**
- * Shared type definitions for the Tawsila inventory management system
+ * Shared type definitions for the Rahwan inventory management system
  * This file consolidates common types used across multiple services
  */
 

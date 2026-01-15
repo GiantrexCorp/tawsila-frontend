@@ -227,7 +227,7 @@ export default function SetPasswordPage() {
       {/* Footer */}
       <footer className="border-t py-6 bg-background">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} Tawsila. {tCommon('allRightsReserved')}.</p>
+          <p>© {new Date().getFullYear()} Rahwan. {tCommon('allRightsReserved')}.</p>
         </div>
       </footer>
     </div>

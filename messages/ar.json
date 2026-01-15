@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "توصيلة",
+    "name": "رهوان",
     "tagline": "إدارة ذكية للمخزون والتوصيل"
   },
   "nav": {
@@ -44,7 +44,7 @@
     "topAgents": "أفضل المناديب"
   },
   "dashboard": {
-    "welcome": "أهلاً بيك تاني في توصيلة",
+    "welcome": "أهلاً بيك تاني في رهوان",
     "subtitle": "ده اللي بيحصل في النظام النهارده",
     "pendingRequests": "طلبات المنتجات المستنية",
     "pendingDeliveries": "التوصيلات المستنية",
@@ -908,7 +908,7 @@
     "statusHistory": "سجل الحالة",
     "trackAnother": "تتبع طلب تاني",
     "viewLocation": "عرض الموقع",
-    "copyright": "© {year} توصيلة. كل الحقوق محفوظة."
+    "copyright": "© {year} رهوان. كل الحقوق محفوظة."
   },
   "landing": {
     "heroTitle": "تتبع شحنتك",
@@ -921,7 +921,7 @@
     "dailyDeliveries": "التوصيلات اليومية",
     "onTimeRate": "معدل التوصيل في الوقت",
     "happyClients": "العملاء السعداء",
-    "whyTrackTitle": "ليه تختار توصيلة؟",
+    "whyTrackTitle": "ليه تختار رهوان؟",
     "whyTrackSubtitle": "شريك الشحن الموثوق بتاعك للتوصيلات السريعة والموثوقة",
     "realTimeTracking": "توصيل سريع وموثوق",
     "realTimeTrackingDesc": "خدمات شحن سريعة وموثوقة مع معدل توصيل في الوقت 99.9%",
@@ -940,8 +940,8 @@
     "step3Title": "احصل على تحديثات التوصيل",
     "step3Desc": "استلم تحديثات فورية ووقت التوصيل المتوقع",
     "trustedByTitle": "موثوق به من قبل الشركات الرائدة",
-    "trustedBySubtitle": "انضم إلى مئات الشركات التي تعتمد على توصيلة لاحتياجات الشحن الخاصة بها",
-    "aboutTitle": "عن توصيلة",
+    "trustedBySubtitle": "انضم إلى مئات الشركات التي تعتمد على رهوان لاحتياجات الشحن الخاصة بها",
+    "aboutTitle": "عن رهوان",
     "aboutSubtitle": "شريكك الموثوق لخدمات التوصيل واللوجستيات الموثوقة",
     "aboutFeature1": "خدمة احترافية",
     "aboutFeature1Desc": "حلول لوجستية على مستوى المؤسسات موثوقة من الشركات",
@@ -961,10 +961,10 @@
     "cookieSettings": "إعدادات ملفات تعريف الارتباط"
   },
   "login": {
-    "welcome": "أهلاً بيك في توصيلة",
+    "welcome": "أهلاً بيك في رهوان",
     "subtitle": "سجل دخولك عشان تكمل",
     "email": "الإيميل",
-    "emailPlaceholder": "admin@tawsila.com",
+    "emailPlaceholder": "admin@rahwan.com",
     "password": "كلمة السر",
     "passwordPlaceholder": "••••••••",
     "forgotPassword": "نسيت كلمة السر؟",
@@ -997,7 +997,7 @@
     "passwordTooShort": "كلمة السر لازم تكون 6 حروف على الأقل",
     "passwordMismatch": "كلمات السر مش متطابقة",
     "passwordChangeSuccess": "تم تغيير كلمة السر بنجاح!",
-    "welcomeMessage": "أهلاً بيك في توصيلة، {name}!",
+    "welcomeMessage": "أهلاً بيك في رهوان، {name}!",
     "passwordChangeFailed": "فشل تغيير كلمة السر",
     "passwordHint": "كلمة السر لازم تكون 6 حروف على الأقل.",
     "noTokenError": "مفيش رمز مصادقة. من فضلك سجل دخولك تاني."

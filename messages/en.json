@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Tawsila",
+    "name": "Rahwan",
     "tagline": "Smart Inventory & Delivery Management"
   },
   "nav": {
@@ -44,7 +44,7 @@
     "topAgents": "Top Agents"
   },
   "dashboard": {
-    "welcome": "Welcome back to Tawsila",
+    "welcome": "Welcome back to Rahwan",
     "subtitle": "Here's what's happening with your system today",
     "pendingRequests": "Pending Product Requests",
     "pendingDeliveries": "Pending Deliveries",
@@ -908,7 +908,7 @@
     "statusHistory": "Status History",
     "trackAnother": "Track Another Order",
     "viewLocation": "View location",
-    "copyright": "© {year} Tawsila. All rights reserved."
+    "copyright": "© {year} Rahwan. All rights reserved."
   },
   "landing": {
     "heroTitle": "Track Your Shipment",
@@ -921,7 +921,7 @@
     "dailyDeliveries": "Daily Deliveries",
     "onTimeRate": "On-time Rate",
     "happyClients": "Happy Clients",
-    "whyTrackTitle": "Why Choose Tawsila?",
+    "whyTrackTitle": "Why Choose Rahwan?",
     "whyTrackSubtitle": "Your trusted shipping partner for reliable and fast deliveries",
     "realTimeTracking": "Fast & Reliable Delivery",
     "realTimeTrackingDesc": "Quick and dependable shipping services with 99.9% on-time delivery rate",
@@ -940,8 +940,8 @@
     "step3Title": "Get Delivery Updates",
     "step3Desc": "Receive real-time updates and estimated delivery time",
     "trustedByTitle": "Trusted by Leading Companies",
-    "trustedBySubtitle": "Join hundreds of businesses that rely on Tawsila for their shipping needs",
-    "aboutTitle": "About Tawsila",
+    "trustedBySubtitle": "Join hundreds of businesses that rely on Rahwan for their shipping needs",
+    "aboutTitle": "About Rahwan",
     "aboutSubtitle": "Your trusted partner for reliable delivery and logistics services",
     "aboutFeature1": "Professional Service",
     "aboutFeature1Desc": "Enterprise-grade logistics solutions trusted by businesses",
@@ -961,10 +961,10 @@
     "cookieSettings": "Cookie Settings"
   },
   "login": {
-    "welcome": "Welcome to Tawsila",
+    "welcome": "Welcome to Rahwan",
     "subtitle": "Sign in to your account to continue",
     "email": "Email",
-    "emailPlaceholder": "admin@tawsila.com",
+    "emailPlaceholder": "admin@rahwan.com",
     "password": "Password",
     "passwordPlaceholder": "••••••••",
     "forgotPassword": "Forgot password?",
@@ -997,7 +997,7 @@
     "passwordTooShort": "Password must be at least 6 characters",
     "passwordMismatch": "Passwords do not match",
     "passwordChangeSuccess": "Password Changed Successfully!",
-    "welcomeMessage": "Welcome to Tawsila, {name}!",
+    "welcomeMessage": "Welcome to Rahwan, {name}!",
     "passwordChangeFailed": "Password change failed",
     "passwordHint": "Your password must be at least 6 characters long.",
     "noTokenError": "No authentication token found. Please login again."

@@ -206,7 +206,7 @@ export default function LoginPage() {
       {/* Footer */}
       <footer className="border-t py-6 bg-background">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} Tawsila. {t('allRightsReserved')}.</p>
+          <p>© {new Date().getFullYear()} Rahwan. {t('allRightsReserved')}.</p>
         </div>
       </footer>
     </div>
