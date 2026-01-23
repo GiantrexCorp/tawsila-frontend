@@ -1,34 +1,47 @@
 "use client";
 
 import * as React from "react";
-import { Package } from "lucide-react";
-import { useTranslations } from "next-intl";
+import Image from "next/image";
 
 interface RahwanLogoProps {
   iconOnly?: boolean;
+  size?: "sm" | "md" | "lg";
   className?: string;
 }
 
-export function RahwanLogo({ iconOnly = false, className = "" }: RahwanLogoProps) {
-  const t = useTranslations('app');
+const sizeConfig = {
+  sm: { width: 100, height: 34 },
+  md: { width: 130, height: 44 },
+  lg: { width: 160, height: 54 },
+};
+
+export function RahwanLogo({ iconOnly = false, size = "md", className = "" }: RahwanLogoProps) {
+  const { width, height } = sizeConfig[size];
 
   if (iconOnly) {
     return (
-      <div className={`flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground ${className}`}>
-        <Package className="h-6 w-6" />
+      <div className={`flex h-10 w-10 items-center justify-center ${className}`}>
+        <Image
+          src="/rahwan-logo.png"
+          alt="Rahwan"
+          width={40}
+          height={40}
+          className="rounded-lg object-contain"
+        />
       </div>
     );
   }
 
   return (
-    <div className={`flex items-center gap-3 ${className}`}>
-      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-        <Package className="h-6 w-6" />
-      </div>
-      <div>
-        <h2 className="text-lg font-semibold">{t('name')}</h2>
-        <p className="text-xs text-muted-foreground">{t('tagline')}</p>
-      </div>
+    <div className={`flex items-center ${className}`}>
+      <Image
+        src="/rahwan-logo.png"
+        alt="Rahwan - For Delivery"
+        width={width}
+        height={height}
+        className="object-contain"
+        priority
+      />
     </div>
   );
 }
