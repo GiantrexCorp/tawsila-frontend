@@ -906,7 +906,12 @@
     "noPermissionsFound": "مفيش صلاحيات",
     "selectedCount": "{count} متحدد",
     "cardView": "عرض البطاقات",
-    "tableView": "عرض الجدول"
+    "tableView": "عرض الجدول",
+    "searchRoles": "دور على الأدوار...",
+    "allRoles": "كل الأدوار",
+    "showingFilteredRoles": "عرض {count} من {total} دور",
+    "noMatchingRoles": "مفيش أدوار مطابقة",
+    "noMatchingRolesDesc": "جرب تعدل البحث أو الفلتر"
   },
   "tracking": {
     "title": "تتبع طلبك",
@@ -1248,7 +1253,10 @@
     "errorLoading": "فشل تحميل المعاملات",
     "errorTitle": "تعذر تحميل المعاملات",
     "credit": "إيداع",
-    "debit": "سحب"
+    "debit": "سحب",
+    "dateRange": "نطاق التاريخ",
+    "fromDate": "من",
+    "toDate": "إلى"
   },
   "wallet": {
     "title": "محفظتي",

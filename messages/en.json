@@ -906,7 +906,12 @@
     "noPermissionsFound": "No permissions found",
     "selectedCount": "{count} selected",
     "cardView": "Card view",
-    "tableView": "Table view"
+    "tableView": "Table view",
+    "searchRoles": "Search roles...",
+    "allRoles": "All Roles",
+    "showingFilteredRoles": "Showing {count} of {total} roles",
+    "noMatchingRoles": "No matching roles",
+    "noMatchingRolesDesc": "Try adjusting your search or filter criteria"
   },
   "tracking": {
     "title": "Track Your Order",
@@ -1249,7 +1254,10 @@
     "errorLoading": "Failed to load transactions",
     "errorTitle": "Unable to Load Transactions",
     "credit": "Credit",
-    "debit": "Debit"
+    "debit": "Debit",
+    "dateRange": "Date Range",
+    "fromDate": "From",
+    "toDate": "To"
   },
   "wallet": {
     "title": "My Wallet",
