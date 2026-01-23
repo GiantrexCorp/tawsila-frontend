@@ -722,8 +722,8 @@ export default function OrderDetailPage() {
               )}
             </div>
 
-            {/* Right: QR Code */}
-            {order.qr_code && (
+            {/* Right: QR Code - Controlled by NEXT_PUBLIC_SHOW_ORDER_QR_CARD env variable */}
+            {process.env.NEXT_PUBLIC_SHOW_ORDER_QR_CARD === 'true' && order.qr_code && (
               <div className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-white dark:bg-zinc-900 border shadow-sm">
                 <QRCodeSVG value={order.qr_code} size={120} level="M" includeMargin={false} />
                 <Button
