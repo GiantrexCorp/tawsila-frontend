@@ -15,6 +15,12 @@
   overflow: hidden;
 }
 
+/* Force light mode for print container (even when hidden, affects print) */
+.print-container,
+.print-container * {
+  color-scheme: light !important;
+}
+
 /* ===== PRINT STYLES ===== */
 @media print {
   /* Page setup */
@@ -23,13 +29,16 @@
     margin: 5mm;
   }
 
-  /* Reset */
+  /* Reset and force light mode */
   html, body {
     margin: 0 !important;
     padding: 0 !important;
     width: 210mm !important;
     height: auto !important;
     overflow: visible !important;
+    background: white !important;
+    color: black !important;
+    color-scheme: light !important;
   }
 
   /* Hide everything */
@@ -61,7 +70,9 @@
     gap: 0;
     page-break-after: always;
     break-after: page;
-    background: white;
+    background: white !important;
+    background-color: white !important;
+    color: black !important;
   }
 
   .print-page:last-child {
@@ -75,6 +86,8 @@
     flex-direction: column;
     align-items: center;
     width: 200mm;
+    background: white !important;
+    background-color: white !important;
   }
 
   /* Cut line between labels */
@@ -85,19 +98,21 @@
     align-items: center;
     justify-content: center;
     position: relative;
+    background: white !important;
   }
 
   .cut-line-dashed {
     flex: 1;
     height: 0;
-    border-top: 1px dashed #666;
+    border-top: 1px dashed #666 !important;
     margin: 0 2mm;
+    background: transparent !important;
   }
 
   .cut-line-scissors {
     width: 4mm !important;
     height: 4mm !important;
-    color: #666;
+    color: #666 !important;
     flex-shrink: 0;
   }
 
@@ -130,11 +145,26 @@
     print-color-adjust: exact !important;
   }
 
-  /* Force colors to print */
+  /* Force light colors to print (override dark mode) */
   .shipping-label,
   .shipping-label * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    color-scheme: light !important;
+  }
+
+  /* Ensure all text is black and backgrounds are white */
+  .shipping-label p,
+  .shipping-label span,
+  .shipping-label div {
+    color: black !important;
+    background-color: transparent !important;
+  }
+
+  /* Reset any dark mode variables */
+  .shipping-label {
+    --background: white !important;
+    --foreground: black !important;
   }
 
   /* Typography */
