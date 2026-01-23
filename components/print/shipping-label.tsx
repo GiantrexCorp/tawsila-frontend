@@ -1,6 +1,7 @@
 "use client";
 
 import { QRCodeSVG } from "qrcode.react";
+import Barcode from "react-barcode";
 import Image from "next/image";
 import { useLocale } from "next-intl";
 import type { Order, OrderItem, Customer } from "@/lib/services/orders";
@@ -46,168 +47,244 @@ export function ShippingLabel({ order, t, tCommon }: ShippingLabelProps) {
   const totalItems = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
   const isCOD = order.payment_method === "cash";
 
+  // Format created date
+  const createdDate = order.created_at
+    ? new Date(order.created_at).toLocaleDateString(locale, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : "";
+
+  // Build region string
+  const regionParts = [governorateName, cityName].filter(Boolean);
+  const regionString = regionParts.join(" - ") || "-";
+
   return (
     <div
-      className="shipping-label bg-white text-black"
+      className="shipping-label"
       dir={isRTL ? "rtl" : "ltr"}
       style={{
         width: "200mm",
         height: "140mm",
-        padding: "5mm",
+        padding: "4mm",
         overflow: "hidden",
         fontFamily: "system-ui, -apple-system, sans-serif",
         boxSizing: "border-box",
+        backgroundColor: "white",
+        color: "black",
+        border: "1px solid #000",
       }}
     >
-      {/* Header: Logo + Vendor + QR Code */}
+      {/* Row 1: Logo + Barcode + QR Code */}
       <div
-        className="flex items-start justify-between border-b-2 border-black pb-2 mb-2"
-        style={{ borderBottomWidth: "2px" }}
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          borderBottom: "2px solid #000",
+          paddingBottom: "3mm",
+          marginBottom: "3mm",
+        }}
       >
-        <div className="flex flex-col gap-1">
+        {/* Logo */}
+        <div style={{ display: "flex", alignItems: "center" }}>
           <Image
             src="/rahwan-logo-light.png"
             alt="Rahwan"
-            width={120}
-            height={45}
+            width={100}
+            height={38}
             style={{ objectFit: "contain" }}
             priority
           />
-          {vendorName && (
-            <div className="mt-1">
-              <p className="text-xs text-gray-600">{t("from")}</p>
-              <p className="font-semibold text-sm">{vendorName}</p>
-            </div>
-          )}
         </div>
-        <div className="flex flex-col items-center">
+
+        {/* Barcode */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <Barcode
+            value={order.track_number || "N/A"}
+            width={1.5}
+            height={40}
+            fontSize={12}
+            margin={0}
+            displayValue={true}
+          />
+        </div>
+
+        {/* QR Code */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
           {order.qr_code && (
             <QRCodeSVG
               value={order.qr_code}
-              size={70}
+              size={80}
               level="M"
-              style={{ width: "70px", height: "70px" }}
+              style={{ width: "80px", height: "80px" }}
             />
           )}
         </div>
       </div>
 
-      {/* Order Number & Track Number */}
+      {/* Row 3: COD Amount */}
       <div
-        className="border-b-2 border-black pb-2 mb-2"
-        style={{ borderBottomWidth: "2px" }}
+        style={{
+          borderBottom: "2px solid #000",
+          paddingBottom: "2mm",
+          marginBottom: "2mm",
+          textAlign: "center",
+        }}
       >
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs text-gray-600 uppercase tracking-wide">
-              {t("orderNumber")}
-            </p>
-            <p className="font-bold text-lg font-mono" dir="ltr">
-              {order.order_number}
-            </p>
-          </div>
-          <div className="text-end">
-            <p className="text-xs text-gray-600 uppercase tracking-wide">
-              {t("trackingNumber")}
-            </p>
-            <p className="font-semibold text-sm font-mono" dir="ltr">
-              {order.track_number}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Ship To Section */}
-      <div
-        className="border-b-2 border-black pb-2 mb-2"
-        style={{ borderBottomWidth: "2px" }}
-      >
-        <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">
-          {t("shipTo")}
-        </p>
-        <div className="space-y-0.5">
-          {customer.name && (
-            <p className="font-bold text-base">{customer.name}</p>
-          )}
-          {customer.mobile && (
-            <p className="font-mono text-sm" dir="ltr">
-              {customer.mobile}
-            </p>
-          )}
-          {(customer.full_address || customer.address) && (
-            <p className="text-xs leading-tight">
-              {customer.full_address || customer.address}
-            </p>
-          )}
-          {customer.address_notes && (
-            <p className="text-xs text-gray-600 italic">
-              {customer.address_notes}
-            </p>
-          )}
-          {(cityName || governorateName) && (
-            <p className="text-xs font-medium">
-              {[cityName, governorateName].filter(Boolean).join(", ")}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Items Section with COD Badge */}
-      <div
-        className="border-b-2 border-black pb-2 mb-2"
-        style={{ borderBottomWidth: "2px" }}
-      >
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-xs text-gray-600 uppercase tracking-wide">
-            {t("items")}: {totalItems}
-          </p>
-          {isCOD && (
-            <span
-              className="px-2 py-0.5 text-xs font-bold uppercase rounded"
-              style={{
-                backgroundColor: "#fef3c7",
-                color: "#92400e",
-                border: "1px solid #fbbf24"
-              }}
-            >
-              {t("cod")}
+        <span
+          style={{
+            fontSize: "16px",
+            fontWeight: "bold",
+          }}
+        >
+          {t("codAmount")}:{" "}
+          {isCOD ? (
+            <span style={{ color: "#000" }}>
+              {tCommon("egpSymbol")} {order.total_amount.toFixed(2)}
             </span>
+          ) : (
+            <span style={{ color: "#666" }}>{t("prepaid")}</span>
           )}
+        </span>
+      </div>
+
+      {/* Row 4: From (Vendor) | Deliver To (Customer) */}
+      <div
+        style={{
+          display: "flex",
+          borderBottom: "2px solid #000",
+          marginBottom: "2mm",
+        }}
+      >
+        {/* Vendor Column */}
+        <div
+          style={{
+            flex: "0 0 35%",
+            borderRight: isRTL ? "none" : "1px solid #000",
+            borderLeft: isRTL ? "1px solid #000" : "none",
+            padding: "2mm",
+          }}
+        >
+          <p style={{ fontSize: "10px", color: "#666", marginBottom: "1mm" }}>{t("from")}:</p>
+          <p style={{ fontSize: "14px", fontWeight: "bold" }}>{vendorName || "-"}</p>
         </div>
-        <div className="space-y-0.5">
-          {items.slice(0, 4).map((item, i) => (
-            <div key={i} className="flex justify-between text-xs">
-              <span className="truncate flex-1" style={{ maxWidth: "75%" }}>
-                {item.product_name || `${t("product")} ${i + 1}`}
-              </span>
-              <span className="font-mono">
-                x{item.quantity || 1}
-              </span>
-            </div>
+
+        {/* Customer Column */}
+        <div style={{ flex: "1", padding: "2mm" }}>
+          <p style={{ fontSize: "10px", color: "#666", marginBottom: "1mm" }}>{t("deliverTo")}:</p>
+          <p style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "1mm" }}>
+            {customer.name || "-"}
+          </p>
+          <p style={{ fontSize: "12px", fontFamily: "monospace" }} dir="ltr">
+            {customer.mobile || "-"}
+          </p>
+        </div>
+      </div>
+
+      {/* Row 5: Region */}
+      <div
+        style={{
+          borderBottom: "1px solid #ccc",
+          paddingBottom: "2mm",
+          marginBottom: "2mm",
+        }}
+      >
+        <span style={{ fontSize: "10px", color: "#666" }}>{t("region")} | </span>
+        <span style={{ fontSize: "12px", fontWeight: "600" }}>{regionString}</span>
+      </div>
+
+      {/* Row 6: Address */}
+      <div
+        style={{
+          borderBottom: "1px solid #ccc",
+          paddingBottom: "2mm",
+          marginBottom: "2mm",
+        }}
+      >
+        <span style={{ fontSize: "10px", color: "#666" }}>{t("addressLabel")} | </span>
+        <span style={{ fontSize: "11px" }}>
+          {customer.full_address || customer.address || "-"}
+        </span>
+      </div>
+
+      {/* Row 7: Landmark */}
+      <div
+        style={{
+          borderBottom: "2px solid #000",
+          paddingBottom: "2mm",
+          marginBottom: "2mm",
+        }}
+      >
+        <span style={{ fontSize: "10px", color: "#666" }}>{t("landmark")} | </span>
+        <span style={{ fontSize: "11px" }}>{customer.address_notes || "-"}</span>
+      </div>
+
+      {/* Row 8: Items */}
+      <div
+        style={{
+          borderBottom: "2px solid #000",
+          paddingBottom: "2mm",
+          marginBottom: "2mm",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "1mm",
+          }}
+        >
+          <span style={{ fontSize: "10px", color: "#666" }}>
+            {t("shipmentDescription")} ({totalItems} {t("pieces")})
+          </span>
+        </div>
+        <div style={{ fontSize: "11px" }}>
+          {items.slice(0, 3).map((item, i) => (
+            <span key={i}>
+              {item.product_name || `${t("product")} ${i + 1}`} x{item.quantity || 1}
+              {i < Math.min(items.length, 3) - 1 ? " | " : ""}
+            </span>
           ))}
-          {items.length > 4 && (
-            <p className="text-xs text-gray-500 italic">
-              +{items.length - 4} {t("moreItems")}
-            </p>
+          {items.length > 3 && (
+            <span style={{ color: "#666" }}> +{items.length - 3} {t("moreItems")}</span>
           )}
+          {items.length === 0 && "-"}
         </div>
       </div>
 
-      {/* Total Amount */}
-      <div className="flex items-center justify-between pt-1">
-        <p className="text-xs text-gray-600 uppercase tracking-wide">
-          {t("totalAmount")}
-        </p>
-        <p className="font-bold text-lg">
-          {tCommon("egpSymbol")} {order.total_amount.toFixed(2)}
-        </p>
+      {/* Row 9: Notes */}
+      <div
+        style={{
+          borderBottom: "2px solid #000",
+          paddingBottom: "2mm",
+          marginBottom: "2mm",
+        }}
+      >
+        <span style={{ fontSize: "10px", color: "#666" }}>{t("notes")} | </span>
+        <span style={{ fontSize: "11px" }}>{order.vendor_notes || "-"}</span>
       </div>
 
-      {/* Footer */}
-      <div className="text-center pt-1">
-        <p className="text-xs font-medium text-gray-700">
-          {t("handleWithCare")} - Rahwan
-        </p>
+      {/* Row 10: Footer - Order Number + Date */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <div>
+          <span style={{ fontSize: "10px", color: "#666" }}>{t("orderNumber")}: </span>
+          <span style={{ fontSize: "12px", fontWeight: "bold", fontFamily: "monospace" }}>
+            {order.order_number}
+          </span>
+        </div>
+        <div>
+          <span style={{ fontSize: "10px", color: "#666" }}>{t("createdAt")}: </span>
+          <span style={{ fontSize: "11px" }}>{createdDate}</span>
+        </div>
       </div>
     </div>
   );
