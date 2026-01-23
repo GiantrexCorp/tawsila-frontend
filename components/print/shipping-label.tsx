@@ -92,8 +92,8 @@ export function ShippingLabel({ order, t, tCommon }: ShippingLabelProps) {
           <Image
             src="/rahwan-logo-light.png"
             alt="Rahwan"
-            width={100}
-            height={38}
+            width={150}
+            height={57}
             style={{ objectFit: "contain" }}
             priority
           />
