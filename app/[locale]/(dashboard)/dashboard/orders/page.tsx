@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Loader2, Package, RefreshCw, X, MapPin, Building2, UserCheck, Hash, Phone, Calendar, Filter, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Loader2, Package, RefreshCw, X, MapPin, Building2, UserCheck, Hash, Phone, Calendar, Filter, ChevronDown, ChevronUp, Printer } from "lucide-react";
 import { useRouter } from "@/i18n/routing";
 import { toast } from "sonner";
 
@@ -36,6 +36,10 @@ import {
   OrderActionDialogs,
   type ViewType,
 } from "@/components/orders";
+import { PrintLabelsDialog } from "@/components/print";
+
+// Print styles
+import "@/components/print/print-styles.css";
 
 // Services
 import type { Order } from "@/lib/services/orders";
@@ -55,6 +59,19 @@ export default function OrdersPage() {
   const locale = useLocale();
   const router = useRouter();
   const isMobile = useIsMobile();
+
+  // Hydration state for client-side data
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [user, setUser] = useState<ReturnType<typeof getCurrentUser>>(null);
+
+  // Hydrate user data from localStorage
+  useEffect(() => {
+    setIsHydrated(true);
+    const currentUser = getCurrentUser();
+    if (currentUser) {
+      setUser(currentUser);
+    }
+  }, []);
 
   // View state (persisted to localStorage)
   const [view, setView] = useState<ViewType>("cards");
@@ -90,6 +107,11 @@ export default function OrdersPage() {
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [assignmentType, setAssignmentType] = useState<'pickup' | 'delivery'>('pickup');
 
+  // Selection state for batch printing (vendor-only)
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<number>>(new Set());
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
+
   // Permissions
   const hasPermission = usePagePermission({
     requiredPermissions: [
@@ -106,10 +128,12 @@ export default function OrdersPage() {
     ],
   });
   const { hasPermission: canCreateOrder } = useHasPermission(PERMISSIONS.CREATE_ORDER);
-  const currentUser = getCurrentUser();
 
   // Only users with type 'vendor' and create-order permission can create orders
-  const canShowCreateOrder = canCreateOrder && currentUser?.type === 'vendor';
+  const canShowCreateOrder = canCreateOrder && user?.type === 'vendor';
+
+  // Check if user is a vendor (for batch print labels) - must wait for hydration
+  const isVendor = isHydrated && user?.roles?.some(r => r.name === 'vendor');
 
   // React Query
   const {
@@ -432,11 +456,54 @@ export default function OrdersPage() {
     [selectedOrder, assignmentType, assignAgentMutation, assignDeliveryAgentMutation, refetch, t, tCommon]
   );
 
+  // Selection handlers for batch printing
+  const handleSelectionChange = useCallback((newSelection: Set<number>) => {
+    setSelectedOrderIds(newSelection);
+  }, []);
+
+  const handleEnterSelectionMode = useCallback(() => {
+    setIsSelectionMode(true);
+  }, []);
+
+  const handleExitSelectionMode = useCallback(() => {
+    setIsSelectionMode(false);
+    setSelectedOrderIds(new Set());
+  }, []);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedOrderIds(new Set());
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    const ordersList = ordersResponse?.data || [];
+    const allIds = new Set(ordersList.map((order) => order.id));
+    setSelectedOrderIds(allIds);
+  }, [ordersResponse?.data]);
+
+  const handlePrintLabels = useCallback(() => {
+    if (selectedOrderIds.size === 0) return;
+    setShowPrintDialog(true);
+  }, [selectedOrderIds.size]);
+
+  const handlePrintDialogClose = useCallback((open: boolean) => {
+    setShowPrintDialog(open);
+    if (!open) {
+      // Exit selection mode after printing
+      setIsSelectionMode(false);
+      setSelectedOrderIds(new Set());
+    }
+  }, []);
+
 
   // Computed values
   const orders = ordersResponse?.data || [];
   const totalOrders = ordersResponse?.meta?.total || 0;
   const totalPages = ordersResponse?.meta?.last_page || 1;
+
+  // Get selected orders for printing
+  const selectedOrders = useMemo(() => {
+    return orders.filter((order) => selectedOrderIds.has(order.id));
+  }, [orders, selectedOrderIds]);
 
   const stats = useMemo(() => {
     return {
@@ -464,35 +531,66 @@ export default function OrdersPage() {
     <div className="space-y-6 min-w-0">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-            {t("title")}
-          </h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">
-            {t("subtitle")}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
-            <span className="hidden sm:inline">{t("refreshData")}</span>
-          </Button>
-          {canShowCreateOrder && (
+        {isSelectionMode ? (
+          <>
+            <div className="flex items-center gap-4">
+              <span className="text-lg font-medium">
+                {t("selectOrdersToPrint")}
+              </span>
+            </div>
             <Button
-              onClick={() => router.push("/dashboard/orders/new")}
-              className="gap-2"
+              variant="ghost"
+              size="sm"
+              onClick={handleExitSelectionMode}
             >
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">{t("createOrder")}</span>
+              <X className="h-4 w-4 me-1.5" />
+              {tCommon("cancel")}
             </Button>
-          )}
-        </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+                {t("title")}
+              </h1>
+              <p className="text-sm md:text-base text-muted-foreground mt-1">
+                {t("subtitle")}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetch()}
+                disabled={isFetching}
+                className="gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+                <span className="hidden sm:inline">{t("refreshData")}</span>
+              </Button>
+              {isVendor && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleEnterSelectionMode}
+                  className="gap-2"
+                >
+                  <Printer className="h-4 w-4" />
+                  <span className="hidden sm:inline">{t("printLabels")}</span>
+                </Button>
+              )}
+              {canShowCreateOrder && (
+                <Button
+                  onClick={() => router.push("/dashboard/orders/new")}
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span className="hidden sm:inline">{t("createOrder")}</span>
+                </Button>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -1146,6 +1244,9 @@ export default function OrdersPage() {
           onAssignDeliveryAgent={handleAssignDeliveryClick}
           t={t}
           tCommon={tCommon}
+          selectedOrderIds={selectedOrderIds}
+          onSelectionChange={handleSelectionChange}
+          isSelectionMode={isSelectionMode}
         />
       ) : (
         <OrdersCardGrid
@@ -1157,6 +1258,9 @@ export default function OrdersPage() {
           onAssignDeliveryAgent={handleAssignDeliveryClick}
           t={t}
           tCommon={tCommon}
+          selectedOrderIds={selectedOrderIds}
+          onSelectionChange={handleSelectionChange}
+          isSelectionMode={isSelectionMode}
         />
       )}
 
@@ -1235,6 +1339,55 @@ export default function OrdersPage() {
         onAssignConfirm={handleAssignConfirm}
         isAssigning={assignmentType === 'pickup' ? assignAgentMutation.isPending : assignDeliveryAgentMutation.isPending}
         assignmentType={assignmentType}
+        t={t}
+        tCommon={tCommon}
+      />
+
+      {/* Floating Selection Bar for Batch Print (Selection Mode) */}
+      {isSelectionMode && (
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
+          <Card className="shadow-lg border-2">
+            <CardContent className="py-3 px-4 flex items-center gap-4">
+              <Badge variant="secondary" className="text-sm">
+                {selectedOrderIds.size} {t("selectedCount")}
+              </Badge>
+              <div className="flex items-center gap-2">
+                {selectedOrderIds.size === orders.length ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearSelection}
+                  >
+                    {t("deselectAll")}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSelectAll}
+                  >
+                    {t("selectAll")}
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  onClick={handlePrintLabels}
+                  disabled={selectedOrderIds.size === 0}
+                >
+                  <Printer className="h-4 w-4 me-1.5" />
+                  {t("printLabels")}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Print Labels Dialog */}
+      <PrintLabelsDialog
+        open={showPrintDialog}
+        onOpenChange={handlePrintDialogClose}
+        orders={selectedOrders}
         t={t}
         tCommon={tCommon}
       />

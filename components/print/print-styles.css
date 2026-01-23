@@ -1,0 +1,153 @@
+/* Print styles for shipping labels */
+/* A4: 210mm x 297mm */
+/* With 5mm margins: 200mm x 287mm usable area */
+/* Each label: 200mm x 140mm */
+/* 2 labels per page: 280mm + 7mm gap = 287mm */
+
+/* ===== SCREEN: Hide print container ===== */
+.print-container {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+  /* Page setup */
+  @page {
+    size: A4 portrait;
+    margin: 5mm;
+  }
+
+  /* Reset */
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 210mm !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Hide everything */
+  body > * {
+    display: none !important;
+  }
+
+  /* Show print container */
+  body > .print-container {
+    display: block !important;
+    position: static !important;
+    width: 200mm !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  /* Print page - contains up to 2 labels */
+  .print-page {
+    width: 200mm;
+    height: 287mm;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 0;
+    page-break-after: always;
+    break-after: page;
+    background: white;
+  }
+
+  .print-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  /* Label wrapper */
+  .label-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 200mm;
+  }
+
+  /* Cut line between labels */
+  .cut-line {
+    width: 200mm;
+    height: 7mm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .cut-line-dashed {
+    flex: 1;
+    height: 0;
+    border-top: 1px dashed #666;
+    margin: 0 2mm;
+  }
+
+  .cut-line-scissors {
+    width: 4mm !important;
+    height: 4mm !important;
+    color: #666;
+    flex-shrink: 0;
+  }
+
+  .cut-line-scissors-start {
+    transform: rotate(0deg);
+  }
+
+  .cut-line-scissors-end {
+    transform: rotate(180deg);
+  }
+
+  /* Shipping label */
+  .shipping-label {
+    width: 200mm !important;
+    height: 140mm !important;
+    min-height: 140mm !important;
+    max-height: 140mm !important;
+    padding: 5mm !important;
+    margin: 0 !important;
+    border: 1px solid #000 !important;
+    background: white !important;
+    color: black !important;
+    font-family: system-ui, -apple-system, sans-serif !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    flex-shrink: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Force colors to print */
+  .shipping-label,
+  .shipping-label * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Typography */
+  .shipping-label .font-bold { font-weight: 700 !important; }
+  .shipping-label .font-semibold { font-weight: 600 !important; }
+  .shipping-label .font-mono { font-family: ui-monospace, monospace !important; }
+  .shipping-label .text-xs { font-size: 10px !important; line-height: 1.4 !important; }
+  .shipping-label .text-sm { font-size: 12px !important; line-height: 1.5 !important; }
+  .shipping-label .text-base { font-size: 14px !important; line-height: 1.5 !important; }
+  .shipping-label .text-lg { font-size: 16px !important; line-height: 1.4 !important; }
+  .shipping-label .text-xl { font-size: 18px !important; line-height: 1.3 !important; }
+
+  /* QR & Logo */
+  .shipping-label svg { width: 70px !important; height: 70px !important; }
+  .shipping-label img { max-width: 120px !important; height: auto !important; }
+}

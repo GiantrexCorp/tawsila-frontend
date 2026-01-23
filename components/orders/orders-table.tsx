@@ -4,6 +4,7 @@ import { useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/ui/status-badge";
 import {
   DropdownMenu,
@@ -25,6 +26,10 @@ interface OrdersTableProps {
   onAssignDeliveryAgent?: (orderId: number) => void;
   t: (key: string) => string;
   tCommon: (key: string) => string;
+  // Selection props
+  selectedOrderIds?: Set<number>;
+  onSelectionChange?: (selectedIds: Set<number>) => void;
+  isSelectionMode?: boolean;
 }
 
 export function OrdersTable({
@@ -36,8 +41,36 @@ export function OrdersTable({
   onAssignDeliveryAgent,
   t,
   tCommon,
+  selectedOrderIds = new Set(),
+  onSelectionChange,
+  isSelectionMode = false,
 }: OrdersTableProps) {
   const locale = useLocale();
+
+  // Selection handlers
+  const handleSelectAll = (checked: boolean) => {
+    if (!onSelectionChange) return;
+    if (checked) {
+      const allIds = new Set(orders.map((order) => order.id));
+      onSelectionChange(allIds);
+    } else {
+      onSelectionChange(new Set());
+    }
+  };
+
+  const handleSelectOrder = (orderId: number, checked: boolean) => {
+    if (!onSelectionChange) return;
+    const newSelection = new Set(selectedOrderIds);
+    if (checked) {
+      newSelection.add(orderId);
+    } else {
+      newSelection.delete(orderId);
+    }
+    onSelectionChange(newSelection);
+  };
+
+  const isAllSelected = orders.length > 0 && orders.every((order) => selectedOrderIds.has(order.id));
+  const isSomeSelected = orders.some((order) => selectedOrderIds.has(order.id)) && !isAllSelected;
 
   // Helper to get location name based on phase
   const getLocationInfo = (order: Order) => {
@@ -105,9 +138,24 @@ export function OrdersTable({
   return (
     <Card className="w-full">
       <div className="w-full overflow-auto">
-        <table className="w-full text-sm border-collapse" style={{ minWidth: 1000 }}>
+        <table className="w-full text-sm border-collapse" style={{ minWidth: isSelectionMode ? 1060 : 1000 }}>
           <thead className="bg-muted/50 sticky top-0">
             <tr className="border-b">
+              {isSelectionMode && (
+                <th className="h-12 px-4 text-center align-middle w-[50px]">
+                  <Checkbox
+                    checked={isAllSelected}
+                    ref={(el) => {
+                      if (el) {
+                        (el as HTMLButtonElement & { indeterminate: boolean }).indeterminate = isSomeSelected;
+                      }
+                    }}
+                    onCheckedChange={(checked) => handleSelectAll(checked === true)}
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label={t("selectAll")}
+                  />
+                </th>
+              )}
               <th className="h-12 px-4 text-start align-middle font-medium text-muted-foreground whitespace-nowrap">
                 {t("orderNumber")}
               </th>
@@ -151,16 +199,38 @@ export function OrdersTable({
                   ? assignmentInfo.agent.name_ar || assignmentInfo.agent.name
                   : assignmentInfo.agent.name_en || assignmentInfo.agent.name
                 : null;
+              const isSelected = selectedOrderIds.has(order.id);
+
+              // When selection is enabled, clicking row toggles selection
+              // Otherwise, clicking row navigates to order detail
+              const handleRowClick = () => {
+                if (isSelectionMode) {
+                  handleSelectOrder(order.id, !isSelected);
+                } else {
+                  onOrderClick(order.id);
+                }
+              };
 
               return (
                 <tr
                   key={order.id}
                   className={cn(
                     "border-b transition-colors hover:bg-muted/50 cursor-pointer",
-                    locationInfo?.rowClass
+                    locationInfo?.rowClass,
+                    isSelected && isSelectionMode && "bg-primary/5 hover:bg-primary/10"
                   )}
-                  onClick={() => onOrderClick(order.id)}
+                  onClick={handleRowClick}
                 >
+                  {isSelectionMode && (
+                    <td className="p-4 align-middle text-center">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={(checked) => handleSelectOrder(order.id, checked === true)}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label={`${t("selectOrder")} ${order.order_number}`}
+                      />
+                    </td>
+                  )}
                   <td className="p-4 align-middle">
                     <div>
                       <p className="font-medium whitespace-nowrap">{order.order_number}</p>
