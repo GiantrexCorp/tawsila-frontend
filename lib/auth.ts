@@ -61,7 +61,7 @@ export interface SetPasswordResponse {
 export async function login(credentials: LoginCredentials): Promise<LoginResponse> {
   const response = await apiRequest<User>('/login', {
     method: 'POST',
-    body: JSON.stringify(credentials),
+    body: JSON.stringify({ ...credentials, device_type: 'web' }),
   });
 
   // Check status_code 203 for password change requirement
@@ -105,7 +105,7 @@ export async function login(credentials: LoginCredentials): Promise<LoginRespons
 export async function setPassword(data: SetPasswordRequest): Promise<SetPasswordResponse> {
   const response = await apiRequest<User>('/set-password', {
     method: 'POST',
-    body: JSON.stringify(data),
+    body: JSON.stringify({ ...data, device_type: 'web' }),
   });
 
   // Store the new token and user data

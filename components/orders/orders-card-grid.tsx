@@ -12,6 +12,10 @@ interface OrdersCardGridProps {
   onAssignDeliveryAgent?: (orderId: number) => void;
   t: (key: string) => string;
   tCommon: (key: string) => string;
+  // Selection props
+  selectedOrderIds?: Set<number>;
+  onSelectionChange?: (selectedIds: Set<number>) => void;
+  isSelectionMode?: boolean;
 }
 
 export function OrdersCardGrid({
@@ -23,7 +27,21 @@ export function OrdersCardGrid({
   onAssignDeliveryAgent,
   t,
   tCommon,
+  selectedOrderIds = new Set(),
+  onSelectionChange,
+  isSelectionMode = false,
 }: OrdersCardGridProps) {
+  const handleOrderSelectionChange = (orderId: number, selected: boolean) => {
+    if (!onSelectionChange) return;
+    const newSelection = new Set(selectedOrderIds);
+    if (selected) {
+      newSelection.add(orderId);
+    } else {
+      newSelection.delete(orderId);
+    }
+    onSelectionChange(newSelection);
+  };
+
   return (
     <div className="grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
       {orders.map((order) => (
@@ -37,6 +55,9 @@ export function OrdersCardGrid({
           onAssignDeliveryAgent={onAssignDeliveryAgent ? () => onAssignDeliveryAgent(order.id) : undefined}
           t={t}
           tCommon={tCommon}
+          isSelected={selectedOrderIds.has(order.id)}
+          onSelectionChange={(selected) => handleOrderSelectionChange(order.id, selected)}
+          isSelectionMode={isSelectionMode}
         />
       ))}
     </div>

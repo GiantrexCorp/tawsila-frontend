@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useTranslations, useLocale } from "next-intl";
 import { useParams } from "next/navigation";
 import { useRouter } from "@/i18n/routing";
@@ -65,6 +66,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { QRCodeSVG } from "qrcode.react";
 import { cn } from "@/lib/utils";
 import { BackendImage } from "@/components/ui/backend-image";
+import { ShippingLabel } from "@/components/print";
+import "@/components/print/print-styles.css";
 
 export default function OrderDetailPage() {
   const t = useTranslations('orders');
@@ -115,6 +118,12 @@ export default function OrderDetailPage() {
   const [deliveryAssignmentNotes, setDeliveryAssignmentNotes] = useState("");
   const [isLoadingDeliveryAgents, setIsLoadingDeliveryAgents] = useState(false);
   const hasLoadedRef = useRef(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // For portal mounting
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Skip action states
   const [showSkipPickupDialog, setShowSkipPickupDialog] = useState(false);
@@ -713,8 +722,8 @@ export default function OrderDetailPage() {
               )}
             </div>
 
-            {/* Right: QR Code */}
-            {order.qr_code && (
+            {/* Right: QR Code - Controlled by NEXT_PUBLIC_SHOW_ORDER_QR_CARD env variable */}
+            {process.env.NEXT_PUBLIC_SHOW_ORDER_QR_CARD === 'true' && order.qr_code && (
               <div className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-white dark:bg-zinc-900 border shadow-sm">
                 <QRCodeSVG value={order.qr_code} size={120} level="M" includeMargin={false} />
                 <Button
@@ -1634,59 +1643,15 @@ export default function OrderDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Print Label - Hidden, shown only when printing */}
-      <style jsx global>{`
-        @media print {
-          body * { visibility: hidden; }
-          .print-label, .print-label * { visibility: visible; }
-          .print-label {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-          @page { size: A4; margin: 0; }
-        }
-      `}</style>
-
-      <div className="hidden print:block print-label">
-        <div className="w-full p-4 bg-white">
-          <div className="max-w-lg mx-auto border-2 border-gray-900 bg-white">
-            <div className="p-6 space-y-4">
-              <div className="flex items-start justify-between border-b-2 border-gray-900 pb-3">
-                <div>
-                  <h2 className="text-2xl font-bold uppercase">{t('label')}</h2>
-                  <p className="text-xs text-gray-600 mt-2">{t('orderNumber')}</p>
-                  <p className="font-bold text-2xl font-mono">{order.order_number}</p>
-                </div>
-                {order.qr_code && <QRCodeSVG value={order.qr_code} size={100} level="M" />}
-              </div>
-              <div className="space-y-2 border-b pb-3">
-                <h3 className="font-bold text-base uppercase">{t('shipTo')}</h3>
-                {customer.name && <p className="font-bold">{customer.name}</p>}
-                {customer.mobile && <p className="font-mono" dir="ltr">{customer.mobile}</p>}
-                {(customer.full_address || customer.address) && (
-                  <p className="text-sm">{customer.full_address || customer.address}</p>
-                )}
-              </div>
-              {items.length > 0 && (
-                <div className="border-b pb-3">
-                  <h3 className="font-bold text-sm uppercase mb-2">{t('items')}: {items.length}</h3>
-                  {items.slice(0, 5).map((item, i) => (
-                    <div key={i} className="flex justify-between text-xs">
-                      <span>{item.product_name || `${t('product')} ${i + 1}`}</span>
-                      <span>{tCommon('qty')}: {item.quantity}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="text-center pt-2">
-                <p className="text-xs font-semibold">{t('handleWithCare')}</p>
-              </div>
-            </div>
+      {/* Print Label - Rendered via portal to body */}
+      {isMounted && order && createPortal(
+        <div className="print-container">
+          <div className="print-page">
+            <ShippingLabel order={order} t={t} tCommon={tCommon} />
           </div>
-        </div>
-      </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

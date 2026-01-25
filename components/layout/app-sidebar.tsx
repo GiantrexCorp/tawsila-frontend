@@ -298,7 +298,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="border-b border-sidebar-border p-4">
         <Link href={getHomePage()}>
-          <TawsilaLogo />
+          <TawsilaLogo size="sm" />
         </Link>
       </SidebarHeader>
 

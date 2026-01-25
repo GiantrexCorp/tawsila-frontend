@@ -138,8 +138,8 @@ function buildFilterQuery(filters: OrderFilters): string {
       } else if (key === 'agent_id') {
         apiKey = 'assignments.assigned_to';
       } else if (key === 'vendor_id') {
-        // Backend might expect vendor.id or just vendor_id - try vendor.id first
-        apiKey = 'vendor.id';
+        // Backend supports vendor_id as exact filter
+        apiKey = 'vendor_id';
       }
 
       // Handle boolean filters - convert to API format

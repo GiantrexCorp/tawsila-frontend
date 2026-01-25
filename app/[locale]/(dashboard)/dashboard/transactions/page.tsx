@@ -31,7 +31,9 @@ import {
   AlertTriangle,
   Clock,
   X,
+  Calendar,
 } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { fetchMyTransactions, type TransactionFilters } from "@/lib/services/wallet";
 import { PAGINATION } from "@/lib/constants/pagination";
 import { cn } from "@/lib/utils";
@@ -46,13 +48,17 @@ export default function TransactionsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   // Build API filters
   const apiFilters: TransactionFilters = useMemo(() => ({
     page: currentPage,
     per_page: PAGINATION.TRANSACTIONS,
     type: typeFilter !== 'all' ? typeFilter as 'credit' | 'debit' : undefined,
-  }), [currentPage, typeFilter]);
+    from_date: fromDate || undefined,
+    to_date: toDate || undefined,
+  }), [currentPage, typeFilter, fromDate, toDate]);
 
   // Fetch transactions with React Query
   const { data, isLoading, isFetching, refetch, error } = useQuery({
@@ -80,8 +86,21 @@ export default function TransactionsPage() {
   const clearFilters = () => {
     setTypeFilter('all');
     setSearchQuery('');
+    setFromDate('');
+    setToDate('');
     setCurrentPage(1);
   };
+
+  const handleDateChange = (type: 'from' | 'to', value: string) => {
+    if (type === 'from') {
+      setFromDate(value);
+    } else {
+      setToDate(value);
+    }
+    setCurrentPage(1);
+  };
+
+  const hasActiveFilters = typeFilter !== 'all' || searchQuery || fromDate || toDate;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat(locale === 'ar' ? 'ar-EG' : 'en-EG', {
@@ -240,37 +259,74 @@ export default function TransactionsPage() {
       {/* Filters & Search */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Search */}
-            <div className="relative flex-1">
-              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={t('searchPlaceholder')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="ps-9"
-              />
+          <div className="flex flex-col gap-4">
+            {/* First Row: Search, Type, Clear */}
+            <div className="flex flex-col md:flex-row gap-4">
+              {/* Search */}
+              <div className="relative flex-1">
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={t('searchPlaceholder')}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="ps-9"
+                />
+              </div>
+
+              {/* Type Filter */}
+              <Select value={typeFilter} onValueChange={handleTypeFilter}>
+                <SelectTrigger className="w-full md:w-[180px]">
+                  <SelectValue placeholder={t('filterByType')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('allTypes')}</SelectItem>
+                  <SelectItem value="credit">{t('creditsOnly')}</SelectItem>
+                  <SelectItem value="debit">{t('debitsOnly')}</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Clear Filters */}
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  <X className="h-4 w-4 me-2" />
+                  {tCommon('clearAll')}
+                </Button>
+              )}
             </div>
 
-            {/* Type Filter */}
-            <Select value={typeFilter} onValueChange={handleTypeFilter}>
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder={t('filterByType')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('allTypes')}</SelectItem>
-                <SelectItem value="credit">{t('creditsOnly')}</SelectItem>
-                <SelectItem value="debit">{t('debitsOnly')}</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Clear Filters */}
-            {(typeFilter !== 'all' || searchQuery) && (
-              <Button variant="ghost" size="sm" onClick={clearFilters}>
-                <X className="h-4 w-4 me-2" />
-                {tCommon('clearAll')}
-              </Button>
-            )}
+            {/* Second Row: Date Range */}
+            <div className="flex flex-col sm:flex-row gap-4 items-end">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Calendar className="h-4 w-4" />
+                <span>{t('dateRange')}</span>
+              </div>
+              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="from-date" className="text-xs text-muted-foreground">
+                    {t('fromDate')}
+                  </Label>
+                  <Input
+                    id="from-date"
+                    type="date"
+                    value={fromDate}
+                    onChange={(e) => handleDateChange('from', e.target.value)}
+                    className="h-10"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="to-date" className="text-xs text-muted-foreground">
+                    {t('toDate')}
+                  </Label>
+                  <Input
+                    id="to-date"
+                    type="date"
+                    value={toDate}
+                    onChange={(e) => handleDateChange('to', e.target.value)}
+                    className="h-10"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

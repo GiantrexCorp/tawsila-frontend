@@ -158,16 +158,25 @@ export interface CreateUserData {
 
 /**
  * Build query string from filters
+ * Maps frontend filter keys to backend filter names
  */
 function buildFilterQuery(filters: UserFilters): string {
   const params: string[] = [];
-  
+
+  // Filter key mappings from frontend to backend
+  const filterMappings: Record<string, string> = {
+    role_id: 'hasRole',           // Maps to scope filter
+    inventory_id: 'assignedToInventory', // Maps to scope filter
+  };
+
   Object.entries(filters).forEach(([key, value]) => {
     if (value !== undefined && value !== '') {
-      params.push(`filter[${key}]=${encodeURIComponent(value)}`);
+      // Use mapped key if available, otherwise use original key
+      const backendKey = filterMappings[key] || key;
+      params.push(`filter[${backendKey}]=${encodeURIComponent(value)}`);
     }
   });
-  
+
   return params.length > 0 ? `&${params.join('&')}` : '';
 }
 

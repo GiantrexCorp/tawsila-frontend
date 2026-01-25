@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/ui/status-badge";
-import { User, MapPin, Package, CheckCircle, XCircle, Truck, Eye, Store, Warehouse, UserCheck } from "lucide-react";
+import { User, MapPin, Package, CheckCircle, XCircle, Truck, Eye, Store, Warehouse, UserCheck, Check } from "lucide-react";
 import type { Order, Assignment } from "@/lib/services/orders";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +18,10 @@ interface OrderCardProps {
   onAssignDeliveryAgent?: () => void;
   t: (key: string) => string;
   tCommon: (key: string) => string;
+  // Selection props
+  isSelected?: boolean;
+  onSelectionChange?: (selected: boolean) => void;
+  isSelectionMode?: boolean;
 }
 
 export function OrderCard({
@@ -29,6 +33,9 @@ export function OrderCard({
   onAssignDeliveryAgent,
   t,
   tCommon,
+  isSelected = false,
+  onSelectionChange,
+  isSelectionMode = false,
 }: OrderCardProps) {
   const locale = useLocale();
   const customer = order.customer || { name: "", mobile: "", address: "" };
@@ -100,14 +107,41 @@ export function OrderCard({
       : activeAssignment.assigned_to.name_en || activeAssignment.assigned_to.name
     : null;
 
+  // When selection mode is enabled, clicking card toggles selection
+  // Otherwise, clicking card navigates to order detail
+  const handleCardClick = () => {
+    if (isSelectionMode) {
+      onSelectionChange?.(!isSelected);
+    } else {
+      onClick();
+    }
+  };
+
   return (
     <Card
       className={cn(
         "group relative overflow-hidden transition-all duration-200 hover:shadow-lg hover:border-primary/50 hover:-translate-y-1 cursor-pointer",
-        currentPhase?.border
+        currentPhase?.border,
+        isSelected && isSelectionMode && "ring-2 ring-primary"
       )}
-      onClick={onClick}
+      onClick={handleCardClick}
     >
+      {/* Selection Overlay - Shows checkmark when selected in selection mode */}
+      {isSelected && isSelectionMode && (
+        <div className="absolute inset-0 bg-primary/10 flex items-start justify-start p-3 z-20 pointer-events-none">
+          <div className="rounded-full bg-primary p-1 shadow-sm">
+            <Check className="h-4 w-4 text-primary-foreground" />
+          </div>
+        </div>
+      )}
+
+      {/* Unselected indicator in selection mode */}
+      {!isSelected && isSelectionMode && (
+        <div className="absolute top-3 start-3 z-20 pointer-events-none">
+          <div className="h-6 w-6 rounded-full border-2 border-muted-foreground/40 bg-background/80" />
+        </div>
+      )}
+
       {/* Status Badge - Floating */}
       <div className="absolute top-3 end-3 z-10">
         <OrderStatusBadge status={order.status} statusLabel={order.status_label} />
@@ -119,7 +153,7 @@ export function OrderCard({
         currentPhase?.gradient || "from-primary/5"
       )} />
 
-      <CardContent className="p-4 sm:p-5">
+      <CardContent className={cn("p-4 sm:p-5", isSelectionMode && "ps-10 sm:ps-12")}>
         {/* Order Number & Track Number with Phase Badge */}
         <div className="mb-4 pe-20">
           <div className="flex items-center gap-2 mb-1">
@@ -127,7 +161,7 @@ export function OrderCard({
               {order.order_number}
             </h3>
           </div>
-          <p className="text-xs text-muted-foreground" dir="ltr">
+          <p className="text-xs text-muted-foreground">
             {order.track_number}
           </p>
         </div>

@@ -108,7 +108,7 @@ export default function TrackPage() {
       {/* Footer */}
       <footer className="border-t py-6">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} Tawsila. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Rahwan. All rights reserved.</p>
         </div>
       </footer>
     </div>

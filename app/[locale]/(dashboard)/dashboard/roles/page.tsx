@@ -1,11 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RoleAvatar } from "@/components/ui/role-avatar";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Plus,
   Loader2,
@@ -16,6 +24,8 @@ import {
   RefreshCw,
   Users,
   Key,
+  Search,
+  X,
 } from "lucide-react";
 import { useRoles } from "@/hooks/queries";
 import { usePagePermission } from "@/hooks/use-page-permission";
@@ -47,8 +57,46 @@ export default function RolesPage() {
   // View toggle state
   const [viewType, setViewType] = useState<ViewType>("cards");
 
-  // Derived data
-  const roles = useMemo(() => rolesResponse?.data || [], [rolesResponse?.data]);
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+
+  // System role names
+  const systemRoleNames = ['super-admin', 'admin', 'manager', 'viewer', 'inventory-manager', 'order-preparer', 'shipping-agent', 'vendor'];
+
+  // Derived data with filtering
+  const allRoles = useMemo(() => rolesResponse?.data || [], [rolesResponse?.data]);
+
+  // Apply filters
+  const roles = useMemo(() => {
+    let filtered = allRoles;
+
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(role =>
+        role.name.toLowerCase().includes(query) ||
+        role.slug_en?.toLowerCase().includes(query) ||
+        role.slug_ar?.toLowerCase().includes(query)
+      );
+    }
+
+    // Type filter (system/custom)
+    if (typeFilter === "system") {
+      filtered = filtered.filter(role => systemRoleNames.includes(role.name));
+    } else if (typeFilter === "custom") {
+      filtered = filtered.filter(role => !systemRoleNames.includes(role.name));
+    }
+
+    return filtered;
+  }, [allRoles, searchQuery, typeFilter, systemRoleNames]);
+
+  const handleClearFilters = useCallback(() => {
+    setSearchQuery("");
+    setTypeFilter("all");
+  }, []);
+
+  const hasActiveFilters = searchQuery || typeFilter !== "all";
 
   const getRoleDisplayName = (role: typeof roles[0]) => {
     const slug = locale === 'ar' ? role.slug_ar : role.slug_en;
@@ -61,15 +109,14 @@ export default function RolesPage() {
     ).join(' ');
   };
 
-  // Stats
+  // Stats (based on all roles, not filtered)
   const stats = useMemo(() => {
-    const systemRoles = ['super-admin', 'admin', 'manager', 'viewer', 'inventory-manager', 'order-preparer', 'shipping-agent', 'vendor'];
     return {
-      total: roles.length,
-      system: roles.filter(r => systemRoles.includes(r.name)).length,
-      custom: roles.filter(r => !systemRoles.includes(r.name)).length,
+      total: allRoles.length,
+      system: allRoles.filter(r => systemRoleNames.includes(r.name)).length,
+      custom: allRoles.filter(r => !systemRoleNames.includes(r.name)).length,
     };
-  }, [roles]);
+  }, [allRoles, systemRoleNames]);
 
   if (hasPermission === null || hasPermission === false) {
     return (
@@ -109,6 +156,43 @@ export default function RolesPage() {
         </div>
       </div>
 
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={t('searchRoles')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="ps-9"
+              />
+            </div>
+
+            {/* Type Filter */}
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder={t('allRoles')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('allRoles')}</SelectItem>
+                <SelectItem value="system">{t('systemRoles')}</SelectItem>
+                <SelectItem value="custom">{t('customRoles')}</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Clear Filters */}
+            {hasActiveFilters && (
+              <Button variant="outline" size="icon" onClick={handleClearFilters}>
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
@@ -147,10 +231,13 @@ export default function RolesPage() {
       </div>
 
       {/* Results Count & View Toggle */}
-      {!isLoading && roles.length > 0 && (
+      {!isLoading && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            {roles.length} {roles.length === 1 ? 'role' : 'roles'}
+            {hasActiveFilters
+              ? t('showingFilteredRoles', { count: roles.length, total: allRoles.length })
+              : `${roles.length} ${roles.length === 1 ? 'role' : 'roles'}`
+            }
           </p>
           <ViewToggle
             view={viewType}
@@ -283,8 +370,17 @@ export default function RolesPage() {
           {roles.length === 0 && (
             <div className="flex flex-col items-center justify-center h-[40vh] text-center">
               <Shield className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-semibold">{t('noRoles')}</h3>
-              <p className="text-sm text-muted-foreground mt-1">{t('noRolesDesc')}</p>
+              <h3 className="text-lg font-semibold">
+                {hasActiveFilters ? t('noMatchingRoles') : t('noRoles')}
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                {hasActiveFilters ? t('noMatchingRolesDesc') : t('noRolesDesc')}
+              </p>
+              {hasActiveFilters && (
+                <Button variant="outline" onClick={handleClearFilters} className="mt-4">
+                  {tCommon('clearFilters')}
+                </Button>
+              )}
             </div>
           )}
         </>
