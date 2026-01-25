@@ -41,7 +41,8 @@ export interface TrackingData {
   is_completed: boolean;
   is_failed: boolean;
   vendor: {
-    name: string;
+    name_en: string;
+    name_ar: string;
   };
   delivery_address: {
     address: string;

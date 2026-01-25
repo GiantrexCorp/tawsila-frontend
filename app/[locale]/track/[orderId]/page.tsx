@@ -254,7 +254,7 @@ export default function TrackOrderPage({ params }: Props) {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">{t('vendor')}</p>
-                  <p className="font-semibold">{tracking.vendor.name}</p>
+                  <p className="font-semibold">{locale === 'ar' ? tracking.vendor.name_ar : tracking.vendor.name_en}</p>
                 </div>
               </div>
             </div>
