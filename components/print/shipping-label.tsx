@@ -45,7 +45,7 @@ export function ShippingLabel({ order, t, tCommon }: ShippingLabelProps) {
 
   const items: OrderItem[] = order.items || [];
   const totalItems = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
-  const isCOD = order.payment_method === "cash";
+  const isCOD = order.payment_method === "cod";
 
   // Format created date
   const createdDate = order.created_at
