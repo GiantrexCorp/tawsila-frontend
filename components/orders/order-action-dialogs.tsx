@@ -46,6 +46,12 @@ interface OrderActionDialogsProps {
   onRejectConfirm: (reason?: string) => Promise<void>;
   isRejecting: boolean;
 
+  // Cancel Dialog (for vendors)
+  showCancelDialog?: boolean;
+  onCancelDialogClose?: () => void;
+  onCancelConfirm?: (reason: string) => Promise<void>;
+  isCancelling?: boolean;
+
   // Assign Dialog
   showAssignDialog: boolean;
   onAssignDialogClose: () => void;
@@ -68,6 +74,10 @@ export function OrderActionDialogs({
   onRejectDialogClose,
   onRejectConfirm,
   isRejecting,
+  showCancelDialog = false,
+  onCancelDialogClose,
+  onCancelConfirm,
+  isCancelling = false,
   showAssignDialog,
   onAssignDialogClose,
   onAssignConfirm,
@@ -85,6 +95,9 @@ export function OrderActionDialogs({
 
   // Reject dialog state
   const [rejectionReason, setRejectionReason] = useState("");
+
+  // Cancel dialog state
+  const [cancellationReason, setCancellationReason] = useState("");
 
   // Assign dialog state
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -162,6 +175,13 @@ export function OrderActionDialogs({
     }
   }, [showRejectDialog]);
 
+  // Reset cancellation reason when dialog closes
+  useEffect(() => {
+    if (!showCancelDialog) {
+      setCancellationReason("");
+    }
+  }, [showCancelDialog]);
+
   const handleAccept = async () => {
     if (!selectedInventoryId) {
       toast.error(t("inventoryRequired"));
@@ -172,6 +192,16 @@ export function OrderActionDialogs({
 
   const handleReject = async () => {
     await onRejectConfirm(rejectionReason.trim() || undefined);
+  };
+
+  const handleCancel = async () => {
+    if (!cancellationReason.trim()) {
+      toast.error(t("cancellationReason") + " " + t("agentRequired").replace(t("selectAgent"), ""));
+      return;
+    }
+    if (onCancelConfirm) {
+      await onCancelConfirm(cancellationReason.trim());
+    }
   };
 
   const handleAssign = async () => {
@@ -311,6 +341,62 @@ export function OrderActionDialogs({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cancel Order Dialog (for vendors) */}
+      {showCancelDialog !== undefined && onCancelDialogClose && (
+        <Dialog open={showCancelDialog} onOpenChange={onCancelDialogClose}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t("cancelOrder")}</DialogTitle>
+              <DialogDescription>{t("cancelOrderDesc")}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="cancellation_reason">
+                  {t("cancellationReason")} *
+                </Label>
+                <Textarea
+                  id="cancellation_reason"
+                  placeholder={t("cancellationReasonPlaceholder")}
+                  value={cancellationReason}
+                  onChange={(e) => setCancellationReason(e.target.value)}
+                  rows={4}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t("cancellationReasonHelp")}
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={onCancelDialogClose}
+                disabled={isCancelling}
+              >
+                {tCommon("cancel")}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleCancel}
+                disabled={isCancelling || !cancellationReason.trim()}
+                className="gap-2"
+              >
+                {isCancelling ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {t("cancelling")}
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="h-4 w-4" />
+                    {t("cancelOrder")}
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Assign Agent Dialog */}
       <Dialog open={showAssignDialog} onOpenChange={onAssignDialogClose}>

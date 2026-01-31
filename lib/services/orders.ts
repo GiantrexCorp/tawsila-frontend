@@ -284,6 +284,10 @@ export interface Order {
   rejection_reason: string | null;
   /** Timestamp when order was rejected */
   rejected_at: string | null;
+  /** Reason for cancellation (if cancelled by vendor) */
+  cancellation_reason: string | null;
+  /** Timestamp when order was cancelled */
+  cancelled_at: string | null;
   /** Notes visible to vendor */
   vendor_notes: string | null;
   /** Internal notes (admin only) */
@@ -322,6 +326,8 @@ export interface Order {
   can_accept?: boolean;
   /** Whether current user can reject this order */
   can_reject?: boolean;
+  /** Whether current user (vendor) can cancel this order */
+  can_cancel?: boolean;
   /** Whether current user can assign a pickup agent to this order */
   can_assign_pickup_agent?: boolean;
   /** Whether current user can assign a delivery agent to this order */
@@ -815,7 +821,7 @@ export async function skipScan(orderId: number): Promise<Order> {
 /**
  * Skip OTP verification - used by admins to manually mark order as delivered
  * without customer OTP verification
- * 
+ *
  * Used for:
  * - Mark as delivered (when status is out_for_delivery)
  */
@@ -827,6 +833,24 @@ export async function skipVerifyOtp(orderId: number): Promise<Order> {
 
   if (!response.data) {
     throw new Error(response.message || 'Failed to skip OTP verification');
+  }
+
+  return response.data;
+}
+
+/**
+ * Cancel an order by vendor
+ * Only available for vendors on their own orders before pickup
+ */
+export async function cancelOrder(id: number, reason: string): Promise<Order> {
+  const response = await apiRequest<Order>(`/orders/${id}/cancel`, {
+    method: 'POST',
+    body: JSON.stringify({ reason: reason.trim() }),
+    skipRedirectOn403: true,
+  });
+
+  if (!response.data) {
+    throw new Error(response.message || 'Failed to cancel order');
   }
 
   return response.data;

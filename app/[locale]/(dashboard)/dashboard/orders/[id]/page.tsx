@@ -47,7 +47,7 @@ import {
 } from "lucide-react";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
-import { fetchOrder, acceptOrder, rejectOrder, assignPickupAgent, assignDeliveryAgent, skipScan, skipVerifyOtp, type Order, type OrderItem, type Customer, type Assignment, type StatusLog, type Scan as ScanType, type Vendor, type OrderTransaction } from "@/lib/services/orders";
+import { fetchOrder, acceptOrder, rejectOrder, cancelOrder, assignPickupAgent, assignDeliveryAgent, skipScan, skipVerifyOtp, type Order, type OrderItem, type Customer, type Assignment, type StatusLog, type Scan as ScanType, type Vendor, type OrderTransaction } from "@/lib/services/orders";
 import { fetchMyInventories, fetchCurrentInventory, type Inventory } from "@/lib/services/inventories";
 import { fetchPickupAgents, fetchDeliveryAgents, type Agent } from "@/lib/services/agents";
 import { toast } from "sonner";
@@ -105,6 +105,9 @@ export default function OrderDetailPage() {
   const [isRejecting, setIsRejecting] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState("");
   const [isAssigning, setIsAssigning] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -215,6 +218,31 @@ export default function OrderDetailPage() {
       setIsRejecting(false);
     }
   }, [orderId, rejectionReason, t, tCommon]);
+
+  const handleCancelClick = useCallback(() => {
+    setShowCancelDialog(true);
+    setCancellationReason("");
+  }, []);
+
+  const handleCancelOrder = useCallback(async () => {
+    if (!cancellationReason.trim()) {
+      toast.error(t('cancellationReason') + ' is required');
+      return;
+    }
+    setIsCancelling(true);
+    try {
+      const updatedOrder = await cancelOrder(orderId, cancellationReason.trim());
+      setOrder(updatedOrder);
+      setShowCancelDialog(false);
+      setCancellationReason("");
+      toast.success(t('orderCancelledSuccess'));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : tCommon('tryAgain');
+      toast.error(t('orderCancelledFailed'), { description: message });
+    } finally {
+      setIsCancelling(false);
+    }
+  }, [orderId, cancellationReason, t, tCommon]);
 
   const loadAgents = useCallback(async (inventoryId: number) => {
     setIsLoadingAgents(true);
@@ -516,6 +544,7 @@ export default function OrderDetailPage() {
   const transactions = orderWithRelations.transactions || [];
   const canAccept = order.can_accept === true;
   const canReject = order.can_reject === true;
+  const canCancel = order.can_cancel === true;
   const canAssignPickupAgent = order.can_assign_pickup_agent === true;
   const canAssignDeliveryAgent = order.can_assign_delivery_agent === true;
 
@@ -613,7 +642,7 @@ export default function OrderDetailPage() {
               </div>
 
               {/* Action Buttons */}
-              {(canAccept || canReject || canAssignPickupAgent || canAssignDeliveryAgent) && (
+              {(canAccept || canReject || canCancel || canAssignPickupAgent || canAssignDeliveryAgent) && (
                 <div className="flex flex-wrap gap-2 pt-4">
                   {canAccept && (
                     <Button onClick={handleAcceptClick} disabled={isAccepting} className="gap-2">
@@ -625,6 +654,12 @@ export default function OrderDetailPage() {
                     <Button variant="destructive" onClick={handleRejectClick} disabled={isRejecting} className="gap-2">
                       <XCircle className="h-4 w-4" />
                       {t('rejectOrder')}
+                    </Button>
+                  )}
+                  {canCancel && (
+                    <Button variant="destructive" onClick={handleCancelClick} disabled={isCancelling} className="gap-2">
+                      <XCircle className="h-4 w-4" />
+                      {t('cancelOrder')}
                     </Button>
                   )}
                   {canAssignPickupAgent && (
@@ -1264,6 +1299,26 @@ export default function OrderDetailPage() {
             </div>
           </div>
         )}
+
+        {/* Cancellation Info */}
+        {order.cancellation_reason && (
+          <div className="md:col-span-2 lg:col-span-3 rounded-2xl bg-destructive/10 border border-destructive/20 p-5">
+            <div className="flex items-start gap-4">
+              <div className="h-10 w-10 rounded-xl bg-destructive/20 flex items-center justify-center shrink-0">
+                <XCircle className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-destructive">{t('cancelled')}</h3>
+                {order.cancelled_at && (
+                  <p className="text-xs text-destructive/70 mt-1">
+                    {t('cancelledAt')}: {new Date(order.cancelled_at).toLocaleString(locale)}
+                  </p>
+                )}
+                <p className="text-sm mt-2">{order.cancellation_reason}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Dialogs */}
@@ -1396,6 +1451,37 @@ export default function OrderDetailPage() {
             <Button variant="destructive" onClick={handleRejectOrder} disabled={isRejecting} className="gap-2">
               {isRejecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
               {isRejecting ? t('rejecting') : t('rejectOrder')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('cancelOrder')}</DialogTitle>
+            <DialogDescription>{t('cancelOrderDesc')}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="cancellation_reason">{t('cancellationReason')} *</Label>
+              <Textarea
+                id="cancellation_reason"
+                placeholder={t('cancellationReasonPlaceholder')}
+                value={cancellationReason}
+                onChange={(e) => setCancellationReason(e.target.value)}
+                rows={4}
+              />
+              <p className="text-xs text-muted-foreground">{t('cancellationReasonHelp')}</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowCancelDialog(false); setCancellationReason(""); }} disabled={isCancelling}>
+              {tCommon('cancel')}
+            </Button>
+            <Button variant="destructive" onClick={handleCancelOrder} disabled={isCancelling || !cancellationReason.trim()} className="gap-2">
+              {isCancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+              {isCancelling ? t('cancelling') : t('cancelOrder')}
             </Button>
           </DialogFooter>
         </DialogContent>

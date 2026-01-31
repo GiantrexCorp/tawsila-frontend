@@ -22,6 +22,7 @@ interface OrdersTableProps {
   onOrderClick: (orderId: number) => void;
   onAccept?: (orderId: number) => void;
   onReject?: (orderId: number) => void;
+  onCancel?: (orderId: number) => void;
   onAssignAgent?: (orderId: number) => void;
   onAssignDeliveryAgent?: (orderId: number) => void;
   t: (key: string) => string;
@@ -37,6 +38,7 @@ export function OrdersTable({
   onOrderClick,
   onAccept,
   onReject,
+  onCancel,
   onAssignAgent,
   onAssignDeliveryAgent,
   t,
@@ -189,9 +191,10 @@ export function OrdersTable({
             {orders.map((order) => {
               const canAccept = order.can_accept === true;
               const canReject = order.can_reject === true;
+              const canCancel = order.can_cancel === true;
               const canAssignPickupAgent = order.can_assign_pickup_agent === true;
               const canAssignDeliveryAgent = order.can_assign_delivery_agent === true;
-              const hasActions = canAccept || canReject || canAssignPickupAgent || canAssignDeliveryAgent;
+              const hasActions = canAccept || canReject || canCancel || canAssignPickupAgent || canAssignDeliveryAgent;
               const locationInfo = getLocationInfo(order);
               const assignmentInfo = getAssignmentInfo(order);
               const agentName = assignmentInfo?.agent
@@ -325,6 +328,12 @@ export function OrdersTable({
                           <DropdownMenuItem onClick={() => onReject(order.id)}>
                             <XCircle className="h-4 w-4 me-2 text-destructive" />
                             {t("rejectOrder")}
+                          </DropdownMenuItem>
+                        )}
+                        {canCancel && onCancel && (
+                          <DropdownMenuItem onClick={() => onCancel(order.id)}>
+                            <XCircle className="h-4 w-4 me-2 text-destructive" />
+                            {t("cancelOrder")}
                           </DropdownMenuItem>
                         )}
                         {canAssignPickupAgent && onAssignAgent && (

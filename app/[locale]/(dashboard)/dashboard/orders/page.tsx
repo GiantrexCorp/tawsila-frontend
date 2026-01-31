@@ -21,6 +21,7 @@ import {
   useOrders,
   useAcceptOrder,
   useRejectOrder,
+  useCancelOrder,
   useAssignPickupAgent,
   useAssignDeliveryAgent,
   type OrderFilters,
@@ -102,6 +103,7 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showAcceptDialog, setShowAcceptDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [assignmentType, setAssignmentType] = useState<'pickup' | 'delivery'>('pickup');
 
@@ -141,6 +143,7 @@ export default function OrdersPage() {
 
   const acceptOrderMutation = useAcceptOrder();
   const rejectOrderMutation = useRejectOrder();
+  const cancelOrderMutation = useCancelOrder();
   const assignAgentMutation = useAssignPickupAgent();
   const assignDeliveryAgentMutation = useAssignDeliveryAgent();
 
@@ -349,6 +352,17 @@ export default function OrdersPage() {
     [ordersResponse?.data]
   );
 
+  const handleCancelClick = useCallback(
+    (orderId: number) => {
+      const order = ordersResponse?.data.find((o) => o.id === orderId);
+      if (order) {
+        setSelectedOrder(order);
+        setShowCancelDialog(true);
+      }
+    },
+    [ordersResponse?.data]
+  );
+
   const handleAssignClick = useCallback(
     (orderId: number) => {
       const order = ordersResponse?.data.find((o) => o.id === orderId);
@@ -420,6 +434,25 @@ export default function OrdersPage() {
       }
     },
     [selectedOrder, rejectOrderMutation, t, tCommon]
+  );
+
+  const handleCancelConfirm = useCallback(
+    async (reason: string) => {
+      if (!selectedOrder) return;
+      try {
+        await cancelOrderMutation.mutateAsync({
+          id: selectedOrder.id,
+          reason,
+        });
+        toast.success(t("orderCancelledSuccess"));
+        setShowCancelDialog(false);
+        setSelectedOrder(null);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : tCommon("tryAgain");
+        toast.error(t("orderCancelledFailed"), { description: message });
+      }
+    },
+    [selectedOrder, cancelOrderMutation, t, tCommon]
   );
 
   const handleAssignConfirm = useCallback(
@@ -1000,6 +1033,7 @@ export default function OrdersPage() {
                             <SelectItem value="pending">{t("pending")}</SelectItem>
                             <SelectItem value="accepted">{t("accepted")}</SelectItem>
                             <SelectItem value="rejected">{t("rejected")}</SelectItem>
+                            <SelectItem value="cancelled">{t("cancelled")}</SelectItem>
                             <SelectItem value="pickup_assigned">{t("pickupAssigned")}</SelectItem>
                             <SelectItem value="picked_up_from_vendor">{t("pickedUpFromVendor")}</SelectItem>
                             <SelectItem value="received_at_inventory">{t("receivedAtInventory")}</SelectItem>
@@ -1236,6 +1270,7 @@ export default function OrdersPage() {
           onOrderClick={handleOrderClick}
           onAccept={handleAcceptClick}
           onReject={handleRejectClick}
+          onCancel={handleCancelClick}
           onAssignAgent={handleAssignClick}
           onAssignDeliveryAgent={handleAssignDeliveryClick}
           t={t}
@@ -1327,6 +1362,13 @@ export default function OrdersPage() {
         }}
         onRejectConfirm={handleRejectConfirm}
         isRejecting={rejectOrderMutation.isPending}
+        showCancelDialog={showCancelDialog}
+        onCancelDialogClose={() => {
+          setShowCancelDialog(false);
+          setSelectedOrder(null);
+        }}
+        onCancelConfirm={handleCancelConfirm}
+        isCancelling={cancelOrderMutation.isPending}
         showAssignDialog={showAssignDialog}
         onAssignDialogClose={() => {
           setShowAssignDialog(false);

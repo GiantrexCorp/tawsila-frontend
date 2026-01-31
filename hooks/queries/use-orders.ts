@@ -10,6 +10,7 @@ import {
   createOrder,
   acceptOrder,
   rejectOrder,
+  cancelOrder,
   assignPickupAgent,
   assignDeliveryAgent,
   fetchOrderAssignments,
@@ -144,6 +145,41 @@ export function useRejectOrder() {
   return useMutation({
     mutationFn: ({ id, reason }: { id: number; reason?: string }) =>
       rejectOrder(id, reason),
+    onSuccess: (updatedOrder, variables) => {
+      // Update the specific order in cache
+      queryClient.setQueryData(queryKeys.orders.detail(variables.id), updatedOrder);
+
+      // Update the order in all list caches immediately for instant UI update
+      queryClient.setQueriesData<OrdersResponse>(
+        { queryKey: queryKeys.orders.lists() },
+        (oldData) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            data: oldData.data.map((order) =>
+              order.id === variables.id ? { ...order, ...updatedOrder } : order
+            ),
+          };
+        }
+      );
+
+      // Also refetch to ensure we have the latest data from server
+      queryClient.invalidateQueries({ queryKey: queryKeys.orders.lists() });
+      // Invalidate stats
+      queryClient.invalidateQueries({ queryKey: queryKeys.orders.stats() });
+    },
+  });
+}
+
+/**
+ * Hook to cancel an order (vendor only)
+ */
+export function useCancelOrder() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: number; reason: string }) =>
+      cancelOrder(id, reason),
     onSuccess: (updatedOrder, variables) => {
       // Update the specific order in cache
       queryClient.setQueryData(queryKeys.orders.detail(variables.id), updatedOrder);
