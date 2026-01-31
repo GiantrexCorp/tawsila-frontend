@@ -60,13 +60,11 @@ export default function OrdersPage() {
   const router = useRouter();
   const isMobile = useIsMobile();
 
-  // Hydration state for client-side data
-  const [isHydrated, setIsHydrated] = useState(false);
+  // User state for client-side data
   const [user, setUser] = useState<ReturnType<typeof getCurrentUser>>(null);
 
   // Hydrate user data from localStorage
   useEffect(() => {
-    setIsHydrated(true);
     const currentUser = getCurrentUser();
     if (currentUser) {
       setUser(currentUser);
