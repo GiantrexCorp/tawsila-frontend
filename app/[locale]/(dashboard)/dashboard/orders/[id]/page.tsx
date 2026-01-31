@@ -46,7 +46,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { usePagePermission } from "@/hooks/use-page-permission";
-import { PERMISSIONS } from "@/hooks/use-permissions";
+import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
 import { fetchOrder, acceptOrder, rejectOrder, assignPickupAgent, assignDeliveryAgent, skipScan, skipVerifyOtp, type Order, type OrderItem, type Customer, type Assignment, type StatusLog, type Scan as ScanType, type Vendor, type OrderTransaction } from "@/lib/services/orders";
 import { fetchMyInventories, fetchCurrentInventory, type Inventory } from "@/lib/services/inventories";
 import { fetchPickupAgents, fetchDeliveryAgents, type Agent } from "@/lib/services/agents";
@@ -93,6 +93,7 @@ export default function OrderDetailPage() {
       PERMISSIONS.VERIFY_ORDER_OTP,
     ]
   });
+  const { hasPermission: canViewPrintLabel } = useHasPermission(PERMISSIONS.VIEW_PRINT_LABEL);
 
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -651,8 +652,8 @@ export default function OrderDetailPage() {
                 </div>
               )}
 
-              {/* Print Button - Vendor Only */}
-              {isVendor && (
+              {/* Print Button */}
+              {canViewPrintLabel && (
                 <div className="flex flex-wrap gap-2 pt-4">
                   <Button variant="outline" onClick={() => window.print()} className="gap-2">
                     <Printer className="h-4 w-4" />

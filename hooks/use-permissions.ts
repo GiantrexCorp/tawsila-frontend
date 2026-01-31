@@ -50,6 +50,7 @@ export const PERMISSIONS = {
   PICKUP_ORDER_FROM_VENDOR: 'pickup-order-from-vendor',
   PICKUP_ORDER_FROM_INVENTORY: 'pickup-order-from-inventory',
   VERIFY_ORDER_OTP: 'verify-order-otp',
+  VIEW_PRINT_LABEL: 'view-print-label',
 
   // Inventories
   LIST_INVENTORIES: 'list-inventories',
@@ -125,6 +126,7 @@ export const PERMISSION_MODULES = {
     PERMISSIONS.PICKUP_ORDER_FROM_VENDOR,
     PERMISSIONS.PICKUP_ORDER_FROM_INVENTORY,
     PERMISSIONS.VERIFY_ORDER_OTP,
+    PERMISSIONS.VIEW_PRINT_LABEL,
   ],
   INVENTORIES: [
     PERMISSIONS.LIST_INVENTORIES,
