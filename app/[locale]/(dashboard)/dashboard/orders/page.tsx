@@ -128,12 +128,10 @@ export default function OrdersPage() {
     ],
   });
   const { hasPermission: canCreateOrder } = useHasPermission(PERMISSIONS.CREATE_ORDER);
+  const { hasPermission: canViewPrintLabel } = useHasPermission(PERMISSIONS.VIEW_PRINT_LABEL);
 
   // Only users with type 'vendor' and create-order permission can create orders
   const canShowCreateOrder = canCreateOrder && user?.type === 'vendor';
-
-  // Check if user is a vendor (for batch print labels) - must wait for hydration
-  const isVendor = isHydrated && user?.roles?.some(r => r.name === 'vendor');
 
   // React Query
   const {
@@ -568,7 +566,7 @@ export default function OrdersPage() {
                 <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
                 <span className="hidden sm:inline">{t("refreshData")}</span>
               </Button>
-              {isVendor && (
+              {canViewPrintLabel && (
                 <Button
                   variant="outline"
                   size="sm"
