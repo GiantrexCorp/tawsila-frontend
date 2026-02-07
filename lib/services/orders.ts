@@ -342,6 +342,8 @@ export interface Order {
   can_pickup_from_inventory?: boolean;
   /** Whether current user can verify OTP */
   can_verify_otp?: boolean;
+  /** Whether current user can mark delivery as failed */
+  can_fail_delivery?: boolean;
 
   // Admin skip action flags
   /** Whether current user can mark order as picked up from vendor (skip QR scan) */
@@ -851,6 +853,24 @@ export async function cancelOrder(id: number, reason: string): Promise<Order> {
 
   if (!response.data) {
     throw new Error(response.message || 'Failed to cancel order');
+  }
+
+  return response.data;
+}
+
+/**
+ * Mark delivery as failed
+ * Available when order is out for delivery and user has permission
+ */
+export async function failDelivery(id: number, reason: string): Promise<Order> {
+  const response = await apiRequest<Order>(`/orders/${id}/fail-delivery`, {
+    method: 'POST',
+    body: JSON.stringify({ reason: reason.trim() }),
+    skipRedirectOn403: true,
+  });
+
+  if (!response.data) {
+    throw new Error(response.message || 'Failed to mark delivery as failed');
   }
 
   return response.data;

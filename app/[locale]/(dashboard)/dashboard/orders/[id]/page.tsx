@@ -47,7 +47,7 @@ import {
 } from "lucide-react";
 import { usePagePermission } from "@/hooks/use-page-permission";
 import { useHasPermission, PERMISSIONS } from "@/hooks/use-permissions";
-import { fetchOrder, acceptOrder, rejectOrder, cancelOrder, assignPickupAgent, assignDeliveryAgent, skipScan, skipVerifyOtp, type Order, type OrderItem, type Customer, type Assignment, type StatusLog, type Scan as ScanType, type Vendor, type OrderTransaction } from "@/lib/services/orders";
+import { fetchOrder, acceptOrder, rejectOrder, cancelOrder, failDelivery, assignPickupAgent, assignDeliveryAgent, skipScan, skipVerifyOtp, type Order, type OrderItem, type Customer, type Assignment, type StatusLog, type Scan as ScanType, type Vendor, type OrderTransaction } from "@/lib/services/orders";
 import { fetchMyInventories, fetchCurrentInventory, type Inventory } from "@/lib/services/inventories";
 import { fetchPickupAgents, fetchDeliveryAgents, type Agent } from "@/lib/services/agents";
 import { toast } from "sonner";
@@ -108,6 +108,9 @@ export default function OrderDetailPage() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
+  const [isFailingDelivery, setIsFailingDelivery] = useState(false);
+  const [showFailDeliveryDialog, setShowFailDeliveryDialog] = useState(false);
+  const [failDeliveryReason, setFailDeliveryReason] = useState("");
   const [isAssigning, setIsAssigning] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -243,6 +246,31 @@ export default function OrderDetailPage() {
       setIsCancelling(false);
     }
   }, [orderId, cancellationReason, t, tCommon]);
+
+  const handleFailDeliveryClick = useCallback(() => {
+    setShowFailDeliveryDialog(true);
+    setFailDeliveryReason("");
+  }, []);
+
+  const handleFailDelivery = useCallback(async () => {
+    if (!failDeliveryReason.trim()) {
+      toast.error(t('failDeliveryReasonRequired'));
+      return;
+    }
+    setIsFailingDelivery(true);
+    try {
+      const updatedOrder = await failDelivery(orderId, failDeliveryReason.trim());
+      setOrder(updatedOrder);
+      setShowFailDeliveryDialog(false);
+      setFailDeliveryReason("");
+      toast.success(t('deliveryFailedSuccess'));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : tCommon('tryAgain');
+      toast.error(t('deliveryFailedError'), { description: message });
+    } finally {
+      setIsFailingDelivery(false);
+    }
+  }, [orderId, failDeliveryReason, t, tCommon]);
 
   const loadAgents = useCallback(async (inventoryId: number) => {
     setIsLoadingAgents(true);
@@ -545,6 +573,7 @@ export default function OrderDetailPage() {
   const canAccept = order.can_accept === true;
   const canReject = order.can_reject === true;
   const canCancel = order.can_cancel === true;
+  const canFailDelivery = order.can_fail_delivery === true;
   const canAssignPickupAgent = order.can_assign_pickup_agent === true;
   const canAssignDeliveryAgent = order.can_assign_delivery_agent === true;
 
@@ -642,7 +671,7 @@ export default function OrderDetailPage() {
               </div>
 
               {/* Action Buttons */}
-              {(canAccept || canReject || canCancel || canAssignPickupAgent || canAssignDeliveryAgent) && (
+              {(canAccept || canReject || canCancel || canFailDelivery || canAssignPickupAgent || canAssignDeliveryAgent) && (
                 <div className="flex flex-wrap gap-2 pt-4">
                   {canAccept && (
                     <Button onClick={handleAcceptClick} disabled={isAccepting} className="gap-2">
@@ -660,6 +689,12 @@ export default function OrderDetailPage() {
                     <Button variant="destructive" onClick={handleCancelClick} disabled={isCancelling} className="gap-2">
                       <XCircle className="h-4 w-4" />
                       {t('cancelOrder')}
+                    </Button>
+                  )}
+                  {canFailDelivery && (
+                    <Button variant="destructive" onClick={handleFailDeliveryClick} disabled={isFailingDelivery} className="gap-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      {t('failDelivery')}
                     </Button>
                   )}
                   {canAssignPickupAgent && (
@@ -1482,6 +1517,43 @@ export default function OrderDetailPage() {
             <Button variant="destructive" onClick={handleCancelOrder} disabled={isCancelling || !cancellationReason.trim()} className="gap-2">
               {isCancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
               {isCancelling ? t('cancelling') : t('cancelOrder')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Fail Delivery Dialog */}
+      <Dialog open={showFailDeliveryDialog} onOpenChange={setShowFailDeliveryDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+              </div>
+              <DialogTitle>{t('failDelivery')}</DialogTitle>
+            </div>
+            <DialogDescription>{t('failDeliveryDesc')}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="fail_delivery_reason">{t('failDeliveryReason')} *</Label>
+              <Textarea
+                id="fail_delivery_reason"
+                placeholder={t('failDeliveryReasonPlaceholder')}
+                value={failDeliveryReason}
+                onChange={(e) => setFailDeliveryReason(e.target.value)}
+                rows={4}
+              />
+              <p className="text-xs text-muted-foreground">{t('failDeliveryReasonHelp')}</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowFailDeliveryDialog(false); setFailDeliveryReason(""); }} disabled={isFailingDelivery}>
+              {tCommon('cancel')}
+            </Button>
+            <Button variant="destructive" onClick={handleFailDelivery} disabled={isFailingDelivery || !failDeliveryReason.trim()} className="gap-2">
+              {isFailingDelivery ? <Loader2 className="h-4 w-4 animate-spin" /> : <AlertTriangle className="h-4 w-4" />}
+              {isFailingDelivery ? t('failingDelivery') : t('confirmFailDelivery')}
             </Button>
           </DialogFooter>
         </DialogContent>
