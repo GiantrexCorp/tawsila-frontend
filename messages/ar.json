@@ -1290,7 +1290,8 @@
     "startDate": "تاريخ البداية",
     "endDate": "تاريخ النهاية",
     "previous": "السابق",
-    "next": "التالي"
+    "next": "التالي",
+    "back": "رجوع"
   },
   "transactions": {
     "title": "معاملاتي",

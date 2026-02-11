@@ -1291,7 +1291,8 @@
     "startDate": "Start Date",
     "endDate": "End Date",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "back": "Back"
   },
   "transactions": {
     "title": "My Transactions",
