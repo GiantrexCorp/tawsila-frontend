@@ -14,11 +14,13 @@ import {
   assignPickupAgent,
   assignDeliveryAgent,
   fetchOrderAssignments,
+  importOrders,
   Order,
   OrdersResponse,
   OrderFilters,
   Assignment,
   CreateOrderRequest,
+  ImportOrdersResponse,
 } from "@/lib/services/orders";
 
 // Re-export types for convenience
@@ -331,6 +333,22 @@ export function usePrefetchOrder() {
       staleTime: STALE_TIMES.DYNAMIC,
     });
   };
+}
+
+/**
+ * Hook to bulk-import orders
+ */
+export function useImportOrders() {
+  const queryClient = useQueryClient();
+
+  return useMutation<ImportOrdersResponse, Error, CreateOrderRequest[]>({
+    mutationFn: (orders) => importOrders(orders),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.orders.lists() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.orders.stats() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.analytics.all });
+    },
+  });
 }
 
 /**

@@ -1,0 +1,35 @@
+/**
+ * Types for the Import Orders feature
+ */
+
+export type ImportStep = 'upload' | 'preview' | 'submitting';
+
+export const EXPECTED_COLUMNS = [
+  'customerName',
+  'customerMobile',
+  'customerAddress',
+  'governorate',
+  'city',
+  'productName',
+  'quantity',
+  'unitPrice',
+  'paymentMethod',
+  'vendorNotes',
+] as const;
+
+export type ExpectedColumn = (typeof EXPECTED_COLUMNS)[number];
+
+export interface ImportedOrderRow {
+  _id: string;
+  customerName: string;
+  customerMobile: string;
+  customerAddress: string;
+  governorate: string;
+  city: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  paymentMethod: string;
+  vendorNotes: string;
+  _errors: Partial<Record<ExpectedColumn, string>>;
+}

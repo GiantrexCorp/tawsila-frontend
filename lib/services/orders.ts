@@ -876,3 +876,32 @@ export async function failDelivery(id: number, reason: string): Promise<Order> {
   return response.data;
 }
 
+/**
+ * Response from the bulk import orders endpoint
+ */
+export interface ImportOrdersResponse {
+  success_count: number;
+  failure_count: number;
+  errors: Array<{ index: number; message: string }>;
+}
+
+/**
+ * Bulk import orders
+ * Sends an array of CreateOrderRequest to the backend
+ */
+export async function importOrders(
+  orders: CreateOrderRequest[]
+): Promise<ImportOrdersResponse> {
+  const response = await apiRequest<ImportOrdersResponse>('/orders/import', {
+    method: 'POST',
+    body: JSON.stringify({ orders }),
+    skipRedirectOn403: true,
+  });
+
+  if (!response.data) {
+    throw new Error(response.message || 'Failed to import orders');
+  }
+
+  return response.data;
+}
+

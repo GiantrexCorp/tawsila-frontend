@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Loader2, Package, RefreshCw, X, MapPin, Building2, UserCheck, Hash, Phone, Calendar, Filter, ChevronDown, ChevronUp, Printer } from "lucide-react";
+import { Plus, Loader2, Package, RefreshCw, X, MapPin, Building2, UserCheck, Hash, Phone, Calendar, Filter, ChevronDown, ChevronUp, Printer, Upload } from "lucide-react";
 import { useRouter } from "@/i18n/routing";
 import { toast } from "sonner";
 
@@ -35,6 +35,7 @@ import {
   OrdersTable,
   OrdersCardGrid,
   OrderActionDialogs,
+  ImportOrdersDialog,
   type ViewType,
 } from "@/components/orders";
 import { PrintLabelsDialog } from "@/components/print";
@@ -129,6 +130,10 @@ export default function OrdersPage() {
   });
   const { hasPermission: canCreateOrder } = useHasPermission(PERMISSIONS.CREATE_ORDER);
   const { hasPermission: canViewPrintLabel } = useHasPermission(PERMISSIONS.VIEW_PRINT_LABEL);
+  const { hasPermission: canImportOrders } = useHasPermission(PERMISSIONS.IMPORT_ORDERS);
+
+  // Import orders dialog
+  const [showImportDialog, setShowImportDialog] = useState(false);
 
   // Only users with type 'vendor' and create-order permission can create orders
   const canShowCreateOrder = canCreateOrder && user?.type === 'vendor';
@@ -597,6 +602,17 @@ export default function OrdersPage() {
                 <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
                 <span className="hidden sm:inline">{t("refreshData")}</span>
               </Button>
+              {canImportOrders && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowImportDialog(true)}
+                  className="gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  <span className="hidden sm:inline">{t("importOrders")}</span>
+                </Button>
+              )}
               {canViewPrintLabel && (
                 <Button
                   variant="outline"
@@ -1428,6 +1444,12 @@ export default function OrdersPage() {
         orders={selectedOrders}
         t={t}
         tCommon={tCommon}
+      />
+
+      {/* Import Orders Dialog */}
+      <ImportOrdersDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
       />
     </div>
   );
