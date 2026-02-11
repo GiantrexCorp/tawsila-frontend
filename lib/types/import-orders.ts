@@ -21,6 +21,8 @@ export type ExpectedColumn = (typeof EXPECTED_COLUMNS)[number];
 
 export interface ImportedOrderRow {
   _id: string;
+  /** Optional external order reference (e.g. Shopify order name) used to group multi-item orders */
+  _orderRef: string;
   customerName: string;
   customerMobile: string;
   customerAddress: string;

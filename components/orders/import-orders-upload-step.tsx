@@ -43,7 +43,7 @@ export function ImportOrdersUploadStep({ onFilesParsed }: ImportOrdersUploadStep
           return;
         }
         const mapping = autoMapColumns(headers);
-        const orders = mapRowsToOrders(rows, mapping);
+        const orders = mapRowsToOrders(rows, mapping, headers);
         onFilesParsed(orders);
       } catch {
         setError(t("parseError"));

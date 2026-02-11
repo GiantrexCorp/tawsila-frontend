@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,11 @@ export function ImportOrdersPreviewStep({
 }: ImportOrdersPreviewStepProps) {
   const t = useTranslations("importOrders");
 
+  const hasOrderRefs = useMemo(
+    () => rows.some((r) => r._orderRef),
+    [rows]
+  );
+
   const updateField = useCallback(
     (id: string, field: string, value: string | number) => {
       onRowsChange(
@@ -46,16 +51,26 @@ export function ImportOrdersPreviewStep({
 
   const errorCount = rows.filter((r) => Object.values(r._errors).some(Boolean)).length;
 
+  // Count unique orders (grouped by _orderRef, or each row if no ref)
+  const orderCount = useMemo(() => {
+    if (!hasOrderRefs) return rows.length;
+    const refs = new Set(rows.map((r) => r._orderRef || r._id));
+    return refs.size;
+  }, [rows, hasOrderRefs]);
+
   const cellClass = (row: ImportedOrderRow, field: ExpectedColumn) =>
     row._errors[field] ? "border-destructive border-2" : "";
 
   return (
     <div className="space-y-4">
       <ScrollArea className="w-full whitespace-nowrap">
-        <div className="min-w-[1100px]">
+        <div className={hasOrderRefs ? "min-w-[1200px]" : "min-w-[1100px]"}>
           <Table>
             <TableHeader>
               <TableRow>
+                {hasOrderRefs && (
+                  <TableHead className="min-w-[80px]">{t("orderRef")}</TableHead>
+                )}
                 <TableHead className="min-w-[140px]">{t("customerName")}</TableHead>
                 <TableHead className="min-w-[130px]">{t("mobile")}</TableHead>
                 <TableHead className="min-w-[160px]">{t("address")}</TableHead>
@@ -72,6 +87,13 @@ export function ImportOrdersPreviewStep({
             <TableBody>
               {rows.map((row) => (
                 <TableRow key={row._id}>
+                  {hasOrderRefs && (
+                    <TableCell className="p-1">
+                      <span className="text-xs text-muted-foreground font-mono">
+                        {row._orderRef || "—"}
+                      </span>
+                    </TableCell>
+                  )}
                   <TableCell className="p-1">
                     <Input
                       value={row.customerName}
@@ -193,7 +215,9 @@ export function ImportOrdersPreviewStep({
       {/* Footer summary */}
       <div className="flex items-center justify-between text-sm text-muted-foreground px-1">
         <span>
-          {rows.length} {t("ordersCount")}
+          {hasOrderRefs
+            ? t("itemsAndOrders", { items: rows.length, orders: orderCount })
+            : `${rows.length} ${t("ordersCount")}`}
         </span>
         {errorCount > 0 && (
           <span className="text-destructive font-medium">

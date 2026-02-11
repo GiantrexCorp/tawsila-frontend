@@ -72,22 +72,36 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
 
     setStep("submitting");
 
-    const payload: CreateOrderRequest[] = rows.map((row) => ({
-      customer: {
-        name: row.customerName,
-        mobile: row.customerMobile,
-        address: row.customerAddress,
-      },
-      items: [
-        {
-          product_name: row.productName,
-          quantity: row.quantity,
-          unit_price: row.unitPrice,
-        },
-      ],
-      payment_method: row.paymentMethod || "cash",
-      vendor_notes: row.vendorNotes || null,
-    }));
+    // Group rows by _orderRef so multi-item Shopify orders become a single
+    // CreateOrderRequest with multiple items. Rows without an _orderRef are
+    // treated as standalone single-item orders.
+    const grouped = new Map<string, ImportedOrderRow[]>();
+    for (const row of rows) {
+      const key = row._orderRef || row._id; // fallback to unique _id
+      const group = grouped.get(key) || [];
+      group.push(row);
+      grouped.set(key, group);
+    }
+
+    const payload: CreateOrderRequest[] = Array.from(grouped.values()).map(
+      (group) => {
+        const first = group[0];
+        return {
+          customer: {
+            name: first.customerName,
+            mobile: first.customerMobile,
+            address: first.customerAddress,
+          },
+          items: group.map((row) => ({
+            product_name: row.productName,
+            quantity: row.quantity,
+            unit_price: row.unitPrice,
+          })),
+          payment_method: first.paymentMethod || "cash",
+          vendor_notes: first.vendorNotes || null,
+        };
+      }
+    );
 
     try {
       const result = await importMutation.mutateAsync(payload);

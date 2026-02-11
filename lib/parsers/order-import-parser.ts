@@ -6,82 +6,111 @@ import {
   type ImportedOrderRow,
 } from '@/lib/types/import-orders';
 
-/**
- * Maps common header variations (EN + AR) to our expected column names.
- */
+// ---------------------------------------------------------------------------
+// Header synonyms — maps common header variations (EN, AR, Shopify) to our
+// expected column names.
+// ---------------------------------------------------------------------------
+
 const HEADER_SYNONYMS: Record<string, ExpectedColumn> = {
-  // customerName
+  // --- customerName ---
   'customer name': 'customerName',
   'customer': 'customerName',
   'name': 'customerName',
+  'billing name': 'customerName',
+  'shipping name': 'customerName',
   'اسم العميل': 'customerName',
   'العميل': 'customerName',
   'الاسم': 'customerName',
 
-  // customerMobile
+  // --- customerMobile ---
   'mobile': 'customerMobile',
   'phone': 'customerMobile',
   'customer mobile': 'customerMobile',
   'customer phone': 'customerMobile',
   'phone number': 'customerMobile',
   'mobile number': 'customerMobile',
+  'shipping phone': 'customerMobile',
+  'billing phone': 'customerMobile',
   'رقم الموبايل': 'customerMobile',
   'الموبايل': 'customerMobile',
   'رقم الهاتف': 'customerMobile',
   'الهاتف': 'customerMobile',
 
-  // customerAddress
+  // --- customerAddress ---
   'address': 'customerAddress',
   'customer address': 'customerAddress',
   'delivery address': 'customerAddress',
+  'shipping address1': 'customerAddress',
+  'shipping street': 'customerAddress',
   'العنوان': 'customerAddress',
   'عنوان العميل': 'customerAddress',
   'عنوان التوصيل': 'customerAddress',
 
-  // governorate
+  // --- governorate ---
   'governorate': 'governorate',
   'province': 'governorate',
   'state': 'governorate',
+  'shipping province': 'governorate',
+  'shipping province name': 'governorate',
   'المحافظة': 'governorate',
 
-  // city
+  // --- city ---
   'city': 'city',
+  'shipping city': 'city',
   'المدينة': 'city',
   'المنطقة': 'city',
 
-  // productName
+  // --- productName ---
   'product': 'productName',
   'product name': 'productName',
   'item': 'productName',
   'item name': 'productName',
+  'lineitem name': 'productName',
   'المنتج': 'productName',
   'اسم المنتج': 'productName',
 
-  // quantity
+  // --- quantity ---
   'quantity': 'quantity',
   'qty': 'quantity',
+  'lineitem quantity': 'quantity',
   'الكمية': 'quantity',
 
-  // unitPrice
+  // --- unitPrice ---
   'price': 'unitPrice',
   'unit price': 'unitPrice',
   'price per unit': 'unitPrice',
+  'lineitem price': 'unitPrice',
   'السعر': 'unitPrice',
   'سعر الوحدة': 'unitPrice',
 
-  // paymentMethod
+  // --- paymentMethod ---
   'payment': 'paymentMethod',
   'payment method': 'paymentMethod',
+  'financial status': 'paymentMethod',
   'طريقة الدفع': 'paymentMethod',
   'الدفع': 'paymentMethod',
 
-  // vendorNotes
+  // --- vendorNotes ---
   'notes': 'vendorNotes',
   'vendor notes': 'vendorNotes',
   'order notes': 'vendorNotes',
   'ملاحظات': 'vendorNotes',
   'ملاحظات المورد': 'vendorNotes',
 };
+
+/**
+ * Headers whose presence indicates a Shopify export.
+ */
+const SHOPIFY_MARKERS = [
+  'Lineitem name',
+  'Lineitem quantity',
+  'Shipping Name',
+  'Financial Status',
+];
+
+// ---------------------------------------------------------------------------
+// Column mapping
+// ---------------------------------------------------------------------------
 
 /**
  * Auto-map raw CSV/Excel headers to our expected column names.
@@ -111,6 +140,10 @@ export function autoMapColumns(
 
   return mapping;
 }
+
+// ---------------------------------------------------------------------------
+// File parsing
+// ---------------------------------------------------------------------------
 
 /**
  * Parse a CSV file using PapaParse.
@@ -151,8 +184,7 @@ export async function parseExcel(
     raw: false,
   });
 
-  const headers =
-    jsonData.length > 0 ? Object.keys(jsonData[0]) : [];
+  const headers = jsonData.length > 0 ? Object.keys(jsonData[0]) : [];
 
   return { headers, rows: jsonData };
 }
@@ -175,16 +207,144 @@ export async function parseImportFile(
   throw new Error(`Unsupported file type: .${extension}`);
 }
 
+// ---------------------------------------------------------------------------
+// Shopify-specific pre-processing
+// ---------------------------------------------------------------------------
+
+/**
+ * Detect whether the parsed headers belong to a Shopify export.
+ */
+export function isShopifyExport(headers: string[]): boolean {
+  const headerSet = new Set(headers.map((h) => h.trim()));
+  return SHOPIFY_MARKERS.filter((m) => headerSet.has(m)).length >= 2;
+}
+
+/**
+ * Pre-process Shopify export rows:
+ *  1. Forward-fill customer / order-level fields from the first row of each
+ *     order group (Shopify uses the `Name` column as the order identifier and
+ *     leaves order-level fields blank for extra line-item rows).
+ *  2. Concatenate Shipping Address1 + Shipping Address2 into a single field.
+ *  3. Normalise payment method values.
+ */
+export function preprocessShopifyRows(
+  rows: Record<string, string>[]
+): Record<string, string>[] {
+  // Fields that should be forward-filled from the first row of the same order
+  const ORDER_LEVEL_FIELDS = [
+    'Shipping Name',
+    'Shipping Phone',
+    'Shipping Address1',
+    'Shipping Address2',
+    'Shipping Street',
+    'Shipping City',
+    'Shipping Province',
+    'Shipping Province Name',
+    'Shipping Zip',
+    'Shipping Country',
+    'Billing Name',
+    'Billing Phone',
+    'Payment Method',
+    'Financial Status',
+    'Notes',
+    'Email',
+    'Phone',
+  ];
+
+  // ---- Forward-fill by order Name ----
+  let lastOrder: Record<string, string> | null = null;
+
+  for (const row of rows) {
+    const orderName = (row['Name'] ?? '').trim();
+
+    // If we encounter a new non-empty order name, treat this row as the
+    // "first row" of a new order group and cache its order-level values.
+    if (orderName) {
+      lastOrder = {};
+      for (const field of ORDER_LEVEL_FIELDS) {
+        const val = (row[field] ?? '').trim();
+        if (val) lastOrder[field] = val;
+      }
+    } else if (lastOrder) {
+      // Continuation row — fill in missing order-level fields
+      for (const field of ORDER_LEVEL_FIELDS) {
+        if (!(row[field] ?? '').trim() && lastOrder[field]) {
+          row[field] = lastOrder[field];
+        }
+      }
+      // Copy order name too so we can group later
+      if (!row['Name'] && lastOrder['Name']) {
+        row['Name'] = lastOrder['Name'];
+      }
+    }
+
+    // Store Name in lastOrder for potential continuation rows
+    if (orderName && lastOrder) {
+      lastOrder['Name'] = orderName;
+    }
+  }
+
+  // ---- Concatenate Address1 + Address2 ----
+  for (const row of rows) {
+    const addr1 = (row['Shipping Address1'] ?? '').trim();
+    const addr2 = (row['Shipping Address2'] ?? '').trim();
+    if (addr2 && addr1) {
+      row['Shipping Address1'] = `${addr1}, ${addr2}`;
+    }
+  }
+
+  // ---- Normalise payment method ----
+  for (const row of rows) {
+    const raw = (
+      row['Payment Method'] ??
+      row['Financial Status'] ??
+      ''
+    )
+      .trim()
+      .toLowerCase();
+
+    if (
+      raw.includes('shopify payments') ||
+      raw.includes('stripe') ||
+      raw.includes('klarna') ||
+      raw.includes('paypal') ||
+      raw.includes('apple pay') ||
+      raw === 'paid'
+    ) {
+      row['Payment Method'] = 'card';
+    } else if (raw.includes('cash') || raw === 'cod') {
+      row['Payment Method'] = 'cash';
+    }
+    // If the value doesn't match anything known, leave it as-is —
+    // the user can fix it in the preview table.
+  }
+
+  return rows;
+}
+
+// ---------------------------------------------------------------------------
+// Row mapping
+// ---------------------------------------------------------------------------
+
 /**
  * Convert raw parsed rows into ImportedOrderRow[] using the column mapping.
+ * Automatically detects and pre-processes Shopify exports.
  */
 export function mapRowsToOrders(
   rawRows: Record<string, string>[],
-  mapping: Record<string, ExpectedColumn | null>
+  mapping: Record<string, ExpectedColumn | null>,
+  headers: string[]
 ): ImportedOrderRow[] {
+  // Shopify pre-processing
+  const shopify = isShopifyExport(headers);
+  if (shopify) {
+    preprocessShopifyRows(rawRows);
+  }
+
   return rawRows.map((raw, index) => {
     const row: ImportedOrderRow = {
       _id: `import-${index}-${Date.now()}`,
+      _orderRef: shopify ? (raw['Name'] ?? '').trim() : '',
       customerName: '',
       customerMobile: '',
       customerAddress: '',
@@ -217,6 +377,10 @@ export function mapRowsToOrders(
   });
 }
 
+// ---------------------------------------------------------------------------
+// Validation
+// ---------------------------------------------------------------------------
+
 /**
  * Validate a single order row. Mutates `row._errors` in place.
  */
@@ -244,6 +408,10 @@ export function validateAllRows(rows: ImportedOrderRow[]): number {
   }
   return errorCount;
 }
+
+// ---------------------------------------------------------------------------
+// Template generation
+// ---------------------------------------------------------------------------
 
 /**
  * Generate a blank template file for download.
