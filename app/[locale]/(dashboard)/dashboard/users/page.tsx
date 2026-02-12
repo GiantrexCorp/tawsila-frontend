@@ -317,7 +317,10 @@ export default function UsersPage() {
   // Derived data
   const users = usersResponse?.data || [];
   const meta = usersResponse?.meta || null;
-  const availableRoles = rolesResponse?.data || [];
+  // Exclude vendor role from users section (assignable roles / filters)
+  const availableRoles = (rolesResponse?.data || []).filter(
+    (r) => r.name?.toLowerCase() !== "vendor"
+  );
 
   // Dialog states
   const [showAddDialog, setShowAddDialog] = useState(false);

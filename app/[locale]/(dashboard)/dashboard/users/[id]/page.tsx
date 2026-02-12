@@ -204,7 +204,10 @@ export default function ViewUserPage() {
       setIsLoadingRoles(true);
       try {
         const rolesResponse = await fetchRoles();
-        setAvailableRoles(rolesResponse.data);
+        // Exclude vendor role from users section
+        setAvailableRoles(
+          rolesResponse.data.filter((r) => r.name?.toLowerCase() !== "vendor")
+        );
       } catch {
         toast.error(t('failedToLoadRoles'));
       } finally {
