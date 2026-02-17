@@ -135,9 +135,10 @@ export default function OrdersPage() {
   // Import orders dialog
   const [showImportDialog, setShowImportDialog] = useState(false);
 
-  // Only users with type 'vendor' and create-order permission can create orders
-  const canShowCreateOrder = canCreateOrder && user?.type === 'vendor';
-  const canShowImportOrders = canImportOrders && user?.type === 'vendor';
+  // Only vendor-role users with create-order permission can create orders
+  const isVendorUser = user?.roles?.some(r => r.name === 'vendor');
+  const canShowCreateOrder = canCreateOrder && isVendorUser;
+  const canShowImportOrders = canImportOrders && isVendorUser;
 
   // React Query
   const {
