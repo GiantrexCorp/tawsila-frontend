@@ -1,5 +1,6 @@
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
+import 'xlsx/dist/cpexcel.full.mjs';
 import {
   EXPECTED_COLUMNS,
   type ExpectedColumn,
