@@ -586,6 +586,9 @@
     "noOrdersToImport": "No orders to import",
     "allOrdersInvalid": "All {count} orders have errors. Please fix them before submitting",
     "skippedOrders": "{count} order(s) skipped due to errors",
+    "confirmSkipTitle": "Some orders have errors",
+    "confirmSkipMessage": "{skip} order(s) will be skipped due to errors. {valid} valid order(s) will be imported.",
+    "confirmSkipAction": "Import {count} valid orders",
     "importSuccess": "Successfully imported {success} of {total} orders",
     "importFailed": "Failed to import orders",
     "errors": {

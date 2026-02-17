@@ -585,6 +585,9 @@
     "noOrdersToImport": "مفيش طلبات للاستيراد",
     "allOrdersInvalid": "كل الـ {count} طلب فيهم أخطاء. من فضلك صلحهم قبل الإرسال",
     "skippedOrders": "تم تخطي {count} طلب بسبب أخطاء",
+    "confirmSkipTitle": "بعض الطلبات فيها أخطاء",
+    "confirmSkipMessage": "هيتم تخطي {skip} طلب بسبب أخطاء. هيتم استيراد {valid} طلب صحيح.",
+    "confirmSkipAction": "استيراد {count} طلب صحيح",
     "importSuccess": "تم استيراد {success} من {total} طلب بنجاح",
     "importFailed": "فشل استيراد الطلبات",
     "errors": {

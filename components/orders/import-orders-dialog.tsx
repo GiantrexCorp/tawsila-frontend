@@ -12,6 +12,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { ImportOrdersUploadStep } from "./import-orders-upload-step";
 import { ImportOrdersPreviewStep } from "./import-orders-preview-step";
@@ -34,6 +44,11 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
 
   const [step, setStep] = useState<ImportStep>("upload");
   const [rows, setRows] = useState<ImportedOrderRow[]>([]);
+  const [confirmData, setConfirmData] = useState<{
+    validRows: ImportedOrderRow[];
+    skippedCount: number;
+    reasons: string[];
+  } | null>(null);
 
   const importMutation = useImportOrders();
 
@@ -55,6 +70,7 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
   const reset = useCallback(() => {
     setStep("upload");
     setRows([]);
+    setConfirmData(null);
   }, []);
 
   const handleOpenChange = useCallback(
@@ -81,7 +97,7 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
     }
   }, [step]);
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(() => {
     // Validate all rows and separate valid from invalid
     validateAllRows(rows);
     const validRows = rows.filter((r) => Object.keys(r._errors).length === 0);
@@ -97,7 +113,7 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
       return;
     }
 
-    // Show warning about skipped rows but continue with valid ones
+    // If there are invalid rows, show confirmation dialog before proceeding
     if (invalidRows.length > 0) {
       const reasons = new Set<string>();
       for (const row of invalidRows) {
@@ -105,12 +121,20 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
           if (errKey) reasons.add(t(`errors.${errKey}`));
         }
       }
-      toast.warning(
-        t("skippedOrders", { count: invalidRows.length }),
-        { description: [...reasons].join(", "), duration: 8000 }
-      );
+      setConfirmData({
+        validRows,
+        skippedCount: invalidRows.length,
+        reasons: [...reasons],
+      });
+      return;
     }
 
+    // All rows valid — submit directly
+    submitOrders(validRows);
+  }, [rows, t]);
+
+  const submitOrders = useCallback(async (validRows: ImportedOrderRow[]) => {
+    setConfirmData(null);
     setStep("submitting");
 
     // Group valid rows by _orderRef so multi-item Shopify orders become a
@@ -161,7 +185,7 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
       toast.error(t("importFailed"), { description: message });
       setStep("preview");
     }
-  }, [rows, importMutation, handleOpenChange, t, tCommon]);
+  }, [importMutation, handleOpenChange, t, tCommon]);
 
   const stepNumber = step === "upload" ? 1 : step === "preview" ? 2 : 3;
 
@@ -238,6 +262,38 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
           )}
         </DialogFooter>
       </DialogContent>
+
+      {/* Confirmation dialog for skipped orders */}
+      <AlertDialog open={!!confirmData} onOpenChange={() => setConfirmData(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("confirmSkipTitle")}</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  {t("confirmSkipMessage", {
+                    skip: confirmData?.skippedCount ?? 0,
+                    valid: confirmData?.validRows.length ?? 0,
+                  })}
+                </p>
+                <ul className="list-disc ps-5 space-y-1 text-sm">
+                  {confirmData?.reasons.map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => confirmData && submitOrders(confirmData.validRows)}
+            >
+              {t("confirmSkipAction", { count: confirmData?.validRows.length ?? 0 })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
