@@ -28,6 +28,10 @@ export interface ImportedOrderRow {
   customerAddress: string;
   governorate: string;
   city: string;
+  /** Resolved governorate ID from the database (set by resolveLocationIds) */
+  _governorateId?: number | null;
+  /** Resolved city ID from the database (set by resolveLocationIds) */
+  _cityId?: number | null;
   productName: string;
   quantity: number;
   unitPrice: number;

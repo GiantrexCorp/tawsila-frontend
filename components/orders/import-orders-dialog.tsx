@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
+import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -14,8 +15,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { ImportOrdersUploadStep } from "./import-orders-upload-step";
 import { ImportOrdersPreviewStep } from "./import-orders-preview-step";
-import { validateAllRows } from "@/lib/parsers/order-import-parser";
+import { validateAllRows, resolveLocationIds } from "@/lib/parsers/order-import-parser";
 import { useImportOrders } from "@/hooks/queries/use-orders";
+import { useGovernorates } from "@/hooks/queries/use-vendors";
+import { fetchCities } from "@/lib/services/vendors";
+import { queryKeys, STALE_TIMES, CACHE_TIMES } from "@/components/providers/query-provider";
 import type { ImportedOrderRow, ImportStep } from "@/lib/types/import-orders";
 import type { CreateOrderRequest } from "@/lib/services/orders";
 
@@ -33,6 +37,21 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
 
   const importMutation = useImportOrders();
 
+  // Fetch governorates + all their cities for location resolution
+  const { data: governorates = [] } = useGovernorates();
+  const { data: allCities = [] } = useQuery({
+    queryKey: [...queryKeys.locations.governorates(), 'all-cities'],
+    queryFn: async () => {
+      const results = await Promise.all(
+        governorates.map((g) => fetchCities(g.id))
+      );
+      return results.flat();
+    },
+    staleTime: STALE_TIMES.STATIC,
+    gcTime: CACHE_TIMES.STATIC,
+    enabled: governorates.length > 0,
+  });
+
   const reset = useCallback(() => {
     setStep("upload");
     setRows([]);
@@ -47,9 +66,13 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
   );
 
   const handleFilesParsed = useCallback((parsed: ImportedOrderRow[]) => {
+    // Resolve governorate/city strings to database IDs
+    if (governorates.length > 0 && allCities.length > 0) {
+      resolveLocationIds(parsed, governorates, allCities);
+    }
     setRows(parsed);
     setStep("preview");
-  }, []);
+  }, [governorates, allCities]);
 
   const handleBack = useCallback(() => {
     if (step === "preview") {
@@ -91,6 +114,8 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
             name: first.customerName,
             mobile: first.customerMobile,
             address: first.customerAddress,
+            governorate_id: first._governorateId ?? null,
+            city_id: first._cityId ?? null,
           },
           items: group.map((row) => ({
             product_name: row.productName,

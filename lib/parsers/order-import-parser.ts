@@ -6,6 +6,7 @@ import {
   type ExpectedColumn,
   type ImportedOrderRow,
 } from '@/lib/types/import-orders';
+import type { Governorate, City } from '@/lib/services/vendors';
 
 // ---------------------------------------------------------------------------
 // Header synonyms — maps common header variations (EN, AR, Shopify) to our
@@ -443,6 +444,124 @@ export function mapRowsToOrders(
 
     return row;
   });
+}
+
+// ---------------------------------------------------------------------------
+// Location resolution — match imported governorate/city strings to DB IDs
+// ---------------------------------------------------------------------------
+
+/**
+ * Normalize a location string for comparison: trim, lowercase, strip common
+ * prefixes/suffixes like "Governorate", "محافظة", and normalise Arabic
+ * ta-marbuta (ة → ه) so "الجيزه" matches "الجيزة".
+ */
+function normalizeLocation(s: string): string {
+  return s
+    .trim()
+    .toLowerCase()
+    .replace(/\s+governorate$/i, '')
+    .replace(/\s+gov\.?$/i, '')
+    .replace(/^محافظة\s+/, '')
+    .replace(/\s+محافظة$/, '')
+    .replace(/ة/g, 'ه')
+    .replace(/\s+/g, ' ');
+}
+
+/**
+ * Try to find a governorate matching the raw string.
+ * Checks name_en, name_ar (and their normalised forms).
+ */
+function findGovernorate(
+  raw: string,
+  governorates: Governorate[]
+): Governorate | undefined {
+  if (!raw.trim()) return undefined;
+  const norm = normalizeLocation(raw);
+
+  for (const gov of governorates) {
+    if (
+      normalizeLocation(gov.name_en) === norm ||
+      normalizeLocation(gov.name_ar) === norm
+    ) {
+      return gov;
+    }
+  }
+
+  // Partial / contains match as fallback (e.g. "Al Jizah" contains "jiz" ~ "giz")
+  for (const gov of governorates) {
+    const en = normalizeLocation(gov.name_en);
+    const ar = normalizeLocation(gov.name_ar);
+    if (norm.includes(en) || en.includes(norm) || norm.includes(ar) || ar.includes(norm)) {
+      return gov;
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Try to find a city matching the raw string within a given set of cities.
+ */
+function findCity(
+  raw: string,
+  cities: City[]
+): City | undefined {
+  if (!raw.trim()) return undefined;
+  const norm = normalizeLocation(raw);
+
+  for (const city of cities) {
+    if (
+      normalizeLocation(city.name_en) === norm ||
+      normalizeLocation(city.name_ar) === norm
+    ) {
+      return city;
+    }
+  }
+
+  // Partial / contains match as fallback
+  for (const city of cities) {
+    const en = normalizeLocation(city.name_en);
+    const ar = normalizeLocation(city.name_ar);
+    if (norm.includes(en) || en.includes(norm) || norm.includes(ar) || ar.includes(norm)) {
+      return city;
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Resolve governorate/city strings in imported rows to database IDs.
+ * Mutates rows in place — sets _governorateId and _cityId, and normalises
+ * the display strings to match the canonical DB names.
+ *
+ * @param rows     Parsed import rows
+ * @param govs     Governorates from the API
+ * @param cities   All cities (for all governorates) from the API
+ */
+export function resolveLocationIds(
+  rows: ImportedOrderRow[],
+  govs: Governorate[],
+  cities: City[]
+): void {
+  for (const row of rows) {
+    // --- Governorate ---
+    const gov = findGovernorate(row.governorate, govs);
+    if (gov) {
+      row._governorateId = gov.id;
+      row.governorate = gov.name_en;
+
+      // --- City (scoped to matched governorate) ---
+      const govCities = cities.filter(
+        (c) => c.governorate.id === gov.id
+      );
+      const city = findCity(row.city, govCities);
+      if (city) {
+        row._cityId = city.id;
+        row.city = city.name_en;
+      }
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
