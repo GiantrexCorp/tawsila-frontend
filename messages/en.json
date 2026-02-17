@@ -584,10 +584,14 @@
     "submitting": "Submitting...",
     "fixErrorsBeforeSubmit": "Please fix {count} error(s) before submitting",
     "noOrdersToImport": "No orders to import",
+    "allOrdersInvalid": "All {count} orders have errors. Please fix them before submitting",
+    "skippedOrders": "{count} order(s) skipped due to errors",
     "importSuccess": "Successfully imported {success} of {total} orders",
     "importFailed": "Failed to import orders",
     "errors": {
       "required": "Required",
+      "invalidName": "Name cannot be a number",
+      "invalidMobile": "Must be 11 digits starting with 01",
       "min1": "Min 1",
       "minZero": "Cannot be negative"
     }

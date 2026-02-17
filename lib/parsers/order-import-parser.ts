@@ -574,8 +574,20 @@ export function resolveLocationIds(
 export function validateOrderRow(row: ImportedOrderRow): boolean {
   const errors: ImportedOrderRow['_errors'] = {};
 
-  if (!row.customerName.trim()) errors.customerName = 'required';
-  if (!row.customerMobile.trim()) errors.customerMobile = 'required';
+  const name = row.customerName.trim();
+  if (!name) {
+    errors.customerName = 'required';
+  } else if (/^\d+$/.test(name)) {
+    errors.customerName = 'invalidName';
+  }
+
+  const mobile = row.customerMobile.trim();
+  if (!mobile) {
+    errors.customerMobile = 'required';
+  } else if (!/^01\d{9}$/.test(mobile)) {
+    errors.customerMobile = 'invalidMobile';
+  }
+
   if (!row.customerAddress.trim()) errors.customerAddress = 'required';
   if (!row.productName.trim()) errors.productName = 'required';
   if (row.quantity < 1) errors.quantity = 'min1';

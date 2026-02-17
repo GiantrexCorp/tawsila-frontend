@@ -82,25 +82,43 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
   }, [step]);
 
   const handleSubmit = useCallback(async () => {
-    const errorCount = validateAllRows(rows);
-    if (errorCount > 0) {
-      toast.error(t("fixErrorsBeforeSubmit", { count: errorCount }));
-      return;
-    }
+    // Validate all rows and separate valid from invalid
+    validateAllRows(rows);
+    const validRows = rows.filter((r) => Object.keys(r._errors).length === 0);
+    const invalidRows = rows.filter((r) => Object.keys(r._errors).length > 0);
 
     if (rows.length === 0) {
       toast.error(t("noOrdersToImport"));
       return;
     }
 
+    if (validRows.length === 0) {
+      toast.error(t("allOrdersInvalid", { count: invalidRows.length }));
+      return;
+    }
+
+    // Show warning about skipped rows but continue with valid ones
+    if (invalidRows.length > 0) {
+      const reasons = new Set<string>();
+      for (const row of invalidRows) {
+        for (const errKey of Object.values(row._errors)) {
+          if (errKey) reasons.add(t(`errors.${errKey}`));
+        }
+      }
+      toast.warning(
+        t("skippedOrders", { count: invalidRows.length }),
+        { description: [...reasons].join(", "), duration: 8000 }
+      );
+    }
+
     setStep("submitting");
 
-    // Group rows by _orderRef so multi-item Shopify orders become a single
-    // CreateOrderRequest with multiple items. Rows without an _orderRef are
-    // treated as standalone single-item orders.
+    // Group valid rows by _orderRef so multi-item Shopify orders become a
+    // single CreateOrderRequest with multiple items. Rows without an
+    // _orderRef are treated as standalone single-item orders.
     const grouped = new Map<string, ImportedOrderRow[]>();
-    for (const row of rows) {
-      const key = row._orderRef || row._id; // fallback to unique _id
+    for (const row of validRows) {
+      const key = row._orderRef || row._id;
       const group = grouped.get(key) || [];
       group.push(row);
       grouped.set(key, group);

@@ -583,10 +583,14 @@
     "submitting": "جاري الإرسال...",
     "fixErrorsBeforeSubmit": "من فضلك صلح {count} خطأ قبل الإرسال",
     "noOrdersToImport": "مفيش طلبات للاستيراد",
+    "allOrdersInvalid": "كل الـ {count} طلب فيهم أخطاء. من فضلك صلحهم قبل الإرسال",
+    "skippedOrders": "تم تخطي {count} طلب بسبب أخطاء",
     "importSuccess": "تم استيراد {success} من {total} طلب بنجاح",
     "importFailed": "فشل استيراد الطلبات",
     "errors": {
       "required": "مطلوب",
+      "invalidName": "الاسم مينفعش يكون رقم",
+      "invalidMobile": "لازم يكون 11 رقم ويبدأ بـ 01",
       "min1": "الحد الأدنى 1",
       "minZero": "مينفعش يكون سالب"
     }
