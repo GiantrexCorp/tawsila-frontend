@@ -425,6 +425,11 @@ export function mapRowsToOrders(
       if (!column) continue;
       const value = (raw[header] ?? '').toString().trim();
 
+      // Skip empty values when the column already has a non-empty value
+      // (multiple headers can map to the same column, e.g. Shopify exports
+      // have Billing Phone, Shipping Phone, and Phone all → customerMobile)
+      if (!value && (row as unknown as Record<string, string>)[column]) continue;
+
       if (column === 'quantity') {
         const num = parseInt(value, 10);
         row.quantity = isNaN(num) ? 1 : num;
