@@ -137,6 +137,7 @@ export default function OrdersPage() {
 
   // Only users with type 'vendor' and create-order permission can create orders
   const canShowCreateOrder = canCreateOrder && user?.type === 'vendor';
+  const canShowImportOrders = canImportOrders && user?.type === 'vendor';
 
   // React Query
   const {
@@ -602,7 +603,7 @@ export default function OrdersPage() {
                 <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
                 <span className="hidden sm:inline">{t("refreshData")}</span>
               </Button>
-              {canImportOrders && (
+              {canShowImportOrders && (
                 <Button
                   variant="outline"
                   size="sm"

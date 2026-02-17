@@ -147,13 +147,43 @@ export function autoMapColumns(
 // ---------------------------------------------------------------------------
 
 /**
- * Parse a CSV file using PapaParse.
+ * Detect whether a buffer is valid UTF-8 with Arabic content or needs
+ * re-decoding as Windows-1256 (common for Arabic CSVs exported from Excel).
  */
-export function parseCSV(
+function detectCSVEncoding(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+
+  // UTF-8 BOM — definitely UTF-8
+  if (bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) return 'utf-8';
+
+  // Try strict UTF-8 decode
+  try {
+    const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    // Valid UTF-8 but might be mojibake: if we see Latin chars like Ù/Ø
+    // (U+00D9/U+00D8) but no actual Arabic block chars, it's Windows-1256
+    // being accidentally valid UTF-8.
+    const hasArabic = /[\u0600-\u06FF]/.test(text);
+    const hasMojibake = /[\u00C0-\u00FF]{2,}/.test(text);
+    if (!hasArabic && hasMojibake) return 'windows-1256';
+    return 'utf-8';
+  } catch {
+    // Invalid UTF-8 sequences → likely Windows-1256
+    return 'windows-1256';
+  }
+}
+
+/**
+ * Parse a CSV file using PapaParse with automatic encoding detection.
+ */
+export async function parseCSV(
   file: File
 ): Promise<{ headers: string[]; rows: Record<string, string>[] }> {
+  const buffer = await file.arrayBuffer();
+  const encoding = detectCSVEncoding(buffer);
+  const text = new TextDecoder(encoding).decode(buffer);
+
   return new Promise((resolve, reject) => {
-    Papa.parse(file, {
+    Papa.parse(text, {
       header: true,
       skipEmptyLines: true,
       complete(results) {
@@ -161,7 +191,7 @@ export function parseCSV(
         const rows = results.data as Record<string, string>[];
         resolve({ headers, rows });
       },
-      error(err) {
+      error(err: Error) {
         reject(err);
       },
     });
@@ -175,19 +205,51 @@ export async function parseExcel(
   file: File
 ): Promise<{ headers: string[]; rows: Record<string, string>[] }> {
   const buffer = await file.arrayBuffer();
-  const workbook = XLSX.read(buffer, { type: 'array' });
+  const workbook = XLSX.read(buffer, { type: 'array', codepage: 65001 });
   const sheetName = workbook.SheetNames[0];
   if (!sheetName) throw new Error('Excel file contains no sheets');
 
   const sheet = workbook.Sheets[sheetName];
-  const jsonData = XLSX.utils.sheet_to_json<Record<string, string>>(sheet, {
+
+  // Read with raw values so we can handle phone numbers ourselves
+  const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
     defval: '',
-    raw: false,
+    raw: true,
   });
 
-  const headers = jsonData.length > 0 ? Object.keys(jsonData[0]) : [];
+  // Convert all values to strings, preserving phone number leading zeros
+  const stringRows = jsonData.map((row) => {
+    const out: Record<string, string> = {};
+    for (const [key, val] of Object.entries(row)) {
+      if (val == null) {
+        out[key] = '';
+      } else if (typeof val === 'number') {
+        // Check if this column is likely a phone/mobile field
+        const normKey = key.trim().toLowerCase();
+        const isPhone =
+          normKey.includes('phone') ||
+          normKey.includes('mobile') ||
+          normKey === 'الموبايل' ||
+          normKey === 'رقم الموبايل' ||
+          normKey === 'رقم الهاتف' ||
+          normKey === 'الهاتف';
+        if (isPhone) {
+          // Restore leading zero for Egyptian phone numbers
+          const s = String(val);
+          out[key] = s.length === 10 && !s.startsWith('0') ? '0' + s : s;
+        } else {
+          out[key] = String(val);
+        }
+      } else {
+        out[key] = String(val);
+      }
+    }
+    return out;
+  });
 
-  return { headers, rows: jsonData };
+  const headers = stringRows.length > 0 ? Object.keys(stringRows[0]) : [];
+
+  return { headers, rows: stringRows };
 }
 
 /**
