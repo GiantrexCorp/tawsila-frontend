@@ -159,14 +159,20 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
     return `${t("warningRowPrefix", { row: warning.index + 1 })}: ${warning.message}`;
   }, [t]);
 
-  const submitOrders = useCallback(async (payload: CreateOrderRequest[]) => {
+  const submitOrders = useCallback(async (payload: CreateOrderRequest[], approveDuplicates = false) => {
     setConfirmData(null);
     setDuplicateConfirmData(null);
     setStep("submitting");
 
     try {
-      const result = await importMutation.mutateAsync({ orders: payload });
+      const result = await importMutation.mutateAsync({ orders: payload, approveDuplicates });
       const warnings = result.warnings ?? [];
+
+      if (result.requires_confirmation) {
+        setDuplicateConfirmData({ payload, warnings });
+        setStep("preview");
+        return;
+      }
       toast.success(
         t("importSuccess", {
           success: result.success_count,
@@ -217,7 +223,7 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
         return;
       }
 
-      await submitOrders(payload);
+      await submitOrders(payload, false);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : tCommon("tryAgain");
@@ -411,7 +417,7 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
             <AlertDialogAction
               onClick={() => {
                 if (duplicateConfirmData) {
-                  void submitOrders(duplicateConfirmData.payload);
+                  void submitOrders(duplicateConfirmData.payload, true);
                 }
               }}
             >

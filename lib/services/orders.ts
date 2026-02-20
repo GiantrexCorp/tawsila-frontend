@@ -894,11 +894,13 @@ export interface ImportOrdersResponse {
   failure_count: number;
   errors: Array<{ index: number; message: string }>;
   warnings: ImportOrderWarning[];
+  requires_confirmation?: boolean;
 }
 
 export interface ImportOrdersRequest {
   orders: CreateOrderRequest[];
   checkOnly?: boolean;
+  approveDuplicates?: boolean;
 }
 
 /**
@@ -914,6 +916,7 @@ export async function importOrders(
     body: JSON.stringify({
       orders: payload.orders,
       check_only: payload.checkOnly ?? false,
+      approve_duplicates: payload.approveDuplicates ?? false,
     }),
     skipRedirectOn403: true,
   });
