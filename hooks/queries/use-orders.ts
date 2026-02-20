@@ -18,6 +18,7 @@ import {
   Order,
   OrdersResponse,
   OrderFilters,
+  CreateOrderRequest,
   Assignment,
   ImportOrdersRequest,
   ImportOrdersResponse,
