@@ -218,22 +218,8 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
 
       const warnings = precheckResult.warnings ?? [];
       if (warnings.length > 0) {
-        const previewLines = warnings
-          .slice(0, 3)
-          .map(getWarningText)
-          .join("\n");
-        const message =
-          warnings.length > 3
-            ? `${t("confirmDuplicateMessage", { count: warnings.length })}\n\n${previewLines}\n${t("moreWarnings", { count: warnings.length - 3 })}`
-            : `${t("confirmDuplicateMessage", { count: warnings.length })}\n\n${previewLines}`;
-
-        const shouldContinue = window.confirm(message);
-        if (!shouldContinue) {
-          setStep("preview");
-          return;
-        }
-
-        await submitOrders(payload, true);
+        setDuplicateConfirmData({ payload, warnings });
+        setStep("preview");
         return;
       }
 
@@ -244,7 +230,7 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
       toast.error(t("importFailed"), { description: message });
       setStep("preview");
     }
-  }, [buildPayload, getWarningText, importMutation, submitOrders, t, tCommon]);
+  }, [buildPayload, importMutation, submitOrders, t, tCommon]);
 
   const handleSubmit = useCallback(() => {
     // Validate all rows and separate valid from invalid.
