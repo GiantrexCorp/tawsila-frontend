@@ -19,7 +19,7 @@ import {
   OrdersResponse,
   OrderFilters,
   Assignment,
-  CreateOrderRequest,
+  ImportOrdersRequest,
   ImportOrdersResponse,
 } from "@/lib/services/orders";
 
@@ -341,9 +341,13 @@ export function usePrefetchOrder() {
 export function useImportOrders() {
   const queryClient = useQueryClient();
 
-  return useMutation<ImportOrdersResponse, Error, CreateOrderRequest[]>({
-    mutationFn: (orders) => importOrders(orders),
-    onSuccess: () => {
+  return useMutation<ImportOrdersResponse, Error, ImportOrdersRequest>({
+    mutationFn: (payload) => importOrders(payload),
+    onSuccess: (_data, variables) => {
+      if (variables.checkOnly) {
+        return;
+      }
+
       queryClient.invalidateQueries({ queryKey: queryKeys.orders.lists() });
       queryClient.invalidateQueries({ queryKey: queryKeys.orders.stats() });
       queryClient.invalidateQueries({ queryKey: queryKeys.analytics.all });

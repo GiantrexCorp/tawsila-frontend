@@ -896,16 +896,25 @@ export interface ImportOrdersResponse {
   warnings: ImportOrderWarning[];
 }
 
+export interface ImportOrdersRequest {
+  orders: CreateOrderRequest[];
+  checkOnly?: boolean;
+}
+
 /**
  * Bulk import orders
- * Sends an array of CreateOrderRequest to the backend
+ * Sends orders to the backend.
+ * Set checkOnly=true to run duplicate checks without creating any orders.
  */
 export async function importOrders(
-  orders: CreateOrderRequest[]
+  payload: ImportOrdersRequest
 ): Promise<ImportOrdersResponse> {
   const response = await apiRequest<ImportOrdersResponse>('/orders/import', {
     method: 'POST',
-    body: JSON.stringify({ orders }),
+    body: JSON.stringify({
+      orders: payload.orders,
+      check_only: payload.checkOnly ?? false,
+    }),
     skipRedirectOn403: true,
   });
 

@@ -49,6 +49,10 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
     skippedCount: number;
     reasons: string[];
   } | null>(null);
+  const [duplicateConfirmData, setDuplicateConfirmData] = useState<{
+    payload: CreateOrderRequest[];
+    warnings: ImportOrderWarning[];
+  } | null>(null);
 
   const importMutation = useImportOrders();
 
@@ -71,6 +75,7 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
     setStep("upload");
     setRows([]);
     setConfirmData(null);
+    setDuplicateConfirmData(null);
   }, []);
 
   const handleOpenChange = useCallback(
@@ -97,41 +102,38 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
     }
   }, [step]);
 
-  const handleSubmit = useCallback(() => {
-    // Validate all rows and separate valid from invalid
-    validateAllRows(rows);
-    const validRows = rows.filter((r) => Object.keys(r._errors).length === 0);
-    const invalidRows = rows.filter((r) => Object.keys(r._errors).length > 0);
-
-    if (rows.length === 0) {
-      toast.error(t("noOrdersToImport"));
-      return;
+  const buildPayload = useCallback((validRows: ImportedOrderRow[]): CreateOrderRequest[] => {
+    // Group rows by _orderRef so multi-item Shopify orders become a
+    // single CreateOrderRequest with multiple items. Rows without an
+    // _orderRef are treated as standalone single-item orders.
+    const grouped = new Map<string, ImportedOrderRow[]>();
+    for (const row of validRows) {
+      const key = row._orderRef || row._id;
+      const group = grouped.get(key) || [];
+      group.push(row);
+      grouped.set(key, group);
     }
 
-    if (validRows.length === 0) {
-      toast.error(t("allOrdersInvalid", { count: invalidRows.length }));
-      return;
-    }
-
-    // If there are invalid rows, show confirmation dialog before proceeding
-    if (invalidRows.length > 0) {
-      const reasons = new Set<string>();
-      for (const row of invalidRows) {
-        for (const errKey of Object.values(row._errors)) {
-          if (errKey) reasons.add(t(`errors.${errKey}`));
-        }
-      }
-      setConfirmData({
-        validRows,
-        skippedCount: invalidRows.length,
-        reasons: [...reasons],
-      });
-      return;
-    }
-
-    // All rows valid — submit directly
-    submitOrders(validRows);
-  }, [rows, t]);
+    return Array.from(grouped.values()).map((group) => {
+      const first = group[0];
+      return {
+        customer: {
+          name: first.customerName,
+          mobile: first.customerMobile,
+          address: first.customerAddress,
+          governorate_id: first._governorateId ?? null,
+          city_id: first._cityId ?? null,
+        },
+        items: group.map((row) => ({
+          product_name: row.productName,
+          quantity: row.quantity,
+          unit_price: row.unitPrice,
+        })),
+        payment_method: first.paymentMethod || "cash",
+        vendor_notes: first.vendorNotes || null,
+      };
+    });
+  }, []);
 
   const getWarningText = useCallback((warning: ImportOrderWarning) => {
     if (warning.type === "payload_duplicate") {
@@ -157,45 +159,13 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
     return `${t("warningRowPrefix", { row: warning.index + 1 })}: ${warning.message}`;
   }, [t]);
 
-  const submitOrders = useCallback(async (validRows: ImportedOrderRow[]) => {
+  const submitOrders = useCallback(async (payload: CreateOrderRequest[]) => {
     setConfirmData(null);
+    setDuplicateConfirmData(null);
     setStep("submitting");
 
-    // Group valid rows by _orderRef so multi-item Shopify orders become a
-    // single CreateOrderRequest with multiple items. Rows without an
-    // _orderRef are treated as standalone single-item orders.
-    const grouped = new Map<string, ImportedOrderRow[]>();
-    for (const row of validRows) {
-      const key = row._orderRef || row._id;
-      const group = grouped.get(key) || [];
-      group.push(row);
-      grouped.set(key, group);
-    }
-
-    const payload: CreateOrderRequest[] = Array.from(grouped.values()).map(
-      (group) => {
-        const first = group[0];
-        return {
-          customer: {
-            name: first.customerName,
-            mobile: first.customerMobile,
-            address: first.customerAddress,
-            governorate_id: first._governorateId ?? null,
-            city_id: first._cityId ?? null,
-          },
-          items: group.map((row) => ({
-            product_name: row.productName,
-            quantity: row.quantity,
-            unit_price: row.unitPrice,
-          })),
-          payment_method: first.paymentMethod || "cash",
-          vendor_notes: first.vendorNotes || null,
-        };
-      }
-    );
-
     try {
-      const result = await importMutation.mutateAsync(payload);
+      const result = await importMutation.mutateAsync({ orders: payload });
       const warnings = result.warnings ?? [];
       toast.success(
         t("importSuccess", {
@@ -226,6 +196,71 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
       setStep("preview");
     }
   }, [importMutation, handleOpenChange, getWarningText, t, tCommon]);
+
+  const precheckAndSubmit = useCallback(async (validRows: ImportedOrderRow[]) => {
+    setConfirmData(null);
+    setDuplicateConfirmData(null);
+    setStep("submitting");
+
+    const payload = buildPayload(validRows);
+
+    try {
+      const precheckResult = await importMutation.mutateAsync({
+        orders: payload,
+        checkOnly: true,
+      });
+
+      const warnings = precheckResult.warnings ?? [];
+      if (warnings.length > 0) {
+        setDuplicateConfirmData({ payload, warnings });
+        setStep("preview");
+        return;
+      }
+
+      await submitOrders(payload);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : tCommon("tryAgain");
+      toast.error(t("importFailed"), { description: message });
+      setStep("preview");
+    }
+  }, [buildPayload, importMutation, submitOrders, t, tCommon]);
+
+  const handleSubmit = useCallback(() => {
+    // Validate all rows and separate valid from invalid.
+    validateAllRows(rows);
+    const validRows = rows.filter((r) => Object.keys(r._errors).length === 0);
+    const invalidRows = rows.filter((r) => Object.keys(r._errors).length > 0);
+
+    if (rows.length === 0) {
+      toast.error(t("noOrdersToImport"));
+      return;
+    }
+
+    if (validRows.length === 0) {
+      toast.error(t("allOrdersInvalid", { count: invalidRows.length }));
+      return;
+    }
+
+    // If there are invalid rows, show confirmation dialog before proceeding.
+    if (invalidRows.length > 0) {
+      const reasons = new Set<string>();
+      for (const row of invalidRows) {
+        for (const errKey of Object.values(row._errors)) {
+          if (errKey) reasons.add(t(`errors.${errKey}`));
+        }
+      }
+      setConfirmData({
+        validRows,
+        skippedCount: invalidRows.length,
+        reasons: [...reasons],
+      });
+      return;
+    }
+
+    // All rows valid - run duplicate pre-check first.
+    void precheckAndSubmit(validRows);
+  }, [precheckAndSubmit, rows, t]);
 
   const stepNumber = step === "upload" ? 1 : step === "preview" ? 2 : 3;
 
@@ -327,9 +362,60 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
           <AlertDialogFooter>
             <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => confirmData && submitOrders(confirmData.validRows)}
+              onClick={() => {
+                if (confirmData) {
+                  void precheckAndSubmit(confirmData.validRows);
+                }
+              }}
             >
               {t("confirmSkipAction", { count: confirmData?.validRows.length ?? 0 })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmation dialog for duplicate warnings */}
+      <AlertDialog
+        open={!!duplicateConfirmData}
+        onOpenChange={() => setDuplicateConfirmData(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("confirmDuplicateTitle")}</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  {t("confirmDuplicateMessage", {
+                    count: duplicateConfirmData?.warnings.length ?? 0,
+                  })}
+                </p>
+                <ul className="list-disc ps-5 space-y-1 text-sm">
+                  {duplicateConfirmData?.warnings.slice(0, 5).map((warning, idx) => (
+                    <li key={`${warning.type}-${warning.index}-${idx}`}>
+                      {getWarningText(warning)}
+                    </li>
+                  ))}
+                </ul>
+                {(duplicateConfirmData?.warnings.length ?? 0) > 5 && (
+                  <p className="text-sm text-muted-foreground">
+                    {t("moreWarnings", {
+                      count: (duplicateConfirmData?.warnings.length ?? 0) - 5,
+                    })}
+                  </p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("cancelImport")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (duplicateConfirmData) {
+                  void submitOrders(duplicateConfirmData.payload);
+                }
+              }}
+            >
+              {t("continueImport")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
