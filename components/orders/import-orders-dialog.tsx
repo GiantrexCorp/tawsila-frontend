@@ -31,7 +31,7 @@ import { useGovernorates } from "@/hooks/queries/use-vendors";
 import { fetchCities } from "@/lib/services/vendors";
 import { queryKeys, STALE_TIMES, CACHE_TIMES } from "@/components/providers/query-provider";
 import type { ImportedOrderRow, ImportStep } from "@/lib/types/import-orders";
-import type { CreateOrderRequest } from "@/lib/services/orders";
+import type { CreateOrderRequest, ImportOrderWarning } from "@/lib/services/orders";
 
 interface ImportOrdersDialogProps {
   open: boolean;
@@ -133,6 +133,30 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
     submitOrders(validRows);
   }, [rows, t]);
 
+  const getWarningText = useCallback((warning: ImportOrderWarning) => {
+    if (warning.type === "payload_duplicate") {
+      return t("warningPayloadDuplicate", {
+        row: warning.index + 1,
+        matchedRow: (warning.matched_index ?? 0) + 1,
+      });
+    }
+
+    if (warning.type === "existing_order_duplicate") {
+      if (warning.matched_order_number) {
+        return t("warningExistingDuplicateWithOrder", {
+          row: warning.index + 1,
+          orderNumber: warning.matched_order_number,
+        });
+      }
+
+      return t("warningExistingDuplicate", {
+        row: warning.index + 1,
+      });
+    }
+
+    return `${t("warningRowPrefix", { row: warning.index + 1 })}: ${warning.message}`;
+  }, [t]);
+
   const submitOrders = useCallback(async (validRows: ImportedOrderRow[]) => {
     setConfirmData(null);
     setStep("submitting");
@@ -172,12 +196,28 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
 
     try {
       const result = await importMutation.mutateAsync(payload);
+      const warnings = result.warnings ?? [];
       toast.success(
         t("importSuccess", {
           success: result.success_count,
           total: payload.length,
         })
       );
+
+      if (warnings.length > 0) {
+        const warningSummary = warnings
+          .slice(0, 3)
+          .map(getWarningText)
+          .join("\n");
+
+        toast.warning(t("warningsDetected", { count: warnings.length }), {
+          description:
+            warnings.length > 3
+              ? `${warningSummary}\n${t("moreWarnings", { count: warnings.length - 3 })}`
+              : warningSummary,
+        });
+      }
+
       handleOpenChange(false);
     } catch (error) {
       const message =
@@ -185,7 +225,7 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
       toast.error(t("importFailed"), { description: message });
       setStep("preview");
     }
-  }, [importMutation, handleOpenChange, t, tCommon]);
+  }, [importMutation, handleOpenChange, getWarningText, t, tCommon]);
 
   const stepNumber = step === "upload" ? 1 : step === "preview" ? 2 : 3;
 

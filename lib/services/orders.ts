@@ -879,10 +879,21 @@ export async function failDelivery(id: number, reason: string): Promise<Order> {
 /**
  * Response from the bulk import orders endpoint
  */
+export interface ImportOrderWarning {
+  index: number;
+  type: 'payload_duplicate' | 'existing_order_duplicate' | string;
+  message: string;
+  matched_index?: number;
+  matched_order_id?: number;
+  matched_order_number?: string;
+  matched_order_created_at?: string;
+}
+
 export interface ImportOrdersResponse {
   success_count: number;
   failure_count: number;
   errors: Array<{ index: number; message: string }>;
+  warnings: ImportOrderWarning[];
 }
 
 /**

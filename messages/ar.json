@@ -590,6 +590,12 @@
     "confirmSkipAction": "استيراد {count} طلب صحيح",
     "importSuccess": "تم استيراد {success} من {total} طلب بنجاح",
     "importFailed": "فشل استيراد الطلبات",
+    "warningsDetected": "تم اكتشاف {count} تحذير(ات) لاحتمال تكرار الطلبات",
+    "warningPayloadDuplicate": "قد يكون الصف {row} مكرراً للصف {matchedRow} في نفس الملف",
+    "warningExistingDuplicate": "قد يكون الصف {row} مكرراً لطلب موجود تم إنشاؤه مؤخراً",
+    "warningExistingDuplicateWithOrder": "قد يكون الصف {row} مكرراً للطلب {orderNumber}",
+    "warningRowPrefix": "الصف {row}",
+    "moreWarnings": "و {count} تحذير(ات) إضافية...",
     "errors": {
       "required": "مطلوب",
       "invalidName": "الاسم مينفعش يكون رقم",

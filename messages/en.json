@@ -591,6 +591,12 @@
     "confirmSkipAction": "Import {count} valid orders",
     "importSuccess": "Successfully imported {success} of {total} orders",
     "importFailed": "Failed to import orders",
+    "warningsDetected": "{count} potential duplicate warning(s) detected",
+    "warningPayloadDuplicate": "Row {row} may duplicate row {matchedRow} in the same file",
+    "warningExistingDuplicate": "Row {row} may duplicate a recent existing order",
+    "warningExistingDuplicateWithOrder": "Row {row} may duplicate recent order {orderNumber}",
+    "warningRowPrefix": "Row {row}",
+    "moreWarnings": "and {count} more warning(s)...",
     "errors": {
       "required": "Required",
       "invalidName": "Name cannot be a number",
