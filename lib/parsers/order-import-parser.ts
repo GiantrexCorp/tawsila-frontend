@@ -367,20 +367,12 @@ export function preprocessShopifyRows(
       .trim()
       .toLowerCase();
 
-    if (
-      raw.includes('shopify payments') ||
-      raw.includes('stripe') ||
-      raw.includes('klarna') ||
-      raw.includes('paypal') ||
-      raw.includes('apple pay') ||
-      raw === 'paid'
-    ) {
-      row['Payment Method'] = 'card';
-    } else if (raw.includes('cash') || raw === 'cod') {
-      row['Payment Method'] = 'cash';
+    if (raw.includes('cash') || raw === 'cod' || raw === 'cash_on_delivery') {
+      row['Payment Method'] = 'cod';
+    } else if (raw) {
+      // Everything else (shopify payments, stripe, paid, card, etc.) → prepaid
+      row['Payment Method'] = 'prepaid';
     }
-    // If the value doesn't match anything known, leave it as-is —
-    // the user can fix it in the preview table.
   }
 
   return rows;
@@ -417,7 +409,7 @@ export function mapRowsToOrders(
       productName: '',
       quantity: 1,
       unitPrice: 0,
-      paymentMethod: 'cash',
+      paymentMethod: 'cod',
       vendorNotes: '',
       _errors: {},
     };
@@ -638,7 +630,7 @@ export function generateTemplate(format: 'csv' | 'xlsx' = 'csv'): void {
     'T-Shirt - Black - XL',
     '2',
     '350',
-    'cash',
+    'cod',
     'Handle with care',
   ];
 

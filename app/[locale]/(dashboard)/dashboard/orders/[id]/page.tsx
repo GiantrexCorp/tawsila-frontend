@@ -933,7 +933,7 @@ export default function OrderDetailPage() {
               </div>
               <div>
                 <h3 className="font-semibold">{t('paymentInformation')}</h3>
-                <p className="text-xs text-muted-foreground">{order.payment_method === 'cod' ? t('cashOnDelivery') : t('paid')}</p>
+                <p className="text-xs text-muted-foreground">{order.payment_method === 'cod' ? t('cashOnDelivery') : t('prepaid')}</p>
               </div>
             </div>
 

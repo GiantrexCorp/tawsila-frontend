@@ -175,15 +175,15 @@ export function ImportOrdersPreviewStep({
                   </TableCell>
                   <TableCell className="p-1">
                     <Select
-                      value={row.paymentMethod || "cash"}
+                      value={row.paymentMethod || "cod"}
                       onValueChange={(v) => updateField(row._id, "paymentMethod", v)}
                     >
                       <SelectTrigger className="h-8 text-sm w-[110px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="cash">{t("cash")}</SelectItem>
-                        <SelectItem value="card">{t("card")}</SelectItem>
+                        <SelectItem value="cod">{t("cod")}</SelectItem>
+                        <SelectItem value="prepaid">{t("prepaid")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </TableCell>

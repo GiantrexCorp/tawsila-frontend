@@ -268,9 +268,9 @@ export interface Order {
   status: string;
   /** Localized status label for display */
   status_label: string;
-  /** Payment method (e.g., 'cash', 'card') */
+  /** Payment method ('cod' or 'prepaid') */
   payment_method: string;
-  /** Payment status (e.g., 'paid', 'unpaid') */
+  /** Payment status ('pending', 'paid', 'collected', 'refunded', 'settled') */
   payment_status: string;
   /** Localized payment status label */
   payment_status_label: string;

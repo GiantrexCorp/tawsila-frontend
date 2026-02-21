@@ -54,11 +54,20 @@ const statusConfig: Record<string, { className: string }> = {
   paid: {
     className: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30"
   },
+  collected: {
+    className: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30"
+  },
+  settled: {
+    className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+  },
   unpaid: {
     className: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30"
   },
   partial: {
     className: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/30"
+  },
+  refunded: {
+    className: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30"
   },
 };
 

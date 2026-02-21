@@ -1117,8 +1117,8 @@ export default function OrdersPage() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="all">{tCommon("all")}</SelectItem>
-                            <SelectItem value="cash">{t("cash")}</SelectItem>
-                            <SelectItem value="card">{t("card")}</SelectItem>
+                            <SelectItem value="cod">{t("cod")}</SelectItem>
+                            <SelectItem value="prepaid">{t("prepaid")}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -1198,8 +1198,8 @@ export default function OrdersPage() {
             } else if (key === "payment_method") {
               // Payment method translations
               const paymentMethodMap: Record<string, string> = {
-                cash: t("cash") || "Cash",
-                card: t("card") || "Card",
+                cod: t("cod") || "COD",
+                prepaid: t("prepaid") || "Prepaid",
               };
               displayValue = paymentMethodMap[value] || value;
             }

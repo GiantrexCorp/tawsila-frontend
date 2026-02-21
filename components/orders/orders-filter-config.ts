@@ -86,8 +86,10 @@ export const getOrdersFilterConfigs = (t: TranslationFunction): FilterConfig[] =
     label: t("paymentStatus"),
     type: "select",
     options: [
+      { label: t("pending"), value: "pending" },
       { label: t("paid"), value: "paid" },
-      { label: t("unpaid"), value: "unpaid" },
+      { label: t("collected"), value: "collected" },
+      { label: t("settled"), value: "settled" },
     ],
     placeholder: t("selectPaymentStatus"),
   },

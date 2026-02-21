@@ -129,7 +129,7 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
           quantity: row.quantity,
           unit_price: row.unitPrice,
         })),
-        payment_method: first.paymentMethod || "cash",
+        payment_method: first.paymentMethod || "cod",
         vendor_notes: first.vendorNotes || null,
       };
     });

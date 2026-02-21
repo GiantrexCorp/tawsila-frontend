@@ -642,7 +642,7 @@ export default function CreateOrderPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="cod">{t('cashOnDelivery')}</SelectItem>
-                  <SelectItem value="paid">{t('paid')}</SelectItem>
+                  <SelectItem value="prepaid">{t('prepaid')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

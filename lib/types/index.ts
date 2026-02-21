@@ -211,7 +211,12 @@ export type OrderStatus =
 /**
  * Payment status values
  */
-export type PaymentStatus = 'paid' | 'unpaid' | 'partial';
+export type PaymentStatus = 'pending' | 'paid' | 'collected' | 'refunded' | 'settled';
+
+/**
+ * Payment method values
+ */
+export type PaymentMethod = 'cod' | 'prepaid';
 
 // =============================================================================
 // Form & Filter Types
