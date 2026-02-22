@@ -104,11 +104,33 @@ export function ImportOrdersDialog({ open, onOpenChange }: ImportOrdersDialogPro
 
   const buildPayload = useCallback((validRows: ImportedOrderRow[]): CreateOrderRequest[] => {
     // Group rows by _orderRef so multi-item Shopify orders become a
-    // single CreateOrderRequest with multiple items. Rows without an
-    // _orderRef are treated as standalone single-item orders.
+    // single CreateOrderRequest with multiple items. When _orderRef is
+    // missing, group by normalized customer/order identity so multiple
+    // items for the same customer stay in one order.
+    const normalizeGroupingValue = (value: string | number | null | undefined): string =>
+      String(value ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ");
+
+    const getFallbackGroupKey = (row: ImportedOrderRow): string => {
+      const paymentMethod = (row.paymentMethod || "cod").trim().toLowerCase();
+      return [
+        normalizeGroupingValue(row.customerMobile),
+        normalizeGroupingValue(row.customerName),
+        normalizeGroupingValue(row.customerAddress),
+        row._governorateId ?? normalizeGroupingValue(row.governorate),
+        row._cityId ?? normalizeGroupingValue(row.city),
+        paymentMethod,
+        normalizeGroupingValue(row.vendorNotes),
+      ].join("|");
+    };
+
     const grouped = new Map<string, ImportedOrderRow[]>();
     for (const row of validRows) {
-      const key = row._orderRef || row._id;
+      const key = row._orderRef?.trim()
+        ? `ref:${normalizeGroupingValue(row._orderRef)}`
+        : `customer:${getFallbackGroupKey(row)}`;
       const group = grouped.get(key) || [];
       group.push(row);
       grouped.set(key, group);
