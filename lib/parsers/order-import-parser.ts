@@ -315,36 +315,47 @@ export function preprocessShopifyRows(
     'Phone',
   ];
 
-  // ---- Forward-fill by order Name ----
-  let lastOrder: Record<string, string> | null = null;
-
+  // ---- Normalize missing order names (some exports leave grouped rows blank) ----
+  let lastOrderName = '';
   for (const row of rows) {
     const orderName = (row['Name'] ?? '').trim();
-
-    // If we encounter a new non-empty order name, treat this row as the
-    // "first row" of a new order group and cache its order-level values.
     if (orderName) {
-      lastOrder = {};
-      for (const field of ORDER_LEVEL_FIELDS) {
-        const val = (row[field] ?? '').trim();
-        if (val) lastOrder[field] = val;
-      }
-    } else if (lastOrder) {
-      // Continuation row — fill in missing order-level fields
-      for (const field of ORDER_LEVEL_FIELDS) {
-        if (!(row[field] ?? '').trim() && lastOrder[field]) {
-          row[field] = lastOrder[field];
-        }
-      }
-      // Copy order name too so we can group later
-      if (!row['Name'] && lastOrder['Name']) {
-        row['Name'] = lastOrder['Name'];
+      lastOrderName = orderName;
+      continue;
+    }
+
+    if (lastOrderName) {
+      row['Name'] = lastOrderName;
+    }
+  }
+
+  // ---- Forward-fill order-level fields by order name group ----
+  const rowsByOrderName = new Map<string, Record<string, string>[]>();
+  for (const row of rows) {
+    const orderName = (row['Name'] ?? '').trim();
+    if (!orderName) continue;
+
+    const group = rowsByOrderName.get(orderName) || [];
+    group.push(row);
+    rowsByOrderName.set(orderName, group);
+  }
+
+  for (const orderRows of rowsByOrderName.values()) {
+    const canonicalValues: Record<string, string> = {};
+
+    for (const field of ORDER_LEVEL_FIELDS) {
+      const firstNonEmpty = orderRows.find((r) => (r[field] ?? '').trim());
+      if (firstNonEmpty) {
+        canonicalValues[field] = (firstNonEmpty[field] ?? '').trim();
       }
     }
 
-    // Store Name in lastOrder for potential continuation rows
-    if (orderName && lastOrder) {
-      lastOrder['Name'] = orderName;
+    for (const row of orderRows) {
+      for (const field of ORDER_LEVEL_FIELDS) {
+        if (!(row[field] ?? '').trim() && canonicalValues[field]) {
+          row[field] = canonicalValues[field];
+        }
+      }
     }
   }
 
@@ -416,6 +427,12 @@ export function mapRowsToOrders(
 
     for (const [header, column] of Object.entries(mapping)) {
       if (!column) continue;
+      const normalizedHeader = header.trim().toLowerCase();
+
+      // In Shopify exports, `Name` is the order reference (e.g. #2116),
+      // not the customer name. We already store it in _orderRef.
+      if (shopify && normalizedHeader === 'name') continue;
+
       const value = (raw[header] ?? '').toString().trim();
 
       // Skip empty values when the column already has a non-empty value
